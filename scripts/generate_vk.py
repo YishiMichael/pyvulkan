@@ -18,6 +18,11 @@ class Aliases:
         super().__init__()
         self.alias_dict: dict[str, str] = {}
 
+    def is_empty(
+        self: Self
+    ) -> bool:
+        return not self.alias_dict
+
     def read_alias(
         self: Self,
         name: str,
@@ -28,7 +33,7 @@ class Aliases:
     def write_aliases(
         self: Self,
         vulkan_py: TextIO,
-        indent: str = ""
+        indent: str
     ) -> None:
         alias_dict = self.alias_dict
         for name in sorted(alias_dict):
@@ -108,6 +113,9 @@ class Category[ObjT: Obj](Obj):
     ) -> None:
         for obj in self.iter_sorted_objs():
             obj.write(vulkan_py)
+        if not self.aliases.is_empty():
+            vulkan_py.write("\n\n")
+            self.aliases.write_aliases(vulkan_py, indent="")
 
 
 class Define(Obj):
@@ -167,6 +175,11 @@ class Define(Obj):
                 lambda match: match.group(1),
                 result
             )
+            result = re.sub(
+                r"\((\w+)\)",
+                lambda match: match.group(1),
+                result
+            )
             return f"def {name}({", ".join(f"{arg}: int" for arg in args)}) -> int: return {result}"
         return None
 
@@ -203,14 +216,18 @@ class Constant(Obj):
             return None
         if (match := re.fullmatch(r"\d+", value)) is not None:
             return match.group()
-        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(E[+-]?\d+)?)F?", value, flags=re.IGNORECASE)) is not None:
-            return match.group(1)
-        if (match := re.fullmatch(r"\"\w+\"", value)) is not None:
+        if (match := re.fullmatch(r"0x[\dA-F]+", value)) is not None:
             return match.group()
         if (match := re.fullmatch(r"\(~(\d+)U\)", value)) is not None:
             return f"0x{(1 << 32) - 1 - int(match.group(1)):X}"
         if (match := re.fullmatch(r"\(~(\d+)ULL\)", value)) is not None:
             return f"0x{(1 << 64) - 1 - int(match.group(1)):X}"
+        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(E[+-]?\d+)?)F?", value, flags=re.IGNORECASE)) is not None:
+            return match.group(1)
+        if (match := re.fullmatch(r"\"\w+\"", value)) is not None:
+            return match.group()
+        if (match := re.fullmatch(r"\w+", value)) is not None:
+            return match.group()
         raise ValueError
 
     def write(
@@ -248,7 +265,7 @@ class Field(Obj):
         offset: str | None,
         extnumber: str | None,
         direction: str | None,
-        extension_number: int | None
+        number: str | None
     ) -> int:
         if value is not None:
             return int(value, base=16 if value.startswith("0x") else 10)
@@ -256,11 +273,11 @@ class Field(Obj):
             return 1 << int(bitpos)
         if offset is not None:
             if extnumber is not None:
-                extension_number = int(extnumber)
+                number = extnumber
             else:
-                assert extension_number is not None
+                assert number is not None
             sign = -1 if direction == "-" else 1
-            return sign * (1000000000 + (extension_number - 1) * 1000 + int(offset))
+            return sign * (1000000000 + (int(number) - 1) * 1000 + int(offset))
         raise ValueError
 
     def key(
@@ -379,7 +396,7 @@ class Registry:
         def add_group_entry(
             group: Enum | Category[Constant],
             enum_xml: etree.Element,
-            extension_number: int | None
+            number: str | None
         ) -> None:
             name = enum_xml.attrib["name"]
             alias = enum_xml.attrib.get("alias")
@@ -396,7 +413,7 @@ class Registry:
                             offset=enum_xml.attrib.get("offset"),
                             extnumber=enum_xml.attrib.get("extnumber"),
                             direction=enum_xml.attrib.get("direction"),
-                            extension_number=extension_number
+                            number=number
                         )
                     ))
                 case Category():
@@ -473,7 +490,7 @@ class Registry:
                 add_group_entry(
                     group=enum_dict.get(enum_name, self.constants),
                     enum_xml=enum_xml,
-                    extension_number=None
+                    number=None
                 )
 
         for feature_xml in registry_xml.iterfind("feature"):
@@ -485,11 +502,10 @@ class Registry:
                 add_group_entry(
                     group=enum_dict[enum_name] if (enum_name := enum_xml.attrib.get("extends")) is not None else self.constants,
                     enum_xml=enum_xml,
-                    extension_number=None
+                    number=None
                 )
 
         for extension_xml in registry_xml.iterfind("extensions/extension"):
-            extension_number = int(extension_xml.attrib["number"])
             for require_xml in extension_xml.iterfind("require"):
                 if not check_api_attr(require_xml):
                     continue
@@ -499,11 +515,12 @@ class Registry:
                     add_group_entry(
                         group=enum_dict[enum_name] if (enum_name := enum_xml.attrib.get("extends")) is not None else self.constants,
                         enum_xml=enum_xml,
-                        extension_number=extension_number
+                        number=extension_xml.attrib.get("number")
                     )
 
-        for result_field in enum_dict["VkResult"].iter_sorted_objs():
-            self.return_codes.append_obj(result_field)
+        if (result_enum := enum_dict.get("VkResult")) is not None:
+            for result_field in result_enum.iter_sorted_objs():
+                self.return_codes.append_obj(result_field)
 
     def write_registry(
         self: Self,
@@ -517,34 +534,31 @@ class Registry:
 
         vulkan_py.write("\n\n## defines\n")
         self.defines.write(vulkan_py)
-        self.defines.aliases.write_aliases(vulkan_py)
 
         vulkan_py.write("\n\n## constants\n")
         self.constants.write(vulkan_py)
-        self.constants.aliases.write_aliases(vulkan_py)
 
         vulkan_py.write("\n\n## enums\n")
         self.enums.write(vulkan_py)
-        vulkan_py.write("\n\n")
-        self.enums.aliases.write_aliases(vulkan_py)
 
         vulkan_py.write("\n\n## flags\n")
         self.flags.write(vulkan_py)
-        vulkan_py.write("\n\n")
-        self.flags.aliases.write_aliases(vulkan_py)
 
         # TODO: Generate __all__
 
 
 def main() -> None:
-    vk_xml = pathlib.Path("Vulkan-Docs/xml/vk.xml")
     generated_dir = pathlib.Path("generated")
     generated_dir.mkdir(exist_ok=True)
 
     with generated_dir.joinpath("_vulkan.py").open("w") as vulkan_py:
         vulkan_py.write(pathlib.Path("preamble.py").read_text())
         registry = Registry()
-        registry.read_registry(registry_xml=etree.parse(vk_xml).getroot())
+        for xml in (
+            pathlib.Path("Vulkan-Docs/xml/video.xml"),
+            pathlib.Path("Vulkan-Docs/xml/vk.xml")
+        ):
+            registry.read_registry(registry_xml=etree.parse(xml).getroot())
         registry.write_registry(vulkan_py)
 
 
