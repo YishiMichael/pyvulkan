@@ -633,6 +633,7 @@ class Registry:
                     bits_name := bitmask_type_xml.attrib.get("requires") or bitmask_type_xml.attrib.get("bitvalues")
                 ) is not None else None
             )
+            self.flags.append_obj(flag)
             self.add_type(name, flag)
 
         for enums_xml in registry_xml.iterfind("enums"):
