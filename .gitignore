@@ -2,5 +2,6 @@ __pycache__/
 *.py[cod]
 
 /playground/
-/scripts/Vulkan-Docs/
 /scripts/generated/
+/scripts/xml/video.xml
+/scripts/xml/vk.xml
