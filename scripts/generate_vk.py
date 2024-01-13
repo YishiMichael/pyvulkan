@@ -1,3 +1,4 @@
+import itertools
 import pathlib
 import re
 import xml.etree.ElementTree as etree
@@ -36,6 +37,9 @@ class Aliases:
         indent: str
     ) -> None:
         alias_dict = self.alias_dict
+        if not alias_dict:
+            return
+        vulkan_py.write("\n\n")
         for name in sorted(alias_dict):
             alias = alias_dict[name]
             next_alias = alias_dict.get(alias)
@@ -113,9 +117,68 @@ class Category[ObjT: Obj](Obj):
     ) -> None:
         for obj in self.iter_sorted_objs():
             obj.write(vulkan_py)
-        if not self.aliases.is_empty():
-            vulkan_py.write("\n\n")
-            self.aliases.write_aliases(vulkan_py, indent="")
+        self.aliases.write_aliases(vulkan_py, indent="")
+
+
+#class ExternalType(Obj):
+#    __slots__ = ("name",)
+
+#    def __init__(
+#        self: Self,
+#        name: str
+#    ) -> None:
+#        super().__init__()
+#        self.name: str = name
+
+#    def write(
+#        self: Self,
+#        vulkan_py: TextIO
+#    ) -> None:
+#        vulkan_py.write(f"{self.name} = Never\n")
+
+
+class Field(Obj):
+    __slots__ = (
+        "name",
+        "value_int"
+    )
+
+    def __init__(
+        self: Self,
+        name: str,
+        value_int: int
+    ) -> None:
+        super().__init__()
+        self.name: str = name
+        self.value_int: int = value_int
+
+    @classmethod
+    def build_value_int(
+        cls: type[Self],
+        value: str | None,
+        bitpos: str | None,
+        offset: str | None,
+        extnumber: str | None,
+        direction: str | None,
+        number: str | None
+    ) -> int:
+        if value is not None:
+            return int(value, base=16 if value.startswith("0x") else 10)
+        if bitpos is not None:
+            return 1 << int(bitpos)
+        if offset is not None:
+            if extnumber is not None:
+                number = extnumber
+            else:
+                assert number is not None
+            sign = -1 if direction == "-" else 1
+            return sign * (1000000000 + (int(number) - 1) * 1000 + int(offset))
+        raise ValueError
+
+    def key(
+        self: Self
+    ) -> int:
+        return self.value_int
 
 
 class Define(Obj):
@@ -188,8 +251,7 @@ class Define(Obj):
         self: Self,
         vulkan_py: TextIO
     ) -> None:
-        vulkan_py.write(self.code)
-        vulkan_py.write("\n")
+        vulkan_py.write(f"{self.code}\n")
 
 
 class Constant(Obj):
@@ -242,48 +304,23 @@ class Constant(Obj):
         return self.name
 
 
-class Field(Obj):
-    __slots__ = (
-        "name",
-        "value_int"
-    )
+class Handle(Obj):
+    __slots__ = ("name",)
 
     def __init__(
         self: Self,
-        name: str,
-        value_int: int
+        name: str
     ) -> None:
         super().__init__()
         self.name: str = name
-        self.value_int: int = value_int
 
-    @classmethod
-    def build_value_int(
-        cls: type[Self],
-        value: str | None,
-        bitpos: str | None,
-        offset: str | None,
-        extnumber: str | None,
-        direction: str | None,
-        number: str | None
-    ) -> int:
-        if value is not None:
-            return int(value, base=16 if value.startswith("0x") else 10)
-        if bitpos is not None:
-            return 1 << int(bitpos)
-        if offset is not None:
-            if extnumber is not None:
-                number = extnumber
-            else:
-                assert number is not None
-            sign = -1 if direction == "-" else 1
-            return sign * (1000000000 + (int(number) - 1) * 1000 + int(offset))
-        raise ValueError
-
-    def key(
-        self: Self
-    ) -> int:
-        return self.value_int
+    def write(
+        self: Self,
+        vulkan_py: TextIO
+    ) -> None:
+        vulkan_py.write("\n\n")
+        vulkan_py.write(f"class {self.name}(VulkanCData):\n")
+        vulkan_py.write(f"    __slots__ = ()\n")
 
 
 class Enum(Category[Field]):
@@ -304,6 +341,7 @@ class Enum(Category[Field]):
         vulkan_py.write(f"class {self.name}(Enum):\n")
         if self.is_empty():
             vulkan_py.write("    pass\n")
+            return
         for field in self.iter_sorted_objs_without_duplicates():
             vulkan_py.write(f"    {field.name} = {field.value_int}\n")
         self.aliases.write_aliases(vulkan_py, indent="    ")
@@ -338,11 +376,9 @@ class Flag(Obj):
     ) -> None:
         vulkan_py.write("\n\n")
         vulkan_py.write(f"class {self.name}(Flag):\n")
-        if (bits_enum := self.bits_enum) is None:
+        if (bits_enum := self.bits_enum) is None or bits_enum.is_empty():
             vulkan_py.write(f"    pass\n")
             return
-        if bits_enum.is_empty():
-            vulkan_py.write("    pass\n")
         for field in bits_enum.iter_sorted_objs_without_duplicates():
             vulkan_py.write(f"    {field.name} = 0x{field.value_int:0{self.bitwidth // 4}X}\n")
         bits_enum.aliases.write_aliases(vulkan_py, indent="    ")
@@ -353,10 +389,16 @@ class Flag(Obj):
         return self.name
 
 
+
+
+
 class Registry:
     __slots__ = (
+        "type_dict",
         "return_codes",
+        #"external_types",
         "defines",
+        "handles",
         "constants",
         "enums",
         "flags"
@@ -366,11 +408,50 @@ class Registry:
         self: Self
     ) -> None:
         super().__init__()
+        self.type_dict: dict[str, type | Handle | Enum | Flag | None] = {
+            # void, char
+            "void": None,
+            "int": int,
+            "size_t": int,
+            "float": float,
+            "double": float,
+            "char": str,
+            "int8_t": int,
+            "int16_t": int,
+            "int32_t": int,
+            "int64_t": int,
+            "uint8_t": int,
+            "uint16_t": int,
+            "uint32_t": int,
+            "uint64_t": int
+        }
         self.return_codes: Category[Field] = Category()
+        #self.external_types: Category[ExternalType] = Category()
         self.defines: Category[Define] = Category()
         self.constants: Category[Constant] = Category()
+        self.handles: Category[Handle] = Category()
         self.enums: Category[Enum] = Category()
         self.flags: Category[Flag] = Category()
+
+    def add_type(
+        self: Self,
+        type_name: str,
+        type_obj: type | Handle | Enum | Flag | None
+    ) -> None:
+        assert type_name not in self.type_dict
+        self.type_dict[type_name] = type_obj
+
+    def has_type(
+        self: Self,
+        type_name: str
+    ) -> bool:
+        return type_name in self.type_dict
+
+    def get_type(
+        self: Self,
+        type_name: str
+    ) -> type | Handle | Enum | Flag | None:
+        return self.type_dict[type_name]
 
     def read_registry(
         self: Self,
@@ -383,6 +464,19 @@ class Registry:
             api_attr = xml.attrib.get("api")
             return api_attr is None or "vulkan" in api_attr.split(",")
 
+        # TODO: remove
+        #def type_requirement_headers_satisfied(
+        #    requires: str | None
+        #) -> bool:
+        #    if requires is None:
+        #        return True
+        #    if requires in ("stdint", "vk_platform"):
+        #        return True
+        #    if requires.startswith("vk_video/"):
+        #        return True
+        #    return False
+
+        # TODO: remove
         def get_bitwidth_from_flag_type(
             flag_type_text: str | None
         ) -> int:
@@ -426,24 +520,63 @@ class Registry:
                         value_code=value_code
                     ))
 
-        type_xml_items_list = tuple(
-            (
-                type_xml,
-                type_xml.attrib.get("category"),
-                (
-                    name_text
-                    if (name_text := type_xml.findtext("name")) is not None
-                    else type_xml.attrib["name"]
-                ),
-                type_xml.attrib.get("alias")
-            )
-            for type_xml in registry_xml.iterfind("types/type")
-            if check_api_attr(type_xml)
-        )
+        def type_xml_categorize_key(
+            type_xml: etree.Element
+        ) -> str:
+            return type_xml.attrib.get("category", "")
 
-        for define_type_xml, category, name, alias in type_xml_items_list:
-            if category != "define":
+        type_xml_categories = {
+            category: tuple(
+                (
+                    type_xml,
+                    (
+                        name_text
+                        if (name_text := type_xml.findtext("name")) is not None
+                        else type_xml.attrib["name"]
+                    ),
+                    type_xml.attrib.get("alias")
+                )
+                for type_xml in type_xml_iterator
+            )
+            for category, type_xml_iterator in itertools.groupby(
+                sorted(
+                    filter(check_api_attr, registry_xml.iterfind("types/type")),
+                    key=type_xml_categorize_key
+                ),
+                key=type_xml_categorize_key
+            )
+        }
+
+
+        #tuple(
+        #    (
+        #        type_xml,
+        #        type_xml.attrib.get("category"),
+        #        (
+        #            name_text
+        #            if (name_text := type_xml.findtext("name")) is not None
+        #            else type_xml.attrib["name"]
+        #        ),
+        #        type_xml.attrib.get("alias")
+        #    )
+        #    for type_xml in registry_xml.iterfind("types/type")
+        #    if check_api_attr(type_xml)
+        #)
+
+        #for type_xml, name, _ in type_xml_categories.get("", ()):
+        #    if type_requirement_headers_satisfied(type_xml.attrib.get("requires")):
+        #        continue
+        #    self.external_types.append_obj(ExternalType(
+        #        name=name
+        #    ))
+
+
+        for _, name, _ in type_xml_categories.get("", ()):
+            if self.has_type(name):
                 continue
+            self.add_type(name, None)
+
+        for define_type_xml, name, alias in type_xml_categories.get("define", ()):
             if alias is not None:
                 self.defines.set_alias(name, alias)
                 continue
@@ -455,32 +588,52 @@ class Registry:
                 code=code
             ))
 
-        for _, category, name, alias in type_xml_items_list:
-            if category != "enum":
+        for basetype_type_xml, name, _ in type_xml_categories.get("basetype", ()):
+            self.add_type(
+                name,
+                (
+                    self.get_type(match.group(1))
+                    if (match := re.fullmatch(r"typedef (\w+) \w+;", "".join(basetype_type_xml.itertext()))) is not None
+                    else None
+                )
+            )
+
+        for _, name, alias in type_xml_categories.get("handle", ()):
+            if alias is not None:
+                self.handles.set_alias(name, alias)
                 continue
+            handle = Handle(
+                name=name
+            )
+            self.handles.append_obj(handle)
+            self.add_type(name, handle)
+
+        for _, name, alias in type_xml_categories.get("enum", ()):
             if alias is not None:
                 self.enums.set_alias(name, alias)
                 continue
-            self.enums.append_obj(Enum(
+            enum = Enum(
                 name=name
-            ))
+            )
+            self.enums.append_obj(enum)
+            self.add_type(name, enum)
 
         enum_dict = {
             enum.name: enum
             for enum in self.enums.iter_sorted_objs()
         }
-        for bitmask_type_xml, category, name, alias in type_xml_items_list:
-            if category != "bitmask":
-                continue
+        for bitmask_type_xml, name, alias in type_xml_categories.get("bitmask", ()):
             if alias is not None:
                 self.flags.set_alias(name, alias)
                 continue
-            bits_name = bitmask_type_xml.attrib.get("requires") or bitmask_type_xml.attrib.get("bitvalues")
-            self.flags.append_obj(Flag(
+            flag = Flag(
                 name=name,
                 bitwidth=get_bitwidth_from_flag_type(bitmask_type_xml.findtext("type")),
-                bits_enum=enum_dict[bits_name] if bits_name is not None else None
-            ))
+                bits_enum=enum_dict[bits_name] if (
+                    bits_name := bitmask_type_xml.attrib.get("requires") or bitmask_type_xml.attrib.get("bitvalues")
+                ) is not None else None
+            )
+            self.add_type(name, flag)
 
         for enums_xml in registry_xml.iterfind("enums"):
             enum_name = enums_xml.attrib["name"]
@@ -532,11 +685,17 @@ class Registry:
             vulkan_py.write(f"    {return_code.value_int}: \"{return_code.name}\",\n")
         vulkan_py.write("})\n")
 
+        #vulkan_py.write("\n\n## external types\n")
+        #self.external_types.write(vulkan_py)
+
         vulkan_py.write("\n\n## defines\n")
         self.defines.write(vulkan_py)
 
         vulkan_py.write("\n\n## constants\n")
         self.constants.write(vulkan_py)
+
+        vulkan_py.write("\n\n## handles\n")
+        self.handles.write(vulkan_py)
 
         vulkan_py.write("\n\n## enums\n")
         self.enums.write(vulkan_py)

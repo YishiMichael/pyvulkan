@@ -7,10 +7,11 @@ from enum import (
 from typing import (
     Any,
     Dict,
+    Never,
     Union  # For annotating pNext parameter.
 )
 
-from _vulkan_ffi import ffi
+from ._vulkan_ffi import ffi
 
 
 # Determines whether a nonzero success code will raise an exception.
@@ -33,8 +34,19 @@ def load_vulkan() -> Any:
     raise OSError("Cannot find Vulkan SDK version.")
 
 
+class VulkanCData:
+    __slots__ = ("_ptr",)
+
+    def __init__(
+        self,
+        ptr: Any
+    ) -> None:
+        super().__init__()
+        self._ptr: Any = ptr
+
+
 class VulkanException(Exception):
-    pass
+    __slots__ = ()
 
 
 lib = load_vulkan()
