@@ -1005,7 +1005,7 @@ def main() -> None:
     generated_dir = pathlib.Path("generated")
     generated_dir.mkdir(exist_ok=True)
 
-    with generated_dir.joinpath("_vulkan.py").open("w") as vulkan_py:
+    with generated_dir.joinpath("_vulkan.py").open("w", newline="\n") as vulkan_py:
         vulkan_py.write(pathlib.Path("preamble.py").read_text())
         registry = Registry()
         for xml in (
