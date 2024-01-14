@@ -11,7 +11,14 @@ import cffi
 
 
 class Obj:
-    __slots__ = ()
+    __slots__ = ("name",)
+
+    def __init__(
+        self: Self,
+        name: str
+    ) -> None:
+        super().__init__()
+        self.name: str = name
 
     def write_c(
         self: Self,
@@ -31,9 +38,10 @@ class Macro(Obj):
 
     def __init__(
         self: Self,
+        name: str,
         pydef: str
     ) -> None:
-        super().__init__()
+        super().__init__(name)
         self.pydef: str = pydef
 
     @classmethod
@@ -128,14 +136,7 @@ class Macro(Obj):
 
 
 class Type(Obj):
-    __slots__ = ("name",)
-
-    def __init__(
-        self: Self,
-        name: str
-    ) -> None:
-        super().__init__()
-        self.name: str = name
+    __slots__ = ()
 
 
 class TypeAlias(Type):
@@ -323,7 +324,7 @@ class Enum(Type):
         else:
             file.write(f"typedef VkFlags64 {self.name};\n")
             for field_name, field_value in self.fields.items():
-                file.write(f"static const {self.name} {field_name} = 0x{field_value:016X};\n")
+                file.write(f"static const {self.name} {field_name} = 0x{field_value:016X}ULL;\n")
             for field_name, alias in self.aliases.items():
                 file.write(f"static const {self.name} {field_name} = {alias};\n")
 
@@ -353,13 +354,11 @@ class Flag(Type):
     def __init__(
         self: Self,
         name: str,
-        #cdef: str,
         long_bitwidth: bool,
         bitmask_enum_name: str | None
     ) -> None:
         super().__init__(name)
         self.long_bitwidth: bool = long_bitwidth
-        #self.cdef: str = cdef
         self.bitmask_enum_name: str | None = bitmask_enum_name
         self.bitmask_enum: Enum | None = None
 
@@ -378,23 +377,6 @@ class Flag(Type):
     ) -> None:
         file.write("\n")
         file.write(f"typedef {"VkFlags64" if self.long_bitwidth else "VkFlags"} {self.name};\n")
-        #if (bitmask_enum := self.bitmask_enum) is not None:
-        #    if self.long_bitwidth:
-        #        file.write(f"typedef VkFlags64 {bitmask_enum.name};\n")
-        #        for field_name, field_value in bitmask_enum.fields.items():
-        #            file.write(f"static const {bitmask_enum.name} {field_name} = 0x{field_value:016X};\n")
-        #        for field_name, alias in bitmask_enum.aliases.items():
-        #            file.write(f"static const {bitmask_enum.name} {field_name} = {alias};\n")
-        #    else:
-        #        if bitmask_enum.fields or bitmask_enum.aliases:
-        #            file.write(f"typedef enum {{\n")
-        #            for field_name, field_value in bitmask_enum.fields.items():
-        #                file.write(f"    {field_name} = 0x{field_value:08X},\n")
-        #            for field_name, alias in bitmask_enum.aliases.items():
-        #                file.write(f"    {field_name} = {alias},\n")
-        #            file.write(f"}} {bitmask_enum.name};\n")
-        #        else:
-        #            file.write(f"typedef VkFlags {bitmask_enum.name};\n")
 
     def write_py(
         self: Self,
@@ -499,6 +481,7 @@ class Registry:
         if enum is None:
             if alias is not None:
                 self.append_obj(Macro(
+                    name=name,
                     pydef=f"{name} = {alias}"
                 ))
                 return
@@ -507,6 +490,7 @@ class Registry:
             )) is None:
                 return
             self.append_obj(Macro(
+                name=name,
                 pydef=f"{name} = {value_pydef}"
             ))
             return
@@ -561,7 +545,9 @@ class Registry:
                         cdef="".join(type_xml.itertext())
                     )) is None:
                         continue
+                    assert (macro_name := type_xml.findtext("name")) is not None
                     macro = Macro(
+                        name=macro_name,
                         pydef=pydef
                     )
                     self.append_obj(macro)
@@ -680,7 +666,13 @@ class Registry:
             file.write("    if isinstance(result_field.value, int)\n")
             file.write("})\n")
 
-            # TODO: Generate __all__
+            file.write("\n")
+            file.write("__all__ = (\n")
+            for obj in self.objs:
+                if isinstance(obj, ElementaryType | ExternalType | TypeAlias):  # TODO: remove TypeAlias
+                    continue
+                file.write(f"    \"{obj.name}\",\n")
+            file.write(")\n")
 
 
 def main() -> None:
