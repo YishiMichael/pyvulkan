@@ -1004,6 +1004,7 @@ class VkGeometryFlagsKHR(Flag):
     VK_GEOMETRY_OPAQUE_BIT_NV = VK_GEOMETRY_OPAQUE_BIT_KHR
     VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_NV = VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR
 
+
 class VkGeometryInstanceFlagsKHR(Flag):
     VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR = 0x00000001
     VK_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR = 0x00000002
@@ -1016,6 +1017,7 @@ class VkGeometryInstanceFlagsKHR(Flag):
     VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_NV = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR
     VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_NV = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR
     VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_NV = VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR
+
 
 class VkBuildAccelerationStructureFlagsKHR(Flag):
     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR = 0x00000001
@@ -1035,8 +1037,10 @@ class VkBuildAccelerationStructureFlagsKHR(Flag):
     VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR
     VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR
 
+
 class VkPrivateDataSlotCreateFlags(Flag):
     pass
+
 
 class VkAccelerationStructureCreateFlagsKHR(Flag):
     VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR = 0x00000001
@@ -1046,6 +1050,7 @@ class VkAccelerationStructureCreateFlagsKHR(Flag):
 class VkDescriptorUpdateTemplateCreateFlags(Flag):
     pass
 
+
 class VkPipelineCreationFeedbackFlags(Flag):
     VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT = 0x00000001
     VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT = 0x00000002
@@ -1053,6 +1058,7 @@ class VkPipelineCreationFeedbackFlags(Flag):
     VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT_EXT = VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT
     VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT_EXT = VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT
     VK_PIPELINE_CREATION_FEEDBACK_BASE_PIPELINE_ACCELERATION_BIT_EXT = VK_PIPELINE_CREATION_FEEDBACK_BASE_PIPELINE_ACCELERATION_BIT
+
 
 class VkPerformanceCounterDescriptionFlagsKHR(Flag):
     VK_PERFORMANCE_COUNTER_DESCRIPTION_PERFORMANCE_IMPACTING_BIT_KHR = 0x00000001
@@ -1066,6 +1072,7 @@ class VkAcquireProfilingLockFlagsKHR(Flag):
 class VkSemaphoreWaitFlags(Flag):
     VK_SEMAPHORE_WAIT_ANY_BIT = 0x00000001
     VK_SEMAPHORE_WAIT_ANY_BIT_KHR = VK_SEMAPHORE_WAIT_ANY_BIT
+
 
 class VkPipelineCompilerControlFlagsAMD(Flag):
     pass
@@ -1160,6 +1167,7 @@ class VkAccessFlags2(Flag):
     VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_NV = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR
     VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_NV = VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR
 
+
 class VkPipelineStageFlags2(Flag):
     VK_PIPELINE_STAGE_2_NONE = 0x0000000000000000
     VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT = 0x0000000000000001
@@ -1238,6 +1246,7 @@ class VkPipelineStageFlags2(Flag):
     VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_NV = VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT
     VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_NV = VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT
     VK_PIPELINE_STAGE_2_SUBPASS_SHADING_BIT_HUAWEI = VK_PIPELINE_STAGE_2_SUBPASS_SHADER_BIT_HUAWEI
+
 
 class VkAccelerationStructureMotionInfoFlagsNV(Flag):
     pass
@@ -1322,6 +1331,7 @@ class VkFormatFeatureFlags2(Flag):
     VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT_KHR = VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT
     VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT_KHR = VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT
 
+
 class VkRenderingFlags(Flag):
     VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT = 0x00000001
     VK_RENDERING_SUSPENDING_BIT = 0x00000002
@@ -1334,6 +1344,7 @@ class VkRenderingFlags(Flag):
 
 class VkMemoryDecompressionMethodFlagsNV(Flag):
     VK_MEMORY_DECOMPRESSION_METHOD_GDEFLATE_1_0_BIT_NV = 0x0000000000000001
+
 
 class VkBuildMicromapFlagsEXT(Flag):
     VK_BUILD_MICROMAP_PREFER_FAST_TRACE_BIT_EXT = 0x00000001
@@ -1502,6 +1513,7 @@ class VkPeerMemoryFeatureFlags(Flag):
     VK_PEER_MEMORY_FEATURE_GENERIC_SRC_BIT_KHR = VK_PEER_MEMORY_FEATURE_GENERIC_SRC_BIT
     VK_PEER_MEMORY_FEATURE_GENERIC_DST_BIT_KHR = VK_PEER_MEMORY_FEATURE_GENERIC_DST_BIT
 
+
 class VkMemoryAllocateFlags(Flag):
     VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT = 0x00000001
     VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT = 0x00000002
@@ -1509,6 +1521,7 @@ class VkMemoryAllocateFlags(Flag):
     VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT
     VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT
     VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT
+
 
 class VkDeviceGroupPresentModeFlagsKHR(Flag):
     VK_DEVICE_GROUP_PRESENT_MODE_LOCAL_BIT_KHR = 0x00000001
@@ -1525,6 +1538,7 @@ class VkDebugReportFlagsEXT(Flag):
 
 class VkCommandPoolTrimFlags(Flag):
     pass
+
 
 class VkExternalMemoryHandleTypeFlagsNV(Flag):
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT_NV = 0x00000001
@@ -1561,6 +1575,7 @@ class VkExternalMemoryHandleTypeFlags(Flag):
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_HEAP_BIT_KHR = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_HEAP_BIT
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT_KHR = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT
 
+
 class VkExternalMemoryFeatureFlags(Flag):
     VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT = 0x00000001
     VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT = 0x00000002
@@ -1568,6 +1583,7 @@ class VkExternalMemoryFeatureFlags(Flag):
     VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_KHR = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT
     VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHR = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT
     VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHR = VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT
+
 
 class VkExternalSemaphoreHandleTypeFlags(Flag):
     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT = 0x00000001
@@ -1584,15 +1600,18 @@ class VkExternalSemaphoreHandleTypeFlags(Flag):
     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT_KHR = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT
     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT
 
+
 class VkExternalSemaphoreFeatureFlags(Flag):
     VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT = 0x00000001
     VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT = 0x00000002
     VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR = VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT
     VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR = VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT
 
+
 class VkSemaphoreImportFlags(Flag):
     VK_SEMAPHORE_IMPORT_TEMPORARY_BIT = 0x00000001
     VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT
+
 
 class VkExternalFenceHandleTypeFlags(Flag):
     VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT = 0x00000001
@@ -1606,15 +1625,18 @@ class VkExternalFenceHandleTypeFlags(Flag):
     VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT
     VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT
 
+
 class VkExternalFenceFeatureFlags(Flag):
     VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT = 0x00000001
     VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT = 0x00000002
     VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR = VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT
     VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT_KHR = VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT
 
+
 class VkFenceImportFlags(Flag):
     VK_FENCE_IMPORT_TEMPORARY_BIT = 0x00000001
     VK_FENCE_IMPORT_TEMPORARY_BIT_KHR = VK_FENCE_IMPORT_TEMPORARY_BIT
+
 
 class VkSurfaceCounterFlagsEXT(Flag):
     VK_SURFACE_COUNTER_VBLANK_BIT_EXT = 0x00000001
@@ -1673,6 +1695,7 @@ class VkDescriptorBindingFlags(Flag):
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
     VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
 
+
 class VkConditionalRenderingFlagsEXT(Flag):
     VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT = 0x00000001
 
@@ -1688,6 +1711,7 @@ class VkResolveModeFlags(Flag):
     VK_RESOLVE_MODE_AVERAGE_BIT_KHR = VK_RESOLVE_MODE_AVERAGE_BIT
     VK_RESOLVE_MODE_MIN_BIT_KHR = VK_RESOLVE_MODE_MIN_BIT
     VK_RESOLVE_MODE_MAX_BIT_KHR = VK_RESOLVE_MODE_MAX_BIT
+
 
 class VkPipelineRasterizationStateStreamCreateFlagsEXT(Flag):
     pass
@@ -1712,9 +1736,11 @@ class VkToolPurposeFlags(Flag):
     VK_TOOL_PURPOSE_ADDITIONAL_FEATURES_BIT_EXT = VK_TOOL_PURPOSE_ADDITIONAL_FEATURES_BIT
     VK_TOOL_PURPOSE_MODIFYING_FEATURES_BIT_EXT = VK_TOOL_PURPOSE_MODIFYING_FEATURES_BIT
 
+
 class VkSubmitFlags(Flag):
     VK_SUBMIT_PROTECTED_BIT = 0x00000001
     VK_SUBMIT_PROTECTED_BIT_KHR = VK_SUBMIT_PROTECTED_BIT
+
 
 class VkImageFormatConstraintsFlagsFUCHSIA(Flag):
     pass
@@ -2098,8 +2124,10 @@ class VkIndirectCommandsLayoutNV(VulkanCData):
 class VkDescriptorUpdateTemplate(VulkanCData):
     __slots__ = ()
 
+
 class VkSamplerYcbcrConversion(VulkanCData):
     __slots__ = ()
+
 
 class VkValidationCacheEXT(VulkanCData):
     __slots__ = ()
@@ -2121,6 +2149,7 @@ class VkDeferredOperationKHR(VulkanCData):
 
 class VkPrivateDataSlot(VulkanCData):
     __slots__ = ()
+
 
 class VkCuModuleNVX(VulkanCData):
     __slots__ = ()
@@ -4645,10 +4674,12 @@ class VkIndirectStateFlagBitsNV(Enum):
 class VkPrivateDataSlotCreateFlagBits(Enum):
     VK_PRIVATE_DATA_SLOT_CREATE_RESERVED_0_BIT_NV = 1
 
+
 class VkDescriptorUpdateTemplateType(Enum):
     VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET = 0
     VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR = 1
     VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET_KHR = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET
+
 
 class VkViewportCoordinateSwizzleNV(Enum):
     VK_VIEWPORT_COORDINATE_SWIZZLE_POSITIVE_X_NV = 0
@@ -4683,6 +4714,7 @@ class VkPointClippingBehavior(Enum):
     VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR = VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES
     VK_POINT_CLIPPING_BEHAVIOR_USER_CLIP_PLANES_ONLY_KHR = VK_POINT_CLIPPING_BEHAVIOR_USER_CLIP_PLANES_ONLY
 
+
 class VkCoverageModulationModeNV(Enum):
     VK_COVERAGE_MODULATION_MODE_NONE_NV = 0
     VK_COVERAGE_MODULATION_MODE_RGB_NV = 1
@@ -4711,6 +4743,7 @@ class VkQueueGlobalPriorityKHR(Enum):
     VK_QUEUE_GLOBAL_PRIORITY_HIGH_EXT = VK_QUEUE_GLOBAL_PRIORITY_HIGH_KHR
     VK_QUEUE_GLOBAL_PRIORITY_REALTIME_EXT = VK_QUEUE_GLOBAL_PRIORITY_REALTIME_KHR
 
+
 class VkTimeDomainKHR(Enum):
     VK_TIME_DOMAIN_DEVICE_KHR = 0
     VK_TIME_DOMAIN_CLOCK_MONOTONIC_KHR = 1
@@ -4720,6 +4753,7 @@ class VkTimeDomainKHR(Enum):
     VK_TIME_DOMAIN_CLOCK_MONOTONIC_EXT = VK_TIME_DOMAIN_CLOCK_MONOTONIC_KHR
     VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_EXT = VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_KHR
     VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_EXT = VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_KHR
+
 
 class VkConservativeRasterizationModeEXT(Enum):
     VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT = 0
@@ -4739,6 +4773,7 @@ class VkResolveModeFlagBits(Enum):
     VK_RESOLVE_MODE_MIN_BIT_KHR = VK_RESOLVE_MODE_MIN_BIT
     VK_RESOLVE_MODE_MAX_BIT_KHR = VK_RESOLVE_MODE_MAX_BIT
 
+
 class VkDescriptorBindingFlagBits(Enum):
     VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT = 1
     VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT = 2
@@ -4750,6 +4785,7 @@ class VkDescriptorBindingFlagBits(Enum):
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
     VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
 
+
 class VkConditionalRenderingFlagBitsEXT(Enum):
     VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT = 1
 
@@ -4759,11 +4795,13 @@ class VkSemaphoreType(Enum):
     VK_SEMAPHORE_TYPE_BINARY_KHR = VK_SEMAPHORE_TYPE_BINARY
     VK_SEMAPHORE_TYPE_TIMELINE_KHR = VK_SEMAPHORE_TYPE_TIMELINE
 
+
 class VkGeometryFlagBitsKHR(Enum):
     VK_GEOMETRY_OPAQUE_BIT_KHR = 1
     VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR = 2
     VK_GEOMETRY_OPAQUE_BIT_NV = VK_GEOMETRY_OPAQUE_BIT_KHR
     VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_NV = VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR
+
 
 class VkGeometryInstanceFlagBitsKHR(Enum):
     VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR = 1
@@ -4777,6 +4815,7 @@ class VkGeometryInstanceFlagBitsKHR(Enum):
     VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_NV = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR
     VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_NV = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR
     VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_NV = VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR
+
 
 class VkBuildAccelerationStructureFlagBitsKHR(Enum):
     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR = 1
@@ -4796,6 +4835,7 @@ class VkBuildAccelerationStructureFlagBitsKHR(Enum):
     VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR
     VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_NV = VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR
 
+
 class VkAccelerationStructureCreateFlagBitsKHR(Enum):
     VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR = 1
     VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT = 8
@@ -4813,12 +4853,14 @@ class VkCopyAccelerationStructureModeKHR(Enum):
     VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_NV = VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR
     VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_NV = VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR
 
+
 class VkAccelerationStructureTypeKHR(Enum):
     VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR = 0
     VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR = 1
     VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR = 2
     VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR
     VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR
+
 
 class VkGeometryTypeKHR(Enum):
     VK_GEOMETRY_TYPE_TRIANGLES_KHR = 0
@@ -4827,6 +4869,7 @@ class VkGeometryTypeKHR(Enum):
     VK_GEOMETRY_TYPE_TRIANGLES_NV = VK_GEOMETRY_TYPE_TRIANGLES_KHR
     VK_GEOMETRY_TYPE_AABBS_NV = VK_GEOMETRY_TYPE_AABBS_KHR
 
+
 class VkRayTracingShaderGroupTypeKHR(Enum):
     VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR = 0
     VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR = 1
@@ -4834,6 +4877,7 @@ class VkRayTracingShaderGroupTypeKHR(Enum):
     VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR
     VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR
     VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR
+
 
 class VkAccelerationStructureMemoryRequirementsTypeNV(Enum):
     VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV = 0
@@ -4873,6 +4917,7 @@ class VkPipelineCreationFeedbackFlagBits(Enum):
     VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT_EXT = VK_PIPELINE_CREATION_FEEDBACK_VALID_BIT
     VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT_EXT = VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT
     VK_PIPELINE_CREATION_FEEDBACK_BASE_PIPELINE_ACCELERATION_BIT_EXT = VK_PIPELINE_CREATION_FEEDBACK_BASE_PIPELINE_ACCELERATION_BIT
+
 
 class VkPerformanceCounterScopeKHR(Enum):
     VK_PERFORMANCE_COUNTER_SCOPE_COMMAND_BUFFER_KHR = 0
@@ -4915,6 +4960,7 @@ class VkAcquireProfilingLockFlagBitsKHR(Enum):
 class VkSemaphoreWaitFlagBits(Enum):
     VK_SEMAPHORE_WAIT_ANY_BIT = 1
     VK_SEMAPHORE_WAIT_ANY_BIT_KHR = VK_SEMAPHORE_WAIT_ANY_BIT
+
 
 class VkPerformanceConfigurationTypeINTEL(Enum):
     VK_PERFORMANCE_CONFIGURATION_TYPE_COMMAND_QUEUE_METRICS_DISCOVERY_ACTIVATED_INTEL = 0
@@ -4998,6 +5044,7 @@ class VkToolPurposeFlagBits(Enum):
     VK_TOOL_PURPOSE_TRACING_BIT_EXT = VK_TOOL_PURPOSE_TRACING_BIT
     VK_TOOL_PURPOSE_ADDITIONAL_FEATURES_BIT_EXT = VK_TOOL_PURPOSE_ADDITIONAL_FEATURES_BIT
     VK_TOOL_PURPOSE_MODIFYING_FEATURES_BIT_EXT = VK_TOOL_PURPOSE_MODIFYING_FEATURES_BIT
+
 
 class VkFragmentShadingRateNV(Enum):
     VK_FRAGMENT_SHADING_RATE_1_INVOCATION_PER_PIXEL_NV = 0
@@ -5111,6 +5158,7 @@ class VkAccessFlagBits2(Enum):
     VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_NV = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR
     VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_NV = VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR
 
+
 class VkPipelineStageFlagBits2(Enum):
     VK_PIPELINE_STAGE_2_NONE = 0
     VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT = 1
@@ -5189,6 +5237,7 @@ class VkPipelineStageFlagBits2(Enum):
     VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_NV = VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT
     VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_NV = VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT
     VK_PIPELINE_STAGE_2_SUBPASS_SHADING_BIT_HUAWEI = VK_PIPELINE_STAGE_2_SUBPASS_SHADER_BIT_HUAWEI
+
 
 class VkProvokingVertexModeEXT(Enum):
     VK_PROVOKING_VERTEX_MODE_FIRST_VERTEX_EXT = 0
@@ -5287,6 +5336,7 @@ class VkFormatFeatureFlagBits2(Enum):
     VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT_KHR = VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT
     VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT_KHR = VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT
 
+
 class VkRenderingFlagBits(Enum):
     VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT = 1
     VK_RENDERING_SUSPENDING_BIT = 2
@@ -5296,6 +5346,7 @@ class VkRenderingFlagBits(Enum):
     VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT_KHR = VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT
     VK_RENDERING_SUSPENDING_BIT_KHR = VK_RENDERING_SUSPENDING_BIT
     VK_RENDERING_RESUMING_BIT_KHR = VK_RENDERING_RESUMING_BIT
+
 
 class VkPipelineDepthStencilStateCreateFlagBits(Enum):
     VK_PIPELINE_DEPTH_STENCIL_STATE_CREATE_RASTERIZATION_ORDER_ATTACHMENT_DEPTH_ACCESS_BIT_EXT = 1
@@ -5536,6 +5587,8 @@ class VkComponentTypeKHR(Enum):
     VK_COMPONENT_TYPE_UINT32_NV = VK_COMPONENT_TYPE_UINT32_KHR
     VK_COMPONENT_TYPE_UINT64_NV = VK_COMPONENT_TYPE_UINT64_KHR
 
+
+
 class VkCubicFilterWeightsQCOM(Enum):
     VK_CUBIC_FILTER_WEIGHTS_CATMULL_ROM_QCOM = 0
     VK_CUBIC_FILTER_WEIGHTS_ZERO_TANGENT_CARDINAL_QCOM = 1
@@ -5722,6 +5775,7 @@ class VkExternalMemoryHandleTypeFlagBits(Enum):
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_HEAP_BIT_KHR = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_HEAP_BIT
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT_KHR = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT
 
+
 class VkExternalMemoryFeatureFlagBits(Enum):
     VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT = 1
     VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT = 2
@@ -5729,6 +5783,7 @@ class VkExternalMemoryFeatureFlagBits(Enum):
     VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_KHR = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT
     VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHR = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT
     VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHR = VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT
+
 
 class VkExternalSemaphoreHandleTypeFlagBits(Enum):
     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT = 1
@@ -5745,15 +5800,18 @@ class VkExternalSemaphoreHandleTypeFlagBits(Enum):
     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT_KHR = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT
     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT
 
+
 class VkExternalSemaphoreFeatureFlagBits(Enum):
     VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT = 1
     VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT = 2
     VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR = VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT
     VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR = VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT
 
+
 class VkSemaphoreImportFlagBits(Enum):
     VK_SEMAPHORE_IMPORT_TEMPORARY_BIT = 1
     VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT
+
 
 class VkExternalFenceHandleTypeFlagBits(Enum):
     VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT = 1
@@ -5767,15 +5825,18 @@ class VkExternalFenceHandleTypeFlagBits(Enum):
     VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_KHR = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT
     VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT
 
+
 class VkExternalFenceFeatureFlagBits(Enum):
     VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT = 1
     VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT = 2
     VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR = VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT
     VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT_KHR = VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT
 
+
 class VkFenceImportFlagBits(Enum):
     VK_FENCE_IMPORT_TEMPORARY_BIT = 1
     VK_FENCE_IMPORT_TEMPORARY_BIT_KHR = VK_FENCE_IMPORT_TEMPORARY_BIT
+
 
 class VkSurfaceCounterFlagBitsEXT(Enum):
     VK_SURFACE_COUNTER_VBLANK_BIT_EXT = 1
@@ -5802,6 +5863,7 @@ class VkPeerMemoryFeatureFlagBits(Enum):
     VK_PEER_MEMORY_FEATURE_GENERIC_SRC_BIT_KHR = VK_PEER_MEMORY_FEATURE_GENERIC_SRC_BIT
     VK_PEER_MEMORY_FEATURE_GENERIC_DST_BIT_KHR = VK_PEER_MEMORY_FEATURE_GENERIC_DST_BIT
 
+
 class VkMemoryAllocateFlagBits(Enum):
     VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT = 1
     VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT = 2
@@ -5809,6 +5871,7 @@ class VkMemoryAllocateFlagBits(Enum):
     VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT
     VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT
     VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT
+
 
 class VkDeviceGroupPresentModeFlagBitsKHR(Enum):
     VK_DEVICE_GROUP_PRESENT_MODE_LOCAL_BIT_KHR = 1
@@ -5840,6 +5903,7 @@ class VkTessellationDomainOrigin(Enum):
     VK_TESSELLATION_DOMAIN_ORIGIN_UPPER_LEFT_KHR = VK_TESSELLATION_DOMAIN_ORIGIN_UPPER_LEFT
     VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT_KHR = VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT
 
+
 class VkSamplerYcbcrModelConversion(Enum):
     VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY = 0
     VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY = 1
@@ -5852,17 +5916,20 @@ class VkSamplerYcbcrModelConversion(Enum):
     VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601_KHR = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601
     VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020_KHR = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020
 
+
 class VkSamplerYcbcrRange(Enum):
     VK_SAMPLER_YCBCR_RANGE_ITU_FULL = 0
     VK_SAMPLER_YCBCR_RANGE_ITU_NARROW = 1
     VK_SAMPLER_YCBCR_RANGE_ITU_FULL_KHR = VK_SAMPLER_YCBCR_RANGE_ITU_FULL
     VK_SAMPLER_YCBCR_RANGE_ITU_NARROW_KHR = VK_SAMPLER_YCBCR_RANGE_ITU_NARROW
 
+
 class VkChromaLocation(Enum):
     VK_CHROMA_LOCATION_COSITED_EVEN = 0
     VK_CHROMA_LOCATION_MIDPOINT = 1
     VK_CHROMA_LOCATION_COSITED_EVEN_KHR = VK_CHROMA_LOCATION_COSITED_EVEN
     VK_CHROMA_LOCATION_MIDPOINT_KHR = VK_CHROMA_LOCATION_MIDPOINT
+
 
 class VkSamplerReductionMode(Enum):
     VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE = 0
@@ -5872,6 +5939,7 @@ class VkSamplerReductionMode(Enum):
     VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT = VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE
     VK_SAMPLER_REDUCTION_MODE_MIN_EXT = VK_SAMPLER_REDUCTION_MODE_MIN
     VK_SAMPLER_REDUCTION_MODE_MAX_EXT = VK_SAMPLER_REDUCTION_MODE_MAX
+
 
 class VkBlendOverlapEXT(Enum):
     VK_BLEND_OVERLAP_UNCORRELATED_EXT = 0
@@ -5904,6 +5972,7 @@ class VkShaderFloatControlsIndependence(Enum):
     VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_ALL_KHR = VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_ALL
     VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_NONE_KHR = VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_NONE
 
+
 class VkSwapchainImageUsageFlagBitsANDROID(Enum):
     VK_SWAPCHAIN_IMAGE_USAGE_SHARED_BIT_ANDROID = 1
 
@@ -5917,6 +5986,7 @@ class VkFragmentShadingRateCombinerOpKHR(Enum):
 class VkSubmitFlagBits(Enum):
     VK_SUBMIT_PROTECTED_BIT = 1
     VK_SUBMIT_PROTECTED_BIT_KHR = VK_SUBMIT_PROTECTED_BIT
+
 
 class VkGraphicsPipelineLibraryFlagBitsEXT(Enum):
     VK_GRAPHICS_PIPELINE_LIBRARY_VERTEX_INPUT_INTERFACE_BIT_EXT = 1
@@ -6064,6 +6134,7 @@ class VkDriverId(Enum):
     VK_DRIVER_ID_GOOGLE_SWIFTSHADER_KHR = VK_DRIVER_ID_GOOGLE_SWIFTSHADER
     VK_DRIVER_ID_GGP_PROPRIETARY_KHR = VK_DRIVER_ID_GGP_PROPRIETARY
     VK_DRIVER_ID_BROADCOM_PROPRIETARY_KHR = VK_DRIVER_ID_BROADCOM_PROPRIETARY
+
 
 class VkShadingRatePaletteEntryNV(Enum):
     VK_SHADING_RATE_PALETTE_ENTRY_NO_INVOCATIONS_NV = 0
@@ -6274,6 +6345,184 @@ class VkVideoEncodeH265TransformBlockSizeFlagBitsKHR(Enum):
     VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_16_BIT_KHR = 4
     VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_32_BIT_KHR = 8
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class VkAccelerationStructureMotionInstanceTypeNV(Enum):
     VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_STATIC_NV = 0
     VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_MATRIX_MOTION_NV = 1
@@ -6284,6 +6533,16 @@ class VkCudaModuleNV(VulkanCData):
 
 class VkCudaFunctionNV(VulkanCData):
     __slots__ = ()
+
+
+
+
+
+
+
+
+
+
 
 VK_MAX_PHYSICAL_DEVICE_NAME_SIZE = 256
 
@@ -6350,6 +6609,89 @@ VK_MAX_GLOBAL_PRIORITY_SIZE_EXT = VK_MAX_GLOBAL_PRIORITY_SIZE_KHR
 VK_MAX_SHADER_MODULE_IDENTIFIER_SIZE_EXT = 32
 
 VK_SHADER_INDEX_UNUSED_AMDX = 0xFFFFFFFF
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 VK_KHR_SURFACE_SPEC_VERSION = 25
 
@@ -8624,13 +8966,71 @@ __all__ = (
     "StdVideoH264SliceType",
     "StdVideoH264PictureType",
     "StdVideoH264NonVclNaluType",
+    "StdVideoH264SpsVuiFlags",
+    "StdVideoH264HrdParameters",
+    "StdVideoH264SequenceParameterSetVui",
+    "StdVideoH264SpsFlags",
+    "StdVideoH264ScalingLists",
+    "StdVideoH264SequenceParameterSet",
+    "StdVideoH264PpsFlags",
+    "StdVideoH264PictureParameterSet",
     "StdVideoDecodeH264FieldOrderCount",
+    "StdVideoDecodeH264PictureInfoFlags",
+    "StdVideoDecodeH264PictureInfo",
+    "StdVideoDecodeH264ReferenceInfoFlags",
+    "StdVideoDecodeH264ReferenceInfo",
+    "StdVideoEncodeH264WeightTableFlags",
+    "StdVideoEncodeH264WeightTable",
+    "StdVideoEncodeH264SliceHeaderFlags",
+    "StdVideoEncodeH264PictureInfoFlags",
+    "StdVideoEncodeH264ReferenceInfoFlags",
+    "StdVideoEncodeH264ReferenceListsInfoFlags",
+    "StdVideoEncodeH264RefListModEntry",
+    "StdVideoEncodeH264RefPicMarkingEntry",
+    "StdVideoEncodeH264ReferenceListsInfo",
+    "StdVideoEncodeH264PictureInfo",
+    "StdVideoEncodeH264ReferenceInfo",
+    "StdVideoEncodeH264SliceHeader",
     "StdVideoH265ChromaFormatIdc",
     "StdVideoH265ProfileIdc",
     "StdVideoH265LevelIdc",
     "StdVideoH265SliceType",
     "StdVideoH265PictureType",
     "StdVideoH265AspectRatioIdc",
+    "StdVideoH265ProfileTierLevelFlags",
+    "StdVideoH265ProfileTierLevel",
+    "StdVideoH265DecPicBufMgr",
+    "StdVideoH265SubLayerHrdParameters",
+    "StdVideoH265HrdFlags",
+    "StdVideoH265HrdParameters",
+    "StdVideoH265VpsFlags",
+    "StdVideoH265VideoParameterSet",
+    "StdVideoH265ScalingLists",
+    "StdVideoH265ShortTermRefPicSetFlags",
+    "StdVideoH265ShortTermRefPicSet",
+    "StdVideoH265LongTermRefPicsSps",
+    "StdVideoH265SpsVuiFlags",
+    "StdVideoH265SequenceParameterSetVui",
+    "StdVideoH265PredictorPaletteEntries",
+    "StdVideoH265SpsFlags",
+    "StdVideoH265SequenceParameterSet",
+    "StdVideoH265PpsFlags",
+    "StdVideoH265PictureParameterSet",
+    "StdVideoDecodeH265PictureInfoFlags",
+    "StdVideoDecodeH265PictureInfo",
+    "StdVideoDecodeH265ReferenceInfoFlags",
+    "StdVideoDecodeH265ReferenceInfo",
+    "StdVideoEncodeH265WeightTableFlags",
+    "StdVideoEncodeH265WeightTable",
+    "StdVideoEncodeH265LongTermRefPics",
+    "StdVideoEncodeH265SliceSegmentHeaderFlags",
+    "StdVideoEncodeH265SliceSegmentHeader",
+    "StdVideoEncodeH265ReferenceListsInfoFlags",
+    "StdVideoEncodeH265ReferenceListsInfo",
+    "StdVideoEncodeH265PictureInfoFlags",
+    "StdVideoEncodeH265PictureInfo",
+    "StdVideoEncodeH265ReferenceInfoFlags",
+    "StdVideoEncodeH265ReferenceInfo",
     "STD_VIDEO_H264_CPB_CNT_LIST_SIZE",
     "STD_VIDEO_H264_SCALING_LIST_4X4_NUM_LISTS",
     "STD_VIDEO_H264_SCALING_LIST_4X4_NUM_ELEMENTS",
@@ -8758,26 +9158,37 @@ __all__ = (
     "VkIndirectCommandsLayoutUsageFlagsNV",
     "VkIndirectStateFlagsNV",
     "VkGeometryFlagsKHR",
+    "VkGeometryFlagsNV",
     "VkGeometryInstanceFlagsKHR",
+    "VkGeometryInstanceFlagsNV",
     "VkBuildAccelerationStructureFlagsKHR",
+    "VkBuildAccelerationStructureFlagsNV",
     "VkPrivateDataSlotCreateFlags",
+    "VkPrivateDataSlotCreateFlagsEXT",
     "VkAccelerationStructureCreateFlagsKHR",
     "VkDescriptorUpdateTemplateCreateFlags",
+    "VkDescriptorUpdateTemplateCreateFlagsKHR",
     "VkPipelineCreationFeedbackFlags",
+    "VkPipelineCreationFeedbackFlagsEXT",
     "VkPerformanceCounterDescriptionFlagsKHR",
     "VkAcquireProfilingLockFlagsKHR",
     "VkSemaphoreWaitFlags",
+    "VkSemaphoreWaitFlagsKHR",
     "VkPipelineCompilerControlFlagsAMD",
     "VkShaderCorePropertiesFlagsAMD",
     "VkDeviceDiagnosticsConfigFlagsNV",
     "VkRefreshObjectFlagsKHR",
     "VkAccessFlags2",
+    "VkAccessFlags2KHR",
     "VkPipelineStageFlags2",
+    "VkPipelineStageFlags2KHR",
     "VkAccelerationStructureMotionInfoFlagsNV",
     "VkAccelerationStructureMotionInstanceFlagsNV",
     "VkFormatFeatureFlags2",
+    "VkFormatFeatureFlags2KHR",
     "VkRenderingFlags",
     "VkMemoryDecompressionMethodFlagsNV",
+    "VkRenderingFlagsKHR",
     "VkBuildMicromapFlagsEXT",
     "VkMicromapCreateFlagsEXT",
     "VkDirectDriverLoadingFlagsLUNARG",
@@ -8804,20 +9215,31 @@ __all__ = (
     "VkHeadlessSurfaceCreateFlagsEXT",
     "VkScreenSurfaceCreateFlagsQNX",
     "VkPeerMemoryFeatureFlags",
+    "VkPeerMemoryFeatureFlagsKHR",
     "VkMemoryAllocateFlags",
+    "VkMemoryAllocateFlagsKHR",
     "VkDeviceGroupPresentModeFlagsKHR",
     "VkDebugReportFlagsEXT",
     "VkCommandPoolTrimFlags",
+    "VkCommandPoolTrimFlagsKHR",
     "VkExternalMemoryHandleTypeFlagsNV",
     "VkExternalMemoryFeatureFlagsNV",
     "VkExternalMemoryHandleTypeFlags",
+    "VkExternalMemoryHandleTypeFlagsKHR",
     "VkExternalMemoryFeatureFlags",
+    "VkExternalMemoryFeatureFlagsKHR",
     "VkExternalSemaphoreHandleTypeFlags",
+    "VkExternalSemaphoreHandleTypeFlagsKHR",
     "VkExternalSemaphoreFeatureFlags",
+    "VkExternalSemaphoreFeatureFlagsKHR",
     "VkSemaphoreImportFlags",
+    "VkSemaphoreImportFlagsKHR",
     "VkExternalFenceHandleTypeFlags",
+    "VkExternalFenceHandleTypeFlagsKHR",
     "VkExternalFenceFeatureFlags",
+    "VkExternalFenceFeatureFlagsKHR",
     "VkFenceImportFlags",
+    "VkFenceImportFlagsKHR",
     "VkSurfaceCounterFlagsEXT",
     "VkPipelineViewportSwizzleStateCreateFlagsNV",
     "VkPipelineDiscardRectangleStateCreateFlagsEXT",
@@ -8832,13 +9254,17 @@ __all__ = (
     "VkDeviceMemoryReportFlagsEXT",
     "VkPipelineRasterizationConservativeStateCreateFlagsEXT",
     "VkDescriptorBindingFlags",
+    "VkDescriptorBindingFlagsEXT",
     "VkConditionalRenderingFlagsEXT",
     "VkResolveModeFlags",
+    "VkResolveModeFlagsKHR",
     "VkPipelineRasterizationStateStreamCreateFlagsEXT",
     "VkPipelineRasterizationDepthClipStateCreateFlagsEXT",
     "VkSwapchainImageUsageFlagsANDROID",
     "VkToolPurposeFlags",
+    "VkToolPurposeFlagsEXT",
     "VkSubmitFlags",
+    "VkSubmitFlagsKHR",
     "VkImageFormatConstraintsFlagsFUCHSIA",
     "VkHostImageCopyFlagsEXT",
     "VkImageConstraintsInfoFlagsFUCHSIA",
@@ -8911,7 +9337,9 @@ __all__ = (
     "VkPipelineCache",
     "VkIndirectCommandsLayoutNV",
     "VkDescriptorUpdateTemplate",
+    "VkDescriptorUpdateTemplateKHR",
     "VkSamplerYcbcrConversion",
+    "VkSamplerYcbcrConversionKHR",
     "VkValidationCacheEXT",
     "VkAccelerationStructureKHR",
     "VkAccelerationStructureNV",
@@ -8919,6 +9347,7 @@ __all__ = (
     "VkBufferCollectionFUCHSIA",
     "VkDeferredOperationKHR",
     "VkPrivateDataSlot",
+    "VkPrivateDataSlotEXT",
     "VkCuModuleNVX",
     "VkCuFunctionNVX",
     "VkOpticalFlowSessionNV",
@@ -9018,31 +9447,46 @@ __all__ = (
     "VkIndirectCommandsTokenTypeNV",
     "VkIndirectStateFlagBitsNV",
     "VkPrivateDataSlotCreateFlagBits",
+    "VkPrivateDataSlotCreateFlagBitsEXT",
     "VkDescriptorUpdateTemplateType",
+    "VkDescriptorUpdateTemplateTypeKHR",
     "VkViewportCoordinateSwizzleNV",
     "VkDiscardRectangleModeEXT",
     "VkSubpassDescriptionFlagBits",
     "VkPointClippingBehavior",
+    "VkPointClippingBehaviorKHR",
     "VkCoverageModulationModeNV",
     "VkCoverageReductionModeNV",
     "VkValidationCacheHeaderVersionEXT",
     "VkShaderInfoTypeAMD",
     "VkQueueGlobalPriorityKHR",
+    "VkQueueGlobalPriorityEXT",
     "VkTimeDomainKHR",
+    "VkTimeDomainEXT",
     "VkConservativeRasterizationModeEXT",
     "VkResolveModeFlagBits",
+    "VkResolveModeFlagBitsKHR",
     "VkDescriptorBindingFlagBits",
+    "VkDescriptorBindingFlagBitsEXT",
     "VkConditionalRenderingFlagBitsEXT",
     "VkSemaphoreType",
+    "VkSemaphoreTypeKHR",
     "VkGeometryFlagBitsKHR",
+    "VkGeometryFlagBitsNV",
     "VkGeometryInstanceFlagBitsKHR",
+    "VkGeometryInstanceFlagBitsNV",
     "VkBuildAccelerationStructureFlagBitsKHR",
+    "VkBuildAccelerationStructureFlagBitsNV",
     "VkAccelerationStructureCreateFlagBitsKHR",
     "VkBuildAccelerationStructureModeKHR",
     "VkCopyAccelerationStructureModeKHR",
+    "VkCopyAccelerationStructureModeNV",
     "VkAccelerationStructureTypeKHR",
+    "VkAccelerationStructureTypeNV",
     "VkGeometryTypeKHR",
+    "VkGeometryTypeNV",
     "VkRayTracingShaderGroupTypeKHR",
+    "VkRayTracingShaderGroupTypeNV",
     "VkAccelerationStructureMemoryRequirementsTypeNV",
     "VkAccelerationStructureBuildTypeKHR",
     "VkAccelerationStructureCompatibilityKHR",
@@ -9050,12 +9494,14 @@ __all__ = (
     "VkMemoryOverallocationBehaviorAMD",
     "VkDeviceDiagnosticsConfigFlagBitsNV",
     "VkPipelineCreationFeedbackFlagBits",
+    "VkPipelineCreationFeedbackFlagBitsEXT",
     "VkPerformanceCounterScopeKHR",
     "VkPerformanceCounterUnitKHR",
     "VkPerformanceCounterStorageKHR",
     "VkPerformanceCounterDescriptionFlagBitsKHR",
     "VkAcquireProfilingLockFlagBitsKHR",
     "VkSemaphoreWaitFlagBits",
+    "VkSemaphoreWaitFlagBitsKHR",
     "VkPerformanceConfigurationTypeINTEL",
     "VkQueryPoolSamplingModeINTEL",
     "VkPerformanceOverrideTypeINTEL",
@@ -9073,18 +9519,23 @@ __all__ = (
     "VkSciSyncClientTypeNV",
     "VkSciSyncPrimitiveTypeNV",
     "VkToolPurposeFlagBits",
+    "VkToolPurposeFlagBitsEXT",
     "VkFragmentShadingRateNV",
     "VkFragmentShadingRateTypeNV",
     "VkSubpassMergeStatusEXT",
     "VkAccessFlagBits2",
+    "VkAccessFlagBits2KHR",
     "VkPipelineStageFlagBits2",
+    "VkPipelineStageFlagBits2KHR",
     "VkProvokingVertexModeEXT",
     "VkPipelineCacheValidationVersion",
     "VkImageFormatConstraintsFlagBitsFUCHSIA",
     "VkHostImageCopyFlagBitsEXT",
     "VkImageConstraintsInfoFlagBitsFUCHSIA",
     "VkFormatFeatureFlagBits2",
+    "VkFormatFeatureFlagBits2KHR",
     "VkRenderingFlagBits",
+    "VkRenderingFlagBitsKHR",
     "VkPipelineDepthStencilStateCreateFlagBits",
     "VkPipelineColorBlendStateCreateFlagBits",
     "VkImageCompressionFlagBitsEXT",
@@ -9113,6 +9564,8 @@ __all__ = (
     "VkShaderCodeTypeEXT",
     "VkScopeKHR",
     "VkComponentTypeKHR",
+    "VkScopeNV",
+    "VkComponentTypeNV",
     "VkCubicFilterWeightsQCOM",
     "VkBlockMatchWindowCompareModeQCOM",
     "VkLayeredDriverUnderlyingApiMSFT",
@@ -9131,35 +9584,52 @@ __all__ = (
     "VkValidationFeatureEnableEXT",
     "VkValidationFeatureDisableEXT",
     "VkExternalMemoryHandleTypeFlagBits",
+    "VkExternalMemoryHandleTypeFlagBitsKHR",
     "VkExternalMemoryFeatureFlagBits",
+    "VkExternalMemoryFeatureFlagBitsKHR",
     "VkExternalSemaphoreHandleTypeFlagBits",
+    "VkExternalSemaphoreHandleTypeFlagBitsKHR",
     "VkExternalSemaphoreFeatureFlagBits",
+    "VkExternalSemaphoreFeatureFlagBitsKHR",
     "VkSemaphoreImportFlagBits",
+    "VkSemaphoreImportFlagBitsKHR",
     "VkExternalFenceHandleTypeFlagBits",
+    "VkExternalFenceHandleTypeFlagBitsKHR",
     "VkExternalFenceFeatureFlagBits",
+    "VkExternalFenceFeatureFlagBitsKHR",
     "VkFenceImportFlagBits",
+    "VkFenceImportFlagBitsKHR",
     "VkSurfaceCounterFlagBitsEXT",
     "VkDisplayPowerStateEXT",
     "VkDeviceEventTypeEXT",
     "VkDisplayEventTypeEXT",
     "VkPeerMemoryFeatureFlagBits",
+    "VkPeerMemoryFeatureFlagBitsKHR",
     "VkMemoryAllocateFlagBits",
+    "VkMemoryAllocateFlagBitsKHR",
     "VkDeviceGroupPresentModeFlagBitsKHR",
     "VkSwapchainCreateFlagBitsKHR",
     "VkSubgroupFeatureFlagBits",
     "VkTessellationDomainOrigin",
+    "VkTessellationDomainOriginKHR",
     "VkSamplerYcbcrModelConversion",
+    "VkSamplerYcbcrModelConversionKHR",
     "VkSamplerYcbcrRange",
+    "VkSamplerYcbcrRangeKHR",
     "VkChromaLocation",
+    "VkChromaLocationKHR",
     "VkSamplerReductionMode",
+    "VkSamplerReductionModeEXT",
     "VkBlendOverlapEXT",
     "VkDebugUtilsMessageSeverityFlagBitsEXT",
     "VkDebugUtilsMessageTypeFlagBitsEXT",
     "VkFullScreenExclusiveEXT",
     "VkShaderFloatControlsIndependence",
+    "VkShaderFloatControlsIndependenceKHR",
     "VkSwapchainImageUsageFlagBitsANDROID",
     "VkFragmentShadingRateCombinerOpKHR",
     "VkSubmitFlagBits",
+    "VkSubmitFlagBitsKHR",
     "VkGraphicsPipelineLibraryFlagBitsEXT",
     "VkOpticalFlowGridSizeFlagBitsNV",
     "VkOpticalFlowUsageFlagBitsNV",
@@ -9176,6 +9646,7 @@ __all__ = (
     "VkPhysicalDeviceSchedulingControlsFlagBitsARM",
     "VkVendorId",
     "VkDriverId",
+    "VkDriverIdKHR",
     "VkShadingRatePaletteEntryNV",
     "VkCoarseSampleOrderTypeNV",
     "VkPipelineExecutableStatisticFormatKHR",
@@ -9203,9 +9674,1265 @@ __all__ = (
     "VkVideoEncodeH265RateControlFlagBitsKHR",
     "VkVideoEncodeH265CtbSizeFlagBitsKHR",
     "VkVideoEncodeH265TransformBlockSizeFlagBitsKHR",
+    "PFN_vkInternalAllocationNotification",
+    "PFN_vkInternalFreeNotification",
+    "PFN_vkReallocationFunction",
+    "PFN_vkAllocationFunction",
+    "PFN_vkFreeFunction",
+    "PFN_vkVoidFunction",
+    "PFN_vkDebugReportCallbackEXT",
+    "PFN_vkDebugUtilsMessengerCallbackEXT",
+    "PFN_vkFaultCallbackFunction",
+    "PFN_vkDeviceMemoryReportCallbackEXT",
+    "PFN_vkGetInstanceProcAddrLUNARG",
+    "VkBaseOutStructure",
+    "VkBaseInStructure",
+    "VkOffset2D",
+    "VkOffset3D",
+    "VkExtent2D",
+    "VkExtent3D",
+    "VkViewport",
+    "VkRect2D",
+    "VkClearRect",
+    "VkComponentMapping",
+    "VkPhysicalDeviceProperties",
+    "VkExtensionProperties",
+    "VkLayerProperties",
+    "VkApplicationInfo",
+    "VkAllocationCallbacks",
+    "VkDeviceQueueCreateInfo",
+    "VkDeviceCreateInfo",
+    "VkInstanceCreateInfo",
+    "VkQueueFamilyProperties",
+    "VkPhysicalDeviceMemoryProperties",
+    "VkMemoryAllocateInfo",
+    "VkMemoryRequirements",
+    "VkSparseImageFormatProperties",
+    "VkSparseImageMemoryRequirements",
+    "VkMemoryType",
+    "VkMemoryHeap",
+    "VkMappedMemoryRange",
+    "VkFormatProperties",
+    "VkImageFormatProperties",
+    "VkDescriptorBufferInfo",
+    "VkDescriptorImageInfo",
+    "VkWriteDescriptorSet",
+    "VkCopyDescriptorSet",
+    "VkBufferUsageFlags2CreateInfoKHR",
+    "VkBufferCreateInfo",
+    "VkBufferViewCreateInfo",
+    "VkImageSubresource",
+    "VkImageSubresourceLayers",
+    "VkImageSubresourceRange",
+    "VkMemoryBarrier",
+    "VkBufferMemoryBarrier",
+    "VkImageMemoryBarrier",
+    "VkImageCreateInfo",
+    "VkSubresourceLayout",
+    "VkImageViewCreateInfo",
+    "VkBufferCopy",
+    "VkSparseMemoryBind",
+    "VkSparseImageMemoryBind",
+    "VkSparseBufferMemoryBindInfo",
+    "VkSparseImageOpaqueMemoryBindInfo",
+    "VkSparseImageMemoryBindInfo",
+    "VkBindSparseInfo",
+    "VkImageCopy",
+    "VkImageBlit",
+    "VkBufferImageCopy",
+    "VkCopyMemoryIndirectCommandNV",
+    "VkCopyMemoryToImageIndirectCommandNV",
+    "VkImageResolve",
+    "VkShaderModuleCreateInfo",
+    "VkDescriptorSetLayoutBinding",
+    "VkDescriptorSetLayoutCreateInfo",
+    "VkDescriptorPoolSize",
+    "VkDescriptorPoolCreateInfo",
+    "VkDescriptorSetAllocateInfo",
+    "VkSpecializationMapEntry",
+    "VkSpecializationInfo",
+    "VkPipelineShaderStageCreateInfo",
+    "VkComputePipelineCreateInfo",
+    "VkComputePipelineIndirectBufferInfoNV",
+    "VkPipelineCreateFlags2CreateInfoKHR",
+    "VkVertexInputBindingDescription",
+    "VkVertexInputAttributeDescription",
+    "VkPipelineVertexInputStateCreateInfo",
+    "VkPipelineInputAssemblyStateCreateInfo",
+    "VkPipelineTessellationStateCreateInfo",
+    "VkPipelineViewportStateCreateInfo",
+    "VkPipelineRasterizationStateCreateInfo",
+    "VkPipelineMultisampleStateCreateInfo",
+    "VkPipelineColorBlendAttachmentState",
+    "VkPipelineColorBlendStateCreateInfo",
+    "VkPipelineDynamicStateCreateInfo",
+    "VkStencilOpState",
+    "VkPipelineDepthStencilStateCreateInfo",
+    "VkGraphicsPipelineCreateInfo",
+    "VkPipelineCacheCreateInfo",
+    "VkPipelineCacheHeaderVersionOne",
+    "VkPipelineCacheStageValidationIndexEntry",
+    "VkPipelineCacheSafetyCriticalIndexEntry",
+    "VkPipelineCacheHeaderVersionSafetyCriticalOne",
+    "VkPushConstantRange",
+    "VkPipelineLayoutCreateInfo",
+    "VkSamplerCreateInfo",
+    "VkCommandPoolCreateInfo",
+    "VkCommandBufferAllocateInfo",
+    "VkCommandBufferInheritanceInfo",
+    "VkCommandBufferBeginInfo",
+    "VkRenderPassBeginInfo",
+    "VkClearColorValue",
+    "VkClearDepthStencilValue",
+    "VkClearValue",
+    "VkClearAttachment",
+    "VkAttachmentDescription",
+    "VkAttachmentReference",
+    "VkSubpassDescription",
+    "VkSubpassDependency",
+    "VkRenderPassCreateInfo",
+    "VkEventCreateInfo",
+    "VkFenceCreateInfo",
+    "VkPhysicalDeviceFeatures",
+    "VkPhysicalDeviceSparseProperties",
+    "VkPhysicalDeviceLimits",
+    "VkSemaphoreCreateInfo",
+    "VkQueryPoolCreateInfo",
+    "VkFramebufferCreateInfo",
+    "VkDrawIndirectCommand",
+    "VkDrawIndexedIndirectCommand",
+    "VkDispatchIndirectCommand",
+    "VkMultiDrawInfoEXT",
+    "VkMultiDrawIndexedInfoEXT",
+    "VkSubmitInfo",
+    "VkDisplayPropertiesKHR",
+    "VkDisplayPlanePropertiesKHR",
+    "VkDisplayModeParametersKHR",
+    "VkDisplayModePropertiesKHR",
+    "VkDisplayModeCreateInfoKHR",
+    "VkDisplayPlaneCapabilitiesKHR",
+    "VkDisplaySurfaceCreateInfoKHR",
+    "VkDisplayPresentInfoKHR",
+    "VkSurfaceCapabilitiesKHR",
+    "VkAndroidSurfaceCreateInfoKHR",
+    "VkViSurfaceCreateInfoNN",
+    "VkWaylandSurfaceCreateInfoKHR",
+    "VkWin32SurfaceCreateInfoKHR",
+    "VkXlibSurfaceCreateInfoKHR",
+    "VkXcbSurfaceCreateInfoKHR",
+    "VkDirectFBSurfaceCreateInfoEXT",
+    "VkImagePipeSurfaceCreateInfoFUCHSIA",
+    "VkStreamDescriptorSurfaceCreateInfoGGP",
+    "VkScreenSurfaceCreateInfoQNX",
+    "VkSurfaceFormatKHR",
+    "VkSwapchainCreateInfoKHR",
+    "VkPresentInfoKHR",
+    "VkDebugReportCallbackCreateInfoEXT",
+    "VkValidationFlagsEXT",
+    "VkValidationFeaturesEXT",
+    "VkLayerSettingsCreateInfoEXT",
+    "VkLayerSettingEXT",
+    "VkApplicationParametersEXT",
+    "VkPipelineRasterizationStateRasterizationOrderAMD",
+    "VkDebugMarkerObjectNameInfoEXT",
+    "VkDebugMarkerObjectTagInfoEXT",
+    "VkDebugMarkerMarkerInfoEXT",
+    "VkDedicatedAllocationImageCreateInfoNV",
+    "VkDedicatedAllocationBufferCreateInfoNV",
+    "VkDedicatedAllocationMemoryAllocateInfoNV",
+    "VkExternalImageFormatPropertiesNV",
+    "VkExternalMemoryImageCreateInfoNV",
+    "VkExportMemoryAllocateInfoNV",
+    "VkImportMemoryWin32HandleInfoNV",
+    "VkExportMemoryWin32HandleInfoNV",
+    "VkExportMemorySciBufInfoNV",
+    "VkImportMemorySciBufInfoNV",
+    "VkMemoryGetSciBufInfoNV",
+    "VkMemorySciBufPropertiesNV",
+    "VkPhysicalDeviceExternalMemorySciBufFeaturesNV",
+    "VkPhysicalDeviceExternalSciBufFeaturesNV",
+    "VkWin32KeyedMutexAcquireReleaseInfoNV",
+    "VkPhysicalDeviceDeviceGeneratedCommandsFeaturesNV",
+    "VkPhysicalDeviceDeviceGeneratedCommandsComputeFeaturesNV",
+    "VkDevicePrivateDataCreateInfo",
+    "VkDevicePrivateDataCreateInfoEXT",
+    "VkPrivateDataSlotCreateInfo",
+    "VkPrivateDataSlotCreateInfoEXT",
+    "VkPhysicalDevicePrivateDataFeatures",
+    "VkPhysicalDevicePrivateDataFeaturesEXT",
+    "VkPhysicalDeviceDeviceGeneratedCommandsPropertiesNV",
+    "VkPhysicalDeviceMultiDrawPropertiesEXT",
+    "VkGraphicsShaderGroupCreateInfoNV",
+    "VkGraphicsPipelineShaderGroupsCreateInfoNV",
+    "VkBindShaderGroupIndirectCommandNV",
+    "VkBindIndexBufferIndirectCommandNV",
+    "VkBindVertexBufferIndirectCommandNV",
+    "VkSetStateFlagsIndirectCommandNV",
+    "VkIndirectCommandsStreamNV",
+    "VkIndirectCommandsLayoutTokenNV",
+    "VkIndirectCommandsLayoutCreateInfoNV",
+    "VkGeneratedCommandsInfoNV",
+    "VkGeneratedCommandsMemoryRequirementsInfoNV",
+    "VkPipelineIndirectDeviceAddressInfoNV",
+    "VkBindPipelineIndirectCommandNV",
+    "VkPhysicalDeviceFeatures2",
+    "VkPhysicalDeviceFeatures2KHR",
+    "VkPhysicalDeviceProperties2",
+    "VkPhysicalDeviceProperties2KHR",
+    "VkFormatProperties2",
+    "VkFormatProperties2KHR",
+    "VkImageFormatProperties2",
+    "VkImageFormatProperties2KHR",
+    "VkPhysicalDeviceImageFormatInfo2",
+    "VkPhysicalDeviceImageFormatInfo2KHR",
+    "VkQueueFamilyProperties2",
+    "VkQueueFamilyProperties2KHR",
+    "VkPhysicalDeviceMemoryProperties2",
+    "VkPhysicalDeviceMemoryProperties2KHR",
+    "VkSparseImageFormatProperties2",
+    "VkSparseImageFormatProperties2KHR",
+    "VkPhysicalDeviceSparseImageFormatInfo2",
+    "VkPhysicalDeviceSparseImageFormatInfo2KHR",
+    "VkPhysicalDevicePushDescriptorPropertiesKHR",
+    "VkConformanceVersion",
+    "VkConformanceVersionKHR",
+    "VkPhysicalDeviceDriverProperties",
+    "VkPhysicalDeviceDriverPropertiesKHR",
+    "VkPresentRegionsKHR",
+    "VkPresentRegionKHR",
+    "VkRectLayerKHR",
+    "VkPhysicalDeviceVariablePointersFeatures",
+    "VkPhysicalDeviceVariablePointersFeaturesKHR",
+    "VkPhysicalDeviceVariablePointerFeaturesKHR",
+    "VkPhysicalDeviceVariablePointerFeatures",
+    "VkExternalMemoryProperties",
+    "VkExternalMemoryPropertiesKHR",
+    "VkPhysicalDeviceExternalImageFormatInfo",
+    "VkPhysicalDeviceExternalImageFormatInfoKHR",
+    "VkExternalImageFormatProperties",
+    "VkExternalImageFormatPropertiesKHR",
+    "VkPhysicalDeviceExternalBufferInfo",
+    "VkPhysicalDeviceExternalBufferInfoKHR",
+    "VkExternalBufferProperties",
+    "VkExternalBufferPropertiesKHR",
+    "VkPhysicalDeviceIDProperties",
+    "VkPhysicalDeviceIDPropertiesKHR",
+    "VkExternalMemoryImageCreateInfo",
+    "VkExternalMemoryImageCreateInfoKHR",
+    "VkExternalMemoryBufferCreateInfo",
+    "VkExternalMemoryBufferCreateInfoKHR",
+    "VkExportMemoryAllocateInfo",
+    "VkExportMemoryAllocateInfoKHR",
+    "VkImportMemoryWin32HandleInfoKHR",
+    "VkExportMemoryWin32HandleInfoKHR",
+    "VkImportMemoryZirconHandleInfoFUCHSIA",
+    "VkMemoryZirconHandlePropertiesFUCHSIA",
+    "VkMemoryGetZirconHandleInfoFUCHSIA",
+    "VkMemoryWin32HandlePropertiesKHR",
+    "VkMemoryGetWin32HandleInfoKHR",
+    "VkImportMemoryFdInfoKHR",
+    "VkMemoryFdPropertiesKHR",
+    "VkMemoryGetFdInfoKHR",
+    "VkWin32KeyedMutexAcquireReleaseInfoKHR",
+    "VkPhysicalDeviceExternalSemaphoreInfo",
+    "VkPhysicalDeviceExternalSemaphoreInfoKHR",
+    "VkExternalSemaphoreProperties",
+    "VkExternalSemaphorePropertiesKHR",
+    "VkExportSemaphoreCreateInfo",
+    "VkExportSemaphoreCreateInfoKHR",
+    "VkImportSemaphoreWin32HandleInfoKHR",
+    "VkExportSemaphoreWin32HandleInfoKHR",
+    "VkD3D12FenceSubmitInfoKHR",
+    "VkSemaphoreGetWin32HandleInfoKHR",
+    "VkImportSemaphoreFdInfoKHR",
+    "VkSemaphoreGetFdInfoKHR",
+    "VkImportSemaphoreZirconHandleInfoFUCHSIA",
+    "VkSemaphoreGetZirconHandleInfoFUCHSIA",
+    "VkPhysicalDeviceExternalFenceInfo",
+    "VkPhysicalDeviceExternalFenceInfoKHR",
+    "VkExternalFenceProperties",
+    "VkExternalFencePropertiesKHR",
+    "VkExportFenceCreateInfo",
+    "VkExportFenceCreateInfoKHR",
+    "VkImportFenceWin32HandleInfoKHR",
+    "VkExportFenceWin32HandleInfoKHR",
+    "VkFenceGetWin32HandleInfoKHR",
+    "VkImportFenceFdInfoKHR",
+    "VkFenceGetFdInfoKHR",
+    "VkExportFenceSciSyncInfoNV",
+    "VkImportFenceSciSyncInfoNV",
+    "VkFenceGetSciSyncInfoNV",
+    "VkExportSemaphoreSciSyncInfoNV",
+    "VkImportSemaphoreSciSyncInfoNV",
+    "VkSemaphoreGetSciSyncInfoNV",
+    "VkSciSyncAttributesInfoNV",
+    "VkPhysicalDeviceExternalSciSyncFeaturesNV",
+    "VkPhysicalDeviceExternalSciSync2FeaturesNV",
+    "VkSemaphoreSciSyncPoolCreateInfoNV",
+    "VkSemaphoreSciSyncCreateInfoNV",
+    "VkDeviceSemaphoreSciSyncPoolReservationCreateInfoNV",
+    "VkPhysicalDeviceMultiviewFeatures",
+    "VkPhysicalDeviceMultiviewFeaturesKHR",
+    "VkPhysicalDeviceMultiviewProperties",
+    "VkPhysicalDeviceMultiviewPropertiesKHR",
+    "VkRenderPassMultiviewCreateInfo",
+    "VkRenderPassMultiviewCreateInfoKHR",
+    "VkSurfaceCapabilities2EXT",
+    "VkDisplayPowerInfoEXT",
+    "VkDeviceEventInfoEXT",
+    "VkDisplayEventInfoEXT",
+    "VkSwapchainCounterCreateInfoEXT",
+    "VkPhysicalDeviceGroupProperties",
+    "VkPhysicalDeviceGroupPropertiesKHR",
+    "VkMemoryAllocateFlagsInfo",
+    "VkMemoryAllocateFlagsInfoKHR",
+    "VkBindBufferMemoryInfo",
+    "VkBindBufferMemoryInfoKHR",
+    "VkBindBufferMemoryDeviceGroupInfo",
+    "VkBindBufferMemoryDeviceGroupInfoKHR",
+    "VkBindImageMemoryInfo",
+    "VkBindImageMemoryInfoKHR",
+    "VkBindImageMemoryDeviceGroupInfo",
+    "VkBindImageMemoryDeviceGroupInfoKHR",
+    "VkDeviceGroupRenderPassBeginInfo",
+    "VkDeviceGroupRenderPassBeginInfoKHR",
+    "VkDeviceGroupCommandBufferBeginInfo",
+    "VkDeviceGroupCommandBufferBeginInfoKHR",
+    "VkDeviceGroupSubmitInfo",
+    "VkDeviceGroupSubmitInfoKHR",
+    "VkDeviceGroupBindSparseInfo",
+    "VkDeviceGroupBindSparseInfoKHR",
+    "VkDeviceGroupPresentCapabilitiesKHR",
+    "VkImageSwapchainCreateInfoKHR",
+    "VkBindImageMemorySwapchainInfoKHR",
+    "VkAcquireNextImageInfoKHR",
+    "VkDeviceGroupPresentInfoKHR",
+    "VkDeviceGroupDeviceCreateInfo",
+    "VkDeviceGroupDeviceCreateInfoKHR",
+    "VkDeviceGroupSwapchainCreateInfoKHR",
+    "VkDescriptorUpdateTemplateEntry",
+    "VkDescriptorUpdateTemplateEntryKHR",
+    "VkDescriptorUpdateTemplateCreateInfo",
+    "VkDescriptorUpdateTemplateCreateInfoKHR",
+    "VkXYColorEXT",
+    "VkPhysicalDevicePresentIdFeaturesKHR",
+    "VkPresentIdKHR",
+    "VkPhysicalDevicePresentWaitFeaturesKHR",
+    "VkHdrMetadataEXT",
+    "VkDisplayNativeHdrSurfaceCapabilitiesAMD",
+    "VkSwapchainDisplayNativeHdrCreateInfoAMD",
+    "VkRefreshCycleDurationGOOGLE",
+    "VkPastPresentationTimingGOOGLE",
+    "VkPresentTimesInfoGOOGLE",
+    "VkPresentTimeGOOGLE",
+    "VkIOSSurfaceCreateInfoMVK",
+    "VkMacOSSurfaceCreateInfoMVK",
+    "VkMetalSurfaceCreateInfoEXT",
+    "VkViewportWScalingNV",
+    "VkPipelineViewportWScalingStateCreateInfoNV",
+    "VkViewportSwizzleNV",
+    "VkPipelineViewportSwizzleStateCreateInfoNV",
+    "VkPhysicalDeviceDiscardRectanglePropertiesEXT",
+    "VkPipelineDiscardRectangleStateCreateInfoEXT",
+    "VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX",
+    "VkInputAttachmentAspectReference",
+    "VkInputAttachmentAspectReferenceKHR",
+    "VkRenderPassInputAttachmentAspectCreateInfo",
+    "VkRenderPassInputAttachmentAspectCreateInfoKHR",
+    "VkPhysicalDeviceSurfaceInfo2KHR",
+    "VkSurfaceCapabilities2KHR",
+    "VkSurfaceFormat2KHR",
+    "VkDisplayProperties2KHR",
+    "VkDisplayPlaneProperties2KHR",
+    "VkDisplayModeProperties2KHR",
+    "VkDisplayPlaneInfo2KHR",
+    "VkDisplayPlaneCapabilities2KHR",
+    "VkSharedPresentSurfaceCapabilitiesKHR",
+    "VkPhysicalDevice16BitStorageFeatures",
+    "VkPhysicalDevice16BitStorageFeaturesKHR",
+    "VkPhysicalDeviceSubgroupProperties",
+    "VkPhysicalDeviceShaderSubgroupExtendedTypesFeatures",
+    "VkPhysicalDeviceShaderSubgroupExtendedTypesFeaturesKHR",
+    "VkBufferMemoryRequirementsInfo2",
+    "VkBufferMemoryRequirementsInfo2KHR",
+    "VkDeviceBufferMemoryRequirements",
+    "VkDeviceBufferMemoryRequirementsKHR",
+    "VkImageMemoryRequirementsInfo2",
+    "VkImageMemoryRequirementsInfo2KHR",
+    "VkImageSparseMemoryRequirementsInfo2",
+    "VkImageSparseMemoryRequirementsInfo2KHR",
+    "VkDeviceImageMemoryRequirements",
+    "VkDeviceImageMemoryRequirementsKHR",
+    "VkMemoryRequirements2",
+    "VkMemoryRequirements2KHR",
+    "VkSparseImageMemoryRequirements2",
+    "VkSparseImageMemoryRequirements2KHR",
+    "VkPhysicalDevicePointClippingProperties",
+    "VkPhysicalDevicePointClippingPropertiesKHR",
+    "VkMemoryDedicatedRequirements",
+    "VkMemoryDedicatedRequirementsKHR",
+    "VkMemoryDedicatedAllocateInfo",
+    "VkMemoryDedicatedAllocateInfoKHR",
+    "VkImageViewUsageCreateInfo",
+    "VkImageViewSlicedCreateInfoEXT",
+    "VkImageViewUsageCreateInfoKHR",
+    "VkPipelineTessellationDomainOriginStateCreateInfo",
+    "VkPipelineTessellationDomainOriginStateCreateInfoKHR",
+    "VkSamplerYcbcrConversionInfo",
+    "VkSamplerYcbcrConversionInfoKHR",
+    "VkSamplerYcbcrConversionCreateInfo",
+    "VkSamplerYcbcrConversionCreateInfoKHR",
+    "VkBindImagePlaneMemoryInfo",
+    "VkBindImagePlaneMemoryInfoKHR",
+    "VkImagePlaneMemoryRequirementsInfo",
+    "VkImagePlaneMemoryRequirementsInfoKHR",
+    "VkPhysicalDeviceSamplerYcbcrConversionFeatures",
+    "VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR",
+    "VkSamplerYcbcrConversionImageFormatProperties",
+    "VkSamplerYcbcrConversionImageFormatPropertiesKHR",
+    "VkTextureLODGatherFormatPropertiesAMD",
+    "VkConditionalRenderingBeginInfoEXT",
+    "VkProtectedSubmitInfo",
+    "VkPhysicalDeviceProtectedMemoryFeatures",
+    "VkPhysicalDeviceProtectedMemoryProperties",
+    "VkDeviceQueueInfo2",
+    "VkPipelineCoverageToColorStateCreateInfoNV",
+    "VkPhysicalDeviceSamplerFilterMinmaxProperties",
+    "VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT",
+    "VkSampleLocationEXT",
+    "VkSampleLocationsInfoEXT",
+    "VkAttachmentSampleLocationsEXT",
+    "VkSubpassSampleLocationsEXT",
+    "VkRenderPassSampleLocationsBeginInfoEXT",
+    "VkPipelineSampleLocationsStateCreateInfoEXT",
+    "VkPhysicalDeviceSampleLocationsPropertiesEXT",
+    "VkMultisamplePropertiesEXT",
+    "VkSamplerReductionModeCreateInfo",
+    "VkSamplerReductionModeCreateInfoEXT",
+    "VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT",
+    "VkPhysicalDeviceMultiDrawFeaturesEXT",
+    "VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT",
+    "VkPipelineColorBlendAdvancedStateCreateInfoEXT",
+    "VkPhysicalDeviceInlineUniformBlockFeatures",
+    "VkPhysicalDeviceInlineUniformBlockFeaturesEXT",
+    "VkPhysicalDeviceInlineUniformBlockProperties",
+    "VkPhysicalDeviceInlineUniformBlockPropertiesEXT",
+    "VkWriteDescriptorSetInlineUniformBlock",
+    "VkWriteDescriptorSetInlineUniformBlockEXT",
+    "VkDescriptorPoolInlineUniformBlockCreateInfo",
+    "VkDescriptorPoolInlineUniformBlockCreateInfoEXT",
+    "VkPipelineCoverageModulationStateCreateInfoNV",
+    "VkImageFormatListCreateInfo",
+    "VkImageFormatListCreateInfoKHR",
+    "VkValidationCacheCreateInfoEXT",
+    "VkShaderModuleValidationCacheCreateInfoEXT",
+    "VkPhysicalDeviceMaintenance3Properties",
+    "VkPhysicalDeviceMaintenance3PropertiesKHR",
+    "VkPhysicalDeviceMaintenance4Features",
+    "VkPhysicalDeviceMaintenance4FeaturesKHR",
+    "VkPhysicalDeviceMaintenance4Properties",
+    "VkPhysicalDeviceMaintenance4PropertiesKHR",
+    "VkPhysicalDeviceMaintenance5FeaturesKHR",
+    "VkPhysicalDeviceMaintenance5PropertiesKHR",
+    "VkPhysicalDeviceMaintenance6FeaturesKHR",
+    "VkPhysicalDeviceMaintenance6PropertiesKHR",
+    "VkRenderingAreaInfoKHR",
+    "VkDescriptorSetLayoutSupport",
+    "VkDescriptorSetLayoutSupportKHR",
+    "VkPhysicalDeviceShaderDrawParametersFeatures",
+    "VkPhysicalDeviceShaderDrawParameterFeatures",
+    "VkPhysicalDeviceShaderFloat16Int8Features",
+    "VkPhysicalDeviceShaderFloat16Int8FeaturesKHR",
+    "VkPhysicalDeviceFloat16Int8FeaturesKHR",
+    "VkPhysicalDeviceFloatControlsProperties",
+    "VkPhysicalDeviceFloatControlsPropertiesKHR",
+    "VkPhysicalDeviceHostQueryResetFeatures",
+    "VkPhysicalDeviceHostQueryResetFeaturesEXT",
+    "VkNativeBufferUsage2ANDROID",
+    "VkNativeBufferANDROID",
+    "VkSwapchainImageCreateInfoANDROID",
+    "VkPhysicalDevicePresentationPropertiesANDROID",
+    "VkShaderResourceUsageAMD",
+    "VkShaderStatisticsInfoAMD",
+    "VkDeviceQueueGlobalPriorityCreateInfoKHR",
+    "VkDeviceQueueGlobalPriorityCreateInfoEXT",
+    "VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR",
+    "VkPhysicalDeviceGlobalPriorityQueryFeaturesEXT",
+    "VkQueueFamilyGlobalPriorityPropertiesKHR",
+    "VkQueueFamilyGlobalPriorityPropertiesEXT",
+    "VkDebugUtilsObjectNameInfoEXT",
+    "VkDebugUtilsObjectTagInfoEXT",
+    "VkDebugUtilsLabelEXT",
+    "VkDebugUtilsMessengerCreateInfoEXT",
+    "VkDebugUtilsMessengerCallbackDataEXT",
+    "VkPhysicalDeviceDeviceMemoryReportFeaturesEXT",
+    "VkDeviceDeviceMemoryReportCreateInfoEXT",
+    "VkDeviceMemoryReportCallbackDataEXT",
+    "VkImportMemoryHostPointerInfoEXT",
+    "VkMemoryHostPointerPropertiesEXT",
+    "VkPhysicalDeviceExternalMemoryHostPropertiesEXT",
+    "VkPhysicalDeviceConservativeRasterizationPropertiesEXT",
+    "VkCalibratedTimestampInfoKHR",
+    "VkCalibratedTimestampInfoEXT",
+    "VkPhysicalDeviceShaderCorePropertiesAMD",
+    "VkPhysicalDeviceShaderCoreProperties2AMD",
+    "VkPipelineRasterizationConservativeStateCreateInfoEXT",
+    "VkPhysicalDeviceDescriptorIndexingFeatures",
+    "VkPhysicalDeviceDescriptorIndexingFeaturesEXT",
+    "VkPhysicalDeviceDescriptorIndexingProperties",
+    "VkPhysicalDeviceDescriptorIndexingPropertiesEXT",
+    "VkDescriptorSetLayoutBindingFlagsCreateInfo",
+    "VkDescriptorSetLayoutBindingFlagsCreateInfoEXT",
+    "VkDescriptorSetVariableDescriptorCountAllocateInfo",
+    "VkDescriptorSetVariableDescriptorCountAllocateInfoEXT",
+    "VkDescriptorSetVariableDescriptorCountLayoutSupport",
+    "VkDescriptorSetVariableDescriptorCountLayoutSupportEXT",
+    "VkAttachmentDescription2",
+    "VkAttachmentDescription2KHR",
+    "VkAttachmentReference2",
+    "VkAttachmentReference2KHR",
+    "VkSubpassDescription2",
+    "VkSubpassDescription2KHR",
+    "VkSubpassDependency2",
+    "VkSubpassDependency2KHR",
+    "VkRenderPassCreateInfo2",
+    "VkRenderPassCreateInfo2KHR",
+    "VkSubpassBeginInfo",
+    "VkSubpassBeginInfoKHR",
+    "VkSubpassEndInfo",
+    "VkSubpassEndInfoKHR",
+    "VkPhysicalDeviceTimelineSemaphoreFeatures",
+    "VkPhysicalDeviceTimelineSemaphoreFeaturesKHR",
+    "VkPhysicalDeviceTimelineSemaphoreProperties",
+    "VkPhysicalDeviceTimelineSemaphorePropertiesKHR",
+    "VkSemaphoreTypeCreateInfo",
+    "VkSemaphoreTypeCreateInfoKHR",
+    "VkTimelineSemaphoreSubmitInfo",
+    "VkTimelineSemaphoreSubmitInfoKHR",
+    "VkSemaphoreWaitInfo",
+    "VkSemaphoreWaitInfoKHR",
+    "VkSemaphoreSignalInfo",
+    "VkSemaphoreSignalInfoKHR",
+    "VkVertexInputBindingDivisorDescriptionKHR",
+    "VkVertexInputBindingDivisorDescriptionEXT",
+    "VkPipelineVertexInputDivisorStateCreateInfoKHR",
+    "VkPipelineVertexInputDivisorStateCreateInfoEXT",
+    "VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT",
+    "VkPhysicalDeviceVertexAttributeDivisorPropertiesKHR",
+    "VkPhysicalDevicePCIBusInfoPropertiesEXT",
+    "VkImportAndroidHardwareBufferInfoANDROID",
+    "VkAndroidHardwareBufferUsageANDROID",
+    "VkAndroidHardwareBufferPropertiesANDROID",
+    "VkMemoryGetAndroidHardwareBufferInfoANDROID",
+    "VkAndroidHardwareBufferFormatPropertiesANDROID",
+    "VkCommandBufferInheritanceConditionalRenderingInfoEXT",
+    "VkExternalFormatANDROID",
+    "VkPhysicalDevice8BitStorageFeatures",
+    "VkPhysicalDevice8BitStorageFeaturesKHR",
+    "VkPhysicalDeviceConditionalRenderingFeaturesEXT",
+    "VkPhysicalDeviceVulkanMemoryModelFeatures",
+    "VkPhysicalDeviceVulkanMemoryModelFeaturesKHR",
+    "VkPhysicalDeviceShaderAtomicInt64Features",
+    "VkPhysicalDeviceShaderAtomicInt64FeaturesKHR",
+    "VkPhysicalDeviceShaderAtomicFloatFeaturesEXT",
+    "VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT",
+    "VkPhysicalDeviceVertexAttributeDivisorFeaturesKHR",
+    "VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT",
+    "VkQueueFamilyCheckpointPropertiesNV",
+    "VkCheckpointDataNV",
+    "VkPhysicalDeviceDepthStencilResolveProperties",
+    "VkPhysicalDeviceDepthStencilResolvePropertiesKHR",
+    "VkSubpassDescriptionDepthStencilResolve",
+    "VkSubpassDescriptionDepthStencilResolveKHR",
+    "VkImageViewASTCDecodeModeEXT",
+    "VkPhysicalDeviceASTCDecodeFeaturesEXT",
+    "VkPhysicalDeviceTransformFeedbackFeaturesEXT",
+    "VkPhysicalDeviceTransformFeedbackPropertiesEXT",
+    "VkPipelineRasterizationStateStreamCreateInfoEXT",
+    "VkPhysicalDeviceRepresentativeFragmentTestFeaturesNV",
+    "VkPipelineRepresentativeFragmentTestStateCreateInfoNV",
+    "VkPhysicalDeviceExclusiveScissorFeaturesNV",
+    "VkPipelineViewportExclusiveScissorStateCreateInfoNV",
+    "VkPhysicalDeviceCornerSampledImageFeaturesNV",
+    "VkPhysicalDeviceComputeShaderDerivativesFeaturesNV",
+    "VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV",
+    "VkPhysicalDeviceShaderImageFootprintFeaturesNV",
+    "VkPhysicalDeviceDedicatedAllocationImageAliasingFeaturesNV",
+    "VkPhysicalDeviceCopyMemoryIndirectFeaturesNV",
+    "VkPhysicalDeviceCopyMemoryIndirectPropertiesNV",
+    "VkPhysicalDeviceMemoryDecompressionFeaturesNV",
+    "VkPhysicalDeviceMemoryDecompressionPropertiesNV",
+    "VkShadingRatePaletteNV",
+    "VkPipelineViewportShadingRateImageStateCreateInfoNV",
+    "VkPhysicalDeviceShadingRateImageFeaturesNV",
+    "VkPhysicalDeviceShadingRateImagePropertiesNV",
+    "VkPhysicalDeviceInvocationMaskFeaturesHUAWEI",
+    "VkCoarseSampleLocationNV",
+    "VkCoarseSampleOrderCustomNV",
+    "VkPipelineViewportCoarseSampleOrderStateCreateInfoNV",
+    "VkPhysicalDeviceMeshShaderFeaturesNV",
+    "VkPhysicalDeviceMeshShaderPropertiesNV",
+    "VkDrawMeshTasksIndirectCommandNV",
+    "VkPhysicalDeviceMeshShaderFeaturesEXT",
+    "VkPhysicalDeviceMeshShaderPropertiesEXT",
+    "VkDrawMeshTasksIndirectCommandEXT",
+    "VkRayTracingShaderGroupCreateInfoNV",
+    "VkRayTracingShaderGroupCreateInfoKHR",
+    "VkRayTracingPipelineCreateInfoNV",
+    "VkRayTracingPipelineCreateInfoKHR",
+    "VkGeometryTrianglesNV",
+    "VkGeometryAABBNV",
+    "VkGeometryDataNV",
+    "VkGeometryNV",
+    "VkAccelerationStructureInfoNV",
+    "VkAccelerationStructureCreateInfoNV",
+    "VkBindAccelerationStructureMemoryInfoNV",
+    "VkWriteDescriptorSetAccelerationStructureKHR",
+    "VkWriteDescriptorSetAccelerationStructureNV",
+    "VkAccelerationStructureMemoryRequirementsInfoNV",
+    "VkPhysicalDeviceAccelerationStructureFeaturesKHR",
+    "VkPhysicalDeviceRayTracingPipelineFeaturesKHR",
+    "VkPhysicalDeviceRayQueryFeaturesKHR",
+    "VkPhysicalDeviceAccelerationStructurePropertiesKHR",
+    "VkPhysicalDeviceRayTracingPipelinePropertiesKHR",
+    "VkPhysicalDeviceRayTracingPropertiesNV",
+    "VkStridedDeviceAddressRegionKHR",
+    "VkTraceRaysIndirectCommandKHR",
+    "VkTraceRaysIndirectCommand2KHR",
+    "VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR",
+    "VkDrmFormatModifierPropertiesListEXT",
+    "VkDrmFormatModifierPropertiesEXT",
+    "VkPhysicalDeviceImageDrmFormatModifierInfoEXT",
+    "VkImageDrmFormatModifierListCreateInfoEXT",
+    "VkImageDrmFormatModifierExplicitCreateInfoEXT",
+    "VkImageDrmFormatModifierPropertiesEXT",
+    "VkImageStencilUsageCreateInfo",
+    "VkImageStencilUsageCreateInfoEXT",
+    "VkDeviceMemoryOverallocationCreateInfoAMD",
+    "VkPhysicalDeviceFragmentDensityMapFeaturesEXT",
+    "VkPhysicalDeviceFragmentDensityMap2FeaturesEXT",
+    "VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM",
+    "VkPhysicalDeviceFragmentDensityMapPropertiesEXT",
+    "VkPhysicalDeviceFragmentDensityMap2PropertiesEXT",
+    "VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM",
+    "VkRenderPassFragmentDensityMapCreateInfoEXT",
+    "VkSubpassFragmentDensityMapOffsetEndInfoQCOM",
+    "VkPhysicalDeviceScalarBlockLayoutFeatures",
+    "VkPhysicalDeviceScalarBlockLayoutFeaturesEXT",
+    "VkSurfaceProtectedCapabilitiesKHR",
+    "VkPhysicalDeviceUniformBufferStandardLayoutFeatures",
+    "VkPhysicalDeviceUniformBufferStandardLayoutFeaturesKHR",
+    "VkPhysicalDeviceDepthClipEnableFeaturesEXT",
+    "VkPipelineRasterizationDepthClipStateCreateInfoEXT",
+    "VkPhysicalDeviceMemoryBudgetPropertiesEXT",
+    "VkPhysicalDeviceMemoryPriorityFeaturesEXT",
+    "VkMemoryPriorityAllocateInfoEXT",
+    "VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT",
+    "VkPhysicalDeviceBufferDeviceAddressFeatures",
+    "VkPhysicalDeviceBufferDeviceAddressFeaturesKHR",
+    "VkPhysicalDeviceBufferDeviceAddressFeaturesEXT",
+    "VkPhysicalDeviceBufferAddressFeaturesEXT",
+    "VkBufferDeviceAddressInfo",
+    "VkBufferDeviceAddressInfoKHR",
+    "VkBufferDeviceAddressInfoEXT",
+    "VkBufferOpaqueCaptureAddressCreateInfo",
+    "VkBufferOpaqueCaptureAddressCreateInfoKHR",
+    "VkBufferDeviceAddressCreateInfoEXT",
+    "VkPhysicalDeviceImageViewImageFormatInfoEXT",
+    "VkFilterCubicImageViewImageFormatPropertiesEXT",
+    "VkPhysicalDeviceImagelessFramebufferFeatures",
+    "VkPhysicalDeviceImagelessFramebufferFeaturesKHR",
+    "VkFramebufferAttachmentsCreateInfo",
+    "VkFramebufferAttachmentsCreateInfoKHR",
+    "VkFramebufferAttachmentImageInfo",
+    "VkFramebufferAttachmentImageInfoKHR",
+    "VkRenderPassAttachmentBeginInfo",
+    "VkRenderPassAttachmentBeginInfoKHR",
+    "VkPhysicalDeviceTextureCompressionASTCHDRFeatures",
+    "VkPhysicalDeviceTextureCompressionASTCHDRFeaturesEXT",
+    "VkPhysicalDeviceCooperativeMatrixFeaturesNV",
+    "VkPhysicalDeviceCooperativeMatrixPropertiesNV",
+    "VkCooperativeMatrixPropertiesNV",
+    "VkPhysicalDeviceYcbcrImageArraysFeaturesEXT",
+    "VkImageViewHandleInfoNVX",
+    "VkImageViewAddressPropertiesNVX",
+    "VkPresentFrameTokenGGP",
+    "VkPipelineCreationFeedback",
+    "VkPipelineCreationFeedbackEXT",
+    "VkPipelineCreationFeedbackCreateInfo",
+    "VkPipelineCreationFeedbackCreateInfoEXT",
+    "VkSurfaceFullScreenExclusiveInfoEXT",
+    "VkSurfaceFullScreenExclusiveWin32InfoEXT",
+    "VkSurfaceCapabilitiesFullScreenExclusiveEXT",
+    "VkPhysicalDevicePresentBarrierFeaturesNV",
+    "VkSurfaceCapabilitiesPresentBarrierNV",
+    "VkSwapchainPresentBarrierCreateInfoNV",
+    "VkPhysicalDevicePerformanceQueryFeaturesKHR",
+    "VkPhysicalDevicePerformanceQueryPropertiesKHR",
+    "VkPerformanceCounterKHR",
+    "VkPerformanceCounterDescriptionKHR",
+    "VkQueryPoolPerformanceCreateInfoKHR",
+    "VkPerformanceCounterResultKHR",
+    "VkAcquireProfilingLockInfoKHR",
+    "VkPerformanceQuerySubmitInfoKHR",
+    "VkPerformanceQueryReservationInfoKHR",
+    "VkHeadlessSurfaceCreateInfoEXT",
+    "VkPhysicalDeviceCoverageReductionModeFeaturesNV",
+    "VkPipelineCoverageReductionStateCreateInfoNV",
+    "VkFramebufferMixedSamplesCombinationNV",
+    "VkPhysicalDeviceShaderIntegerFunctions2FeaturesINTEL",
+    "VkPerformanceValueDataINTEL",
+    "VkPerformanceValueINTEL",
+    "VkInitializePerformanceApiInfoINTEL",
+    "VkQueryPoolPerformanceQueryCreateInfoINTEL",
+    "VkQueryPoolCreateInfoINTEL",
+    "VkPerformanceMarkerInfoINTEL",
+    "VkPerformanceStreamMarkerInfoINTEL",
+    "VkPerformanceOverrideInfoINTEL",
+    "VkPerformanceConfigurationAcquireInfoINTEL",
+    "VkPhysicalDeviceShaderClockFeaturesKHR",
+    "VkPhysicalDeviceIndexTypeUint8FeaturesEXT",
+    "VkPhysicalDeviceShaderSMBuiltinsPropertiesNV",
+    "VkPhysicalDeviceShaderSMBuiltinsFeaturesNV",
+    "VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT",
+    "VkPhysicalDeviceSeparateDepthStencilLayoutsFeatures",
+    "VkPhysicalDeviceSeparateDepthStencilLayoutsFeaturesKHR",
+    "VkAttachmentReferenceStencilLayout",
+    "VkPhysicalDevicePrimitiveTopologyListRestartFeaturesEXT",
+    "VkAttachmentReferenceStencilLayoutKHR",
+    "VkAttachmentDescriptionStencilLayout",
+    "VkAttachmentDescriptionStencilLayoutKHR",
+    "VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR",
+    "VkPipelineInfoKHR",
+    "VkPipelineInfoEXT",
+    "VkPipelineExecutablePropertiesKHR",
+    "VkPipelineExecutableInfoKHR",
+    "VkPipelineExecutableStatisticValueKHR",
+    "VkPipelineExecutableStatisticKHR",
+    "VkPipelineExecutableInternalRepresentationKHR",
+    "VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures",
+    "VkPhysicalDeviceShaderDemoteToHelperInvocationFeaturesEXT",
+    "VkPhysicalDeviceTexelBufferAlignmentFeaturesEXT",
+    "VkPhysicalDeviceTexelBufferAlignmentProperties",
+    "VkPhysicalDeviceTexelBufferAlignmentPropertiesEXT",
+    "VkPhysicalDeviceSubgroupSizeControlFeatures",
+    "VkPhysicalDeviceSubgroupSizeControlFeaturesEXT",
+    "VkPhysicalDeviceSubgroupSizeControlProperties",
+    "VkPhysicalDeviceSubgroupSizeControlPropertiesEXT",
+    "VkPipelineShaderStageRequiredSubgroupSizeCreateInfo",
+    "VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT",
+    "VkShaderRequiredSubgroupSizeCreateInfoEXT",
+    "VkSubpassShadingPipelineCreateInfoHUAWEI",
+    "VkPhysicalDeviceSubpassShadingPropertiesHUAWEI",
+    "VkPhysicalDeviceClusterCullingShaderPropertiesHUAWEI",
+    "VkMemoryOpaqueCaptureAddressAllocateInfo",
+    "VkMemoryOpaqueCaptureAddressAllocateInfoKHR",
+    "VkDeviceMemoryOpaqueCaptureAddressInfo",
+    "VkDeviceMemoryOpaqueCaptureAddressInfoKHR",
+    "VkPhysicalDeviceLineRasterizationFeaturesEXT",
+    "VkPhysicalDeviceLineRasterizationPropertiesEXT",
+    "VkPipelineRasterizationLineStateCreateInfoEXT",
+    "VkPhysicalDevicePipelineCreationCacheControlFeatures",
+    "VkPhysicalDevicePipelineCreationCacheControlFeaturesEXT",
+    "VkPhysicalDeviceVulkan11Features",
+    "VkPhysicalDeviceVulkan11Properties",
+    "VkPhysicalDeviceVulkan12Features",
+    "VkPhysicalDeviceVulkan12Properties",
+    "VkPhysicalDeviceVulkan13Features",
+    "VkPhysicalDeviceVulkan13Properties",
+    "VkPipelineCompilerControlCreateInfoAMD",
+    "VkPhysicalDeviceCoherentMemoryFeaturesAMD",
+    "VkFaultData",
+    "VkFaultCallbackInfo",
+    "VkPhysicalDeviceToolProperties",
+    "VkPhysicalDeviceToolPropertiesEXT",
+    "VkSamplerCustomBorderColorCreateInfoEXT",
+    "VkPhysicalDeviceCustomBorderColorPropertiesEXT",
+    "VkPhysicalDeviceCustomBorderColorFeaturesEXT",
+    "VkSamplerBorderColorComponentMappingCreateInfoEXT",
+    "VkPhysicalDeviceBorderColorSwizzleFeaturesEXT",
+    "VkDeviceOrHostAddressKHR",
+    "VkDeviceOrHostAddressConstKHR",
+    "VkDeviceOrHostAddressConstAMDX",
+    "VkAccelerationStructureGeometryTrianglesDataKHR",
+    "VkAccelerationStructureGeometryAabbsDataKHR",
+    "VkAccelerationStructureGeometryInstancesDataKHR",
+    "VkAccelerationStructureGeometryDataKHR",
+    "VkAccelerationStructureGeometryKHR",
+    "VkAccelerationStructureBuildGeometryInfoKHR",
+    "VkAccelerationStructureBuildRangeInfoKHR",
+    "VkAccelerationStructureCreateInfoKHR",
+    "VkAabbPositionsKHR",
+    "VkAabbPositionsNV",
+    "VkTransformMatrixKHR",
+    "VkTransformMatrixNV",
+    "VkAccelerationStructureInstanceKHR",
+    "VkAccelerationStructureInstanceNV",
+    "VkAccelerationStructureDeviceAddressInfoKHR",
+    "VkAccelerationStructureVersionInfoKHR",
+    "VkCopyAccelerationStructureInfoKHR",
+    "VkCopyAccelerationStructureToMemoryInfoKHR",
+    "VkCopyMemoryToAccelerationStructureInfoKHR",
+    "VkRayTracingPipelineInterfaceCreateInfoKHR",
+    "VkPipelineLibraryCreateInfoKHR",
+    "VkRefreshObjectKHR",
+    "VkRefreshObjectListKHR",
+    "VkPhysicalDeviceExtendedDynamicStateFeaturesEXT",
+    "VkPhysicalDeviceExtendedDynamicState2FeaturesEXT",
+    "VkPhysicalDeviceExtendedDynamicState3FeaturesEXT",
+    "VkPhysicalDeviceExtendedDynamicState3PropertiesEXT",
+    "VkColorBlendEquationEXT",
+    "VkColorBlendAdvancedEXT",
+    "VkRenderPassTransformBeginInfoQCOM",
+    "VkCopyCommandTransformInfoQCOM",
+    "VkCommandBufferInheritanceRenderPassTransformInfoQCOM",
+    "VkPhysicalDeviceDiagnosticsConfigFeaturesNV",
+    "VkDeviceDiagnosticsConfigCreateInfoNV",
+    "VkPipelineOfflineCreateInfo",
+    "VkPhysicalDeviceZeroInitializeWorkgroupMemoryFeatures",
+    "VkPhysicalDeviceZeroInitializeWorkgroupMemoryFeaturesKHR",
+    "VkPhysicalDeviceShaderSubgroupUniformControlFlowFeaturesKHR",
+    "VkPhysicalDeviceRobustness2FeaturesEXT",
+    "VkPhysicalDeviceRobustness2PropertiesEXT",
+    "VkPhysicalDeviceImageRobustnessFeatures",
+    "VkPhysicalDeviceImageRobustnessFeaturesEXT",
+    "VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR",
+    "VkPhysicalDevicePortabilitySubsetFeaturesKHR",
+    "VkPhysicalDevicePortabilitySubsetPropertiesKHR",
+    "VkPhysicalDevice4444FormatsFeaturesEXT",
+    "VkPhysicalDeviceSubpassShadingFeaturesHUAWEI",
+    "VkPhysicalDeviceClusterCullingShaderFeaturesHUAWEI",
+    "VkPhysicalDeviceClusterCullingShaderVrsFeaturesHUAWEI",
+    "VkBufferCopy2",
+    "VkBufferCopy2KHR",
+    "VkImageCopy2",
+    "VkImageCopy2KHR",
+    "VkImageBlit2",
+    "VkImageBlit2KHR",
+    "VkBufferImageCopy2",
+    "VkBufferImageCopy2KHR",
+    "VkImageResolve2",
+    "VkImageResolve2KHR",
+    "VkCopyBufferInfo2",
+    "VkCopyBufferInfo2KHR",
+    "VkCopyImageInfo2",
+    "VkCopyImageInfo2KHR",
+    "VkBlitImageInfo2",
+    "VkBlitImageInfo2KHR",
+    "VkCopyBufferToImageInfo2",
+    "VkCopyBufferToImageInfo2KHR",
+    "VkCopyImageToBufferInfo2",
+    "VkCopyImageToBufferInfo2KHR",
+    "VkResolveImageInfo2",
+    "VkResolveImageInfo2KHR",
+    "VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT",
+    "VkFragmentShadingRateAttachmentInfoKHR",
+    "VkPipelineFragmentShadingRateStateCreateInfoKHR",
+    "VkPhysicalDeviceFragmentShadingRateFeaturesKHR",
+    "VkPhysicalDeviceFragmentShadingRatePropertiesKHR",
+    "VkPhysicalDeviceFragmentShadingRateKHR",
+    "VkPhysicalDeviceShaderTerminateInvocationFeatures",
+    "VkPhysicalDeviceShaderTerminateInvocationFeaturesKHR",
+    "VkPhysicalDeviceFragmentShadingRateEnumsFeaturesNV",
+    "VkPhysicalDeviceFragmentShadingRateEnumsPropertiesNV",
+    "VkPipelineFragmentShadingRateEnumStateCreateInfoNV",
+    "VkAccelerationStructureBuildSizesInfoKHR",
+    "VkPhysicalDeviceImage2DViewOf3DFeaturesEXT",
+    "VkPhysicalDeviceImageSlicedViewOf3DFeaturesEXT",
+    "VkPhysicalDeviceAttachmentFeedbackLoopDynamicStateFeaturesEXT",
+    "VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT",
+    "VkPhysicalDeviceMutableDescriptorTypeFeaturesVALVE",
+    "VkMutableDescriptorTypeListEXT",
+    "VkMutableDescriptorTypeListVALVE",
+    "VkMutableDescriptorTypeCreateInfoEXT",
+    "VkMutableDescriptorTypeCreateInfoVALVE",
+    "VkPhysicalDeviceDepthClipControlFeaturesEXT",
+    "VkPipelineViewportDepthClipControlCreateInfoEXT",
+    "VkPhysicalDeviceVertexInputDynamicStateFeaturesEXT",
+    "VkPhysicalDeviceExternalMemoryRDMAFeaturesNV",
+    "VkVertexInputBindingDescription2EXT",
+    "VkVertexInputAttributeDescription2EXT",
+    "VkPhysicalDeviceColorWriteEnableFeaturesEXT",
+    "VkPipelineColorWriteCreateInfoEXT",
+    "VkMemoryBarrier2",
+    "VkMemoryBarrier2KHR",
+    "VkImageMemoryBarrier2",
+    "VkImageMemoryBarrier2KHR",
+    "VkBufferMemoryBarrier2",
+    "VkBufferMemoryBarrier2KHR",
+    "VkDependencyInfo",
+    "VkDependencyInfoKHR",
+    "VkSemaphoreSubmitInfo",
+    "VkSemaphoreSubmitInfoKHR",
+    "VkCommandBufferSubmitInfo",
+    "VkCommandBufferSubmitInfoKHR",
+    "VkSubmitInfo2",
+    "VkSubmitInfo2KHR",
+    "VkQueueFamilyCheckpointProperties2NV",
+    "VkCheckpointData2NV",
+    "VkPhysicalDeviceSynchronization2Features",
+    "VkPhysicalDeviceSynchronization2FeaturesKHR",
+    "VkPhysicalDeviceHostImageCopyFeaturesEXT",
+    "VkPhysicalDeviceHostImageCopyPropertiesEXT",
+    "VkMemoryToImageCopyEXT",
+    "VkImageToMemoryCopyEXT",
+    "VkCopyMemoryToImageInfoEXT",
+    "VkCopyImageToMemoryInfoEXT",
+    "VkCopyImageToImageInfoEXT",
+    "VkHostImageLayoutTransitionInfoEXT",
+    "VkSubresourceHostMemcpySizeEXT",
+    "VkHostImageCopyDevicePerformanceQueryEXT",
+    "VkPhysicalDeviceVulkanSC10Properties",
+    "VkPipelinePoolSize",
+    "VkDeviceObjectReservationCreateInfo",
+    "VkCommandPoolMemoryReservationCreateInfo",
+    "VkCommandPoolMemoryConsumption",
+    "VkPhysicalDeviceVulkanSC10Features",
+    "VkPhysicalDevicePrimitivesGeneratedQueryFeaturesEXT",
+    "VkPhysicalDeviceLegacyDitheringFeaturesEXT",
+    "VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT",
+    "VkSubpassResolvePerformanceQueryEXT",
+    "VkMultisampledRenderToSingleSampledInfoEXT",
+    "VkPhysicalDevicePipelineProtectedAccessFeaturesEXT",
+    "VkQueueFamilyVideoPropertiesKHR",
+    "VkQueueFamilyQueryResultStatusPropertiesKHR",
+    "VkVideoProfileListInfoKHR",
+    "VkPhysicalDeviceVideoFormatInfoKHR",
+    "VkVideoFormatPropertiesKHR",
+    "VkVideoProfileInfoKHR",
+    "VkVideoCapabilitiesKHR",
+    "VkVideoSessionMemoryRequirementsKHR",
+    "VkBindVideoSessionMemoryInfoKHR",
+    "VkVideoPictureResourceInfoKHR",
+    "VkVideoReferenceSlotInfoKHR",
+    "VkVideoDecodeCapabilitiesKHR",
+    "VkVideoDecodeUsageInfoKHR",
+    "VkVideoDecodeInfoKHR",
+    "VkPhysicalDeviceVideoMaintenance1FeaturesKHR",
+    "VkVideoInlineQueryInfoKHR",
+    "VkVideoDecodeH264ProfileInfoKHR",
+    "VkVideoDecodeH264CapabilitiesKHR",
+    "VkVideoDecodeH264SessionParametersAddInfoKHR",
+    "VkVideoDecodeH264SessionParametersCreateInfoKHR",
+    "VkVideoDecodeH264PictureInfoKHR",
+    "VkVideoDecodeH264DpbSlotInfoKHR",
+    "VkVideoDecodeH265ProfileInfoKHR",
+    "VkVideoDecodeH265CapabilitiesKHR",
+    "VkVideoDecodeH265SessionParametersAddInfoKHR",
+    "VkVideoDecodeH265SessionParametersCreateInfoKHR",
+    "VkVideoDecodeH265PictureInfoKHR",
+    "VkVideoDecodeH265DpbSlotInfoKHR",
+    "VkVideoSessionCreateInfoKHR",
+    "VkVideoSessionParametersCreateInfoKHR",
+    "VkVideoSessionParametersUpdateInfoKHR",
+    "VkVideoEncodeSessionParametersGetInfoKHR",
+    "VkVideoEncodeSessionParametersFeedbackInfoKHR",
+    "VkVideoBeginCodingInfoKHR",
+    "VkVideoEndCodingInfoKHR",
+    "VkVideoCodingControlInfoKHR",
+    "VkVideoEncodeUsageInfoKHR",
+    "VkVideoEncodeInfoKHR",
+    "VkQueryPoolVideoEncodeFeedbackCreateInfoKHR",
+    "VkVideoEncodeQualityLevelInfoKHR",
+    "VkPhysicalDeviceVideoEncodeQualityLevelInfoKHR",
+    "VkVideoEncodeQualityLevelPropertiesKHR",
+    "VkVideoEncodeRateControlInfoKHR",
+    "VkVideoEncodeRateControlLayerInfoKHR",
+    "VkVideoEncodeCapabilitiesKHR",
+    "VkVideoEncodeH264CapabilitiesKHR",
+    "VkVideoEncodeH264QualityLevelPropertiesKHR",
+    "VkVideoEncodeH264SessionCreateInfoKHR",
+    "VkVideoEncodeH264SessionParametersAddInfoKHR",
+    "VkVideoEncodeH264SessionParametersCreateInfoKHR",
+    "VkVideoEncodeH264SessionParametersGetInfoKHR",
+    "VkVideoEncodeH264SessionParametersFeedbackInfoKHR",
+    "VkVideoEncodeH264DpbSlotInfoKHR",
+    "VkVideoEncodeH264PictureInfoKHR",
+    "VkVideoEncodeH264ProfileInfoKHR",
+    "VkVideoEncodeH264NaluSliceInfoKHR",
+    "VkVideoEncodeH264RateControlInfoKHR",
+    "VkVideoEncodeH264QpKHR",
+    "VkVideoEncodeH264FrameSizeKHR",
+    "VkVideoEncodeH264GopRemainingFrameInfoKHR",
+    "VkVideoEncodeH264RateControlLayerInfoKHR",
+    "VkVideoEncodeH265CapabilitiesKHR",
+    "VkVideoEncodeH265QualityLevelPropertiesKHR",
+    "VkVideoEncodeH265SessionCreateInfoKHR",
+    "VkVideoEncodeH265SessionParametersAddInfoKHR",
+    "VkVideoEncodeH265SessionParametersCreateInfoKHR",
+    "VkVideoEncodeH265SessionParametersGetInfoKHR",
+    "VkVideoEncodeH265SessionParametersFeedbackInfoKHR",
+    "VkVideoEncodeH265PictureInfoKHR",
+    "VkVideoEncodeH265NaluSliceSegmentInfoKHR",
+    "VkVideoEncodeH265RateControlInfoKHR",
+    "VkVideoEncodeH265QpKHR",
+    "VkVideoEncodeH265FrameSizeKHR",
+    "VkVideoEncodeH265GopRemainingFrameInfoKHR",
+    "VkVideoEncodeH265RateControlLayerInfoKHR",
+    "VkVideoEncodeH265ProfileInfoKHR",
+    "VkVideoEncodeH265DpbSlotInfoKHR",
+    "VkPhysicalDeviceInheritedViewportScissorFeaturesNV",
+    "VkCommandBufferInheritanceViewportScissorInfoNV",
+    "VkPhysicalDeviceYcbcr2Plane444FormatsFeaturesEXT",
+    "VkPhysicalDeviceProvokingVertexFeaturesEXT",
+    "VkPhysicalDeviceProvokingVertexPropertiesEXT",
+    "VkPipelineRasterizationProvokingVertexStateCreateInfoEXT",
+    "VkCuModuleCreateInfoNVX",
+    "VkCuFunctionCreateInfoNVX",
+    "VkCuLaunchInfoNVX",
+    "VkPhysicalDeviceDescriptorBufferFeaturesEXT",
+    "VkPhysicalDeviceDescriptorBufferPropertiesEXT",
+    "VkPhysicalDeviceDescriptorBufferDensityMapPropertiesEXT",
+    "VkDescriptorAddressInfoEXT",
+    "VkDescriptorBufferBindingInfoEXT",
+    "VkDescriptorBufferBindingPushDescriptorBufferHandleEXT",
+    "VkDescriptorDataEXT",
+    "VkDescriptorGetInfoEXT",
+    "VkBufferCaptureDescriptorDataInfoEXT",
+    "VkImageCaptureDescriptorDataInfoEXT",
+    "VkImageViewCaptureDescriptorDataInfoEXT",
+    "VkSamplerCaptureDescriptorDataInfoEXT",
+    "VkAccelerationStructureCaptureDescriptorDataInfoEXT",
+    "VkOpaqueCaptureDescriptorDataCreateInfoEXT",
+    "VkPhysicalDeviceShaderIntegerDotProductFeatures",
+    "VkPhysicalDeviceShaderIntegerDotProductFeaturesKHR",
+    "VkPhysicalDeviceShaderIntegerDotProductProperties",
+    "VkPhysicalDeviceShaderIntegerDotProductPropertiesKHR",
+    "VkPhysicalDeviceDrmPropertiesEXT",
+    "VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR",
+    "VkPhysicalDeviceFragmentShaderBarycentricPropertiesKHR",
+    "VkPhysicalDeviceRayTracingMotionBlurFeaturesNV",
     "VkAccelerationStructureMotionInstanceTypeNV",
+    "VkAccelerationStructureGeometryMotionTrianglesDataNV",
+    "VkAccelerationStructureMotionInfoNV",
+    "VkSRTDataNV",
+    "VkAccelerationStructureSRTMotionInstanceNV",
+    "VkAccelerationStructureMatrixMotionInstanceNV",
+    "VkAccelerationStructureMotionInstanceDataNV",
+    "VkAccelerationStructureMotionInstanceNV",
+    "VkMemoryGetRemoteAddressInfoNV",
+    "VkImportMemoryBufferCollectionFUCHSIA",
+    "VkBufferCollectionImageCreateInfoFUCHSIA",
+    "VkBufferCollectionBufferCreateInfoFUCHSIA",
+    "VkBufferCollectionCreateInfoFUCHSIA",
+    "VkBufferCollectionPropertiesFUCHSIA",
+    "VkBufferConstraintsInfoFUCHSIA",
+    "VkSysmemColorSpaceFUCHSIA",
+    "VkImageFormatConstraintsInfoFUCHSIA",
+    "VkImageConstraintsInfoFUCHSIA",
+    "VkBufferCollectionConstraintsInfoFUCHSIA",
     "VkCudaModuleNV",
     "VkCudaFunctionNV",
+    "VkCudaModuleCreateInfoNV",
+    "VkCudaFunctionCreateInfoNV",
+    "VkCudaLaunchInfoNV",
+    "VkPhysicalDeviceRGBA10X6FormatsFeaturesEXT",
+    "VkFormatProperties3",
+    "VkFormatProperties3KHR",
+    "VkDrmFormatModifierPropertiesList2EXT",
+    "VkDrmFormatModifierProperties2EXT",
+    "VkAndroidHardwareBufferFormatProperties2ANDROID",
+    "VkPipelineRenderingCreateInfo",
+    "VkPipelineRenderingCreateInfoKHR",
+    "VkRenderingInfo",
+    "VkRenderingInfoKHR",
+    "VkRenderingAttachmentInfo",
+    "VkRenderingAttachmentInfoKHR",
+    "VkRenderingFragmentShadingRateAttachmentInfoKHR",
+    "VkRenderingFragmentDensityMapAttachmentInfoEXT",
+    "VkPhysicalDeviceDynamicRenderingFeatures",
+    "VkPhysicalDeviceDynamicRenderingFeaturesKHR",
+    "VkCommandBufferInheritanceRenderingInfo",
+    "VkCommandBufferInheritanceRenderingInfoKHR",
+    "VkAttachmentSampleCountInfoAMD",
+    "VkAttachmentSampleCountInfoNV",
+    "VkMultiviewPerViewAttributesInfoNVX",
+    "VkPhysicalDeviceImageViewMinLodFeaturesEXT",
+    "VkImageViewMinLodCreateInfoEXT",
+    "VkPhysicalDeviceRasterizationOrderAttachmentAccessFeaturesEXT",
+    "VkPhysicalDeviceRasterizationOrderAttachmentAccessFeaturesARM",
+    "VkPhysicalDeviceLinearColorAttachmentFeaturesNV",
+    "VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT",
+    "VkPhysicalDeviceGraphicsPipelineLibraryPropertiesEXT",
+    "VkGraphicsPipelineLibraryCreateInfoEXT",
+    "VkPhysicalDeviceDescriptorSetHostMappingFeaturesVALVE",
+    "VkDescriptorSetBindingReferenceVALVE",
+    "VkDescriptorSetLayoutHostMappingInfoVALVE",
+    "VkPhysicalDeviceNestedCommandBufferFeaturesEXT",
+    "VkPhysicalDeviceNestedCommandBufferPropertiesEXT",
+    "VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT",
+    "VkPhysicalDeviceShaderModuleIdentifierPropertiesEXT",
+    "VkPipelineShaderStageModuleIdentifierCreateInfoEXT",
+    "VkShaderModuleIdentifierEXT",
+    "VkImageCompressionControlEXT",
+    "VkPhysicalDeviceImageCompressionControlFeaturesEXT",
+    "VkImageCompressionPropertiesEXT",
+    "VkPhysicalDeviceImageCompressionControlSwapchainFeaturesEXT",
+    "VkImageSubresource2KHR",
+    "VkImageSubresource2EXT",
+    "VkSubresourceLayout2KHR",
+    "VkSubresourceLayout2EXT",
+    "VkRenderPassCreationControlEXT",
+    "VkRenderPassCreationFeedbackInfoEXT",
+    "VkRenderPassCreationFeedbackCreateInfoEXT",
+    "VkRenderPassSubpassFeedbackInfoEXT",
+    "VkRenderPassSubpassFeedbackCreateInfoEXT",
+    "VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT",
+    "VkMicromapBuildInfoEXT",
+    "VkMicromapCreateInfoEXT",
+    "VkMicromapVersionInfoEXT",
+    "VkCopyMicromapInfoEXT",
+    "VkCopyMicromapToMemoryInfoEXT",
+    "VkCopyMemoryToMicromapInfoEXT",
+    "VkMicromapBuildSizesInfoEXT",
+    "VkMicromapUsageEXT",
+    "VkMicromapTriangleEXT",
+    "VkPhysicalDeviceOpacityMicromapFeaturesEXT",
+    "VkPhysicalDeviceOpacityMicromapPropertiesEXT",
+    "VkAccelerationStructureTrianglesOpacityMicromapEXT",
+    "VkPhysicalDeviceDisplacementMicromapFeaturesNV",
+    "VkPhysicalDeviceDisplacementMicromapPropertiesNV",
+    "VkAccelerationStructureTrianglesDisplacementMicromapNV",
+    "VkPipelinePropertiesIdentifierEXT",
+    "VkPhysicalDevicePipelinePropertiesFeaturesEXT",
+    "VkPhysicalDeviceShaderEarlyAndLateFragmentTestsFeaturesAMD",
+    "VkExternalMemoryAcquireUnmodifiedEXT",
+    "VkExportMetalObjectCreateInfoEXT",
+    "VkExportMetalObjectsInfoEXT",
+    "VkExportMetalDeviceInfoEXT",
+    "VkExportMetalCommandQueueInfoEXT",
+    "VkExportMetalBufferInfoEXT",
+    "VkImportMetalBufferInfoEXT",
+    "VkExportMetalTextureInfoEXT",
+    "VkImportMetalTextureInfoEXT",
+    "VkExportMetalIOSurfaceInfoEXT",
+    "VkImportMetalIOSurfaceInfoEXT",
+    "VkExportMetalSharedEventInfoEXT",
+    "VkImportMetalSharedEventInfoEXT",
+    "VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT",
+    "VkPhysicalDevicePipelineRobustnessFeaturesEXT",
+    "VkPipelineRobustnessCreateInfoEXT",
+    "VkPhysicalDevicePipelineRobustnessPropertiesEXT",
+    "VkImageViewSampleWeightCreateInfoQCOM",
+    "VkPhysicalDeviceImageProcessingFeaturesQCOM",
+    "VkPhysicalDeviceImageProcessingPropertiesQCOM",
+    "VkPhysicalDeviceTilePropertiesFeaturesQCOM",
+    "VkTilePropertiesQCOM",
+    "VkPhysicalDeviceAmigoProfilingFeaturesSEC",
+    "VkAmigoProfilingSubmitInfoSEC",
+    "VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT",
+    "VkPhysicalDeviceDepthClampZeroOneFeaturesEXT",
+    "VkPhysicalDeviceAddressBindingReportFeaturesEXT",
+    "VkDeviceAddressBindingCallbackDataEXT",
+    "VkPhysicalDeviceOpticalFlowFeaturesNV",
+    "VkPhysicalDeviceOpticalFlowPropertiesNV",
+    "VkOpticalFlowImageFormatInfoNV",
+    "VkOpticalFlowImageFormatPropertiesNV",
+    "VkOpticalFlowSessionCreateInfoNV",
+    "VkOpticalFlowSessionCreatePrivateDataInfoNV",
+    "VkOpticalFlowExecuteInfoNV",
+    "VkPhysicalDeviceFaultFeaturesEXT",
+    "VkDeviceFaultAddressInfoEXT",
+    "VkDeviceFaultVendorInfoEXT",
+    "VkDeviceFaultCountsEXT",
+    "VkDeviceFaultInfoEXT",
+    "VkDeviceFaultVendorBinaryHeaderVersionOneEXT",
+    "VkPhysicalDevicePipelineLibraryGroupHandlesFeaturesEXT",
+    "VkDepthBiasInfoEXT",
+    "VkDepthBiasRepresentationInfoEXT",
+    "VkDecompressMemoryRegionNV",
+    "VkPhysicalDeviceShaderCoreBuiltinsPropertiesARM",
+    "VkPhysicalDeviceShaderCoreBuiltinsFeaturesARM",
+    "VkFrameBoundaryEXT",
+    "VkPhysicalDeviceFrameBoundaryFeaturesEXT",
+    "VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT",
+    "VkSurfacePresentModeEXT",
+    "VkSurfacePresentScalingCapabilitiesEXT",
+    "VkSurfacePresentModeCompatibilityEXT",
+    "VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT",
+    "VkSwapchainPresentFenceInfoEXT",
+    "VkSwapchainPresentModesCreateInfoEXT",
+    "VkSwapchainPresentModeInfoEXT",
+    "VkSwapchainPresentScalingCreateInfoEXT",
+    "VkReleaseSwapchainImagesInfoEXT",
+    "VkPhysicalDeviceDepthBiasControlFeaturesEXT",
+    "VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV",
+    "VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV",
+    "VkPhysicalDeviceExtendedSparseAddressSpaceFeaturesNV",
+    "VkPhysicalDeviceExtendedSparseAddressSpacePropertiesNV",
+    "VkDirectDriverLoadingInfoLUNARG",
+    "VkDirectDriverLoadingListLUNARG",
+    "VkPhysicalDeviceMultiviewPerViewViewportsFeaturesQCOM",
+    "VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR",
+    "VkDeviceImageSubresourceInfoKHR",
+    "VkPhysicalDeviceShaderCorePropertiesARM",
+    "VkPhysicalDeviceMultiviewPerViewRenderAreasFeaturesQCOM",
+    "VkMultiviewPerViewRenderAreasRenderPassBeginInfoQCOM",
+    "VkQueryLowLatencySupportNV",
+    "VkMemoryMapInfoKHR",
+    "VkMemoryUnmapInfoKHR",
+    "VkPhysicalDeviceShaderObjectFeaturesEXT",
+    "VkPhysicalDeviceShaderObjectPropertiesEXT",
+    "VkShaderCreateInfoEXT",
+    "VkPhysicalDeviceShaderTileImageFeaturesEXT",
+    "VkPhysicalDeviceShaderTileImagePropertiesEXT",
+    "VkImportScreenBufferInfoQNX",
+    "VkScreenBufferPropertiesQNX",
+    "VkScreenBufferFormatPropertiesQNX",
+    "VkExternalFormatQNX",
+    "VkPhysicalDeviceExternalMemoryScreenBufferFeaturesQNX",
+    "VkPhysicalDeviceCooperativeMatrixFeaturesKHR",
+    "VkCooperativeMatrixPropertiesKHR",
+    "VkPhysicalDeviceCooperativeMatrixPropertiesKHR",
+    "VkPhysicalDeviceShaderEnqueuePropertiesAMDX",
+    "VkPhysicalDeviceShaderEnqueueFeaturesAMDX",
+    "VkExecutionGraphPipelineCreateInfoAMDX",
+    "VkPipelineShaderStageNodeCreateInfoAMDX",
+    "VkExecutionGraphPipelineScratchSizeAMDX",
+    "VkDispatchGraphInfoAMDX",
+    "VkDispatchGraphCountInfoAMDX",
+    "VkBindMemoryStatusKHR",
+    "VkBindDescriptorSetsInfoKHR",
+    "VkPushConstantsInfoKHR",
+    "VkPushDescriptorSetInfoKHR",
+    "VkPushDescriptorSetWithTemplateInfoKHR",
+    "VkSetDescriptorBufferOffsetsInfoEXT",
+    "VkBindDescriptorBufferEmbeddedSamplersInfoEXT",
+    "VkPhysicalDeviceCubicClampFeaturesQCOM",
+    "VkPhysicalDeviceYcbcrDegammaFeaturesQCOM",
+    "VkSamplerYcbcrConversionYcbcrDegammaCreateInfoQCOM",
+    "VkPhysicalDeviceCubicWeightsFeaturesQCOM",
+    "VkSamplerCubicWeightsCreateInfoQCOM",
+    "VkBlitImageCubicWeightsInfoQCOM",
+    "VkPhysicalDeviceImageProcessing2FeaturesQCOM",
+    "VkPhysicalDeviceImageProcessing2PropertiesQCOM",
+    "VkSamplerBlockMatchWindowCreateInfoQCOM",
+    "VkPhysicalDeviceDescriptorPoolOverallocationFeaturesNV",
+    "VkPhysicalDeviceLayeredDriverPropertiesMSFT",
+    "VkPhysicalDevicePerStageDescriptorSetFeaturesNV",
+    "VkPhysicalDeviceExternalFormatResolveFeaturesANDROID",
+    "VkPhysicalDeviceExternalFormatResolvePropertiesANDROID",
+    "VkAndroidHardwareBufferFormatResolvePropertiesANDROID",
+    "VkLatencySleepModeInfoNV",
+    "VkLatencySleepInfoNV",
+    "VkSetLatencyMarkerInfoNV",
+    "VkGetLatencyMarkerInfoNV",
+    "VkLatencyTimingsFrameReportNV",
+    "VkOutOfBandQueueTypeInfoNV",
+    "VkLatencySubmissionPresentIdNV",
+    "VkSwapchainLatencyCreateInfoNV",
+    "VkLatencySurfaceCapabilitiesNV",
+    "VkPhysicalDeviceCudaKernelLaunchFeaturesNV",
+    "VkPhysicalDeviceCudaKernelLaunchPropertiesNV",
+    "VkDeviceQueueShaderCoreControlCreateInfoARM",
+    "VkPhysicalDeviceSchedulingControlsFeaturesARM",
+    "VkPhysicalDeviceSchedulingControlsPropertiesARM",
+    "VkPhysicalDeviceRelaxedLineRasterizationFeaturesIMG",
+    "VkPhysicalDeviceRenderPassStripedFeaturesARM",
+    "VkPhysicalDeviceRenderPassStripedPropertiesARM",
+    "VkRenderPassStripeInfoARM",
+    "VkRenderPassStripeBeginInfoARM",
+    "VkRenderPassStripeSubmitInfoARM",
     "VK_MAX_PHYSICAL_DEVICE_NAME_SIZE",
     "VK_UUID_SIZE",
     "VK_LUID_SIZE",
@@ -9239,6 +10966,703 @@ __all__ = (
     "VK_MAX_GLOBAL_PRIORITY_SIZE_EXT",
     "VK_MAX_SHADER_MODULE_IDENTIFIER_SIZE_EXT",
     "VK_SHADER_INDEX_UNUSED_AMDX",
+    "vkCreateInstance",
+    "vkDestroyInstance",
+    "vkEnumeratePhysicalDevices",
+    "vkGetDeviceProcAddr",
+    "vkGetInstanceProcAddr",
+    "vkGetPhysicalDeviceProperties",
+    "vkGetPhysicalDeviceQueueFamilyProperties",
+    "vkGetPhysicalDeviceMemoryProperties",
+    "vkGetPhysicalDeviceFeatures",
+    "vkGetPhysicalDeviceFormatProperties",
+    "vkGetPhysicalDeviceImageFormatProperties",
+    "vkCreateDevice",
+    "vkDestroyDevice",
+    "vkEnumerateInstanceVersion",
+    "vkEnumerateInstanceLayerProperties",
+    "vkEnumerateInstanceExtensionProperties",
+    "vkEnumerateDeviceLayerProperties",
+    "vkEnumerateDeviceExtensionProperties",
+    "vkGetDeviceQueue",
+    "vkQueueSubmit",
+    "vkQueueWaitIdle",
+    "vkDeviceWaitIdle",
+    "vkAllocateMemory",
+    "vkFreeMemory",
+    "vkMapMemory",
+    "vkUnmapMemory",
+    "vkFlushMappedMemoryRanges",
+    "vkInvalidateMappedMemoryRanges",
+    "vkGetDeviceMemoryCommitment",
+    "vkGetBufferMemoryRequirements",
+    "vkBindBufferMemory",
+    "vkGetImageMemoryRequirements",
+    "vkBindImageMemory",
+    "vkGetImageSparseMemoryRequirements",
+    "vkGetPhysicalDeviceSparseImageFormatProperties",
+    "vkQueueBindSparse",
+    "vkCreateFence",
+    "vkDestroyFence",
+    "vkResetFences",
+    "vkGetFenceStatus",
+    "vkWaitForFences",
+    "vkCreateSemaphore",
+    "vkDestroySemaphore",
+    "vkCreateEvent",
+    "vkDestroyEvent",
+    "vkGetEventStatus",
+    "vkSetEvent",
+    "vkResetEvent",
+    "vkCreateQueryPool",
+    "vkDestroyQueryPool",
+    "vkGetQueryPoolResults",
+    "vkResetQueryPool",
+    "vkResetQueryPoolEXT",
+    "vkCreateBuffer",
+    "vkDestroyBuffer",
+    "vkCreateBufferView",
+    "vkDestroyBufferView",
+    "vkCreateImage",
+    "vkDestroyImage",
+    "vkGetImageSubresourceLayout",
+    "vkCreateImageView",
+    "vkDestroyImageView",
+    "vkCreateShaderModule",
+    "vkDestroyShaderModule",
+    "vkCreatePipelineCache",
+    "vkDestroyPipelineCache",
+    "vkGetPipelineCacheData",
+    "vkMergePipelineCaches",
+    "vkCreateGraphicsPipelines",
+    "vkCreateComputePipelines",
+    "vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI",
+    "vkDestroyPipeline",
+    "vkCreatePipelineLayout",
+    "vkDestroyPipelineLayout",
+    "vkCreateSampler",
+    "vkDestroySampler",
+    "vkCreateDescriptorSetLayout",
+    "vkDestroyDescriptorSetLayout",
+    "vkCreateDescriptorPool",
+    "vkDestroyDescriptorPool",
+    "vkResetDescriptorPool",
+    "vkAllocateDescriptorSets",
+    "vkFreeDescriptorSets",
+    "vkUpdateDescriptorSets",
+    "vkCreateFramebuffer",
+    "vkDestroyFramebuffer",
+    "vkCreateRenderPass",
+    "vkDestroyRenderPass",
+    "vkGetRenderAreaGranularity",
+    "vkGetRenderingAreaGranularityKHR",
+    "vkCreateCommandPool",
+    "vkDestroyCommandPool",
+    "vkResetCommandPool",
+    "vkAllocateCommandBuffers",
+    "vkFreeCommandBuffers",
+    "vkBeginCommandBuffer",
+    "vkEndCommandBuffer",
+    "vkResetCommandBuffer",
+    "vkCmdBindPipeline",
+    "vkCmdSetAttachmentFeedbackLoopEnableEXT",
+    "vkCmdSetViewport",
+    "vkCmdSetScissor",
+    "vkCmdSetLineWidth",
+    "vkCmdSetDepthBias",
+    "vkCmdSetBlendConstants",
+    "vkCmdSetDepthBounds",
+    "vkCmdSetStencilCompareMask",
+    "vkCmdSetStencilWriteMask",
+    "vkCmdSetStencilReference",
+    "vkCmdBindDescriptorSets",
+    "vkCmdBindIndexBuffer",
+    "vkCmdBindVertexBuffers",
+    "vkCmdDraw",
+    "vkCmdDrawIndexed",
+    "vkCmdDrawMultiEXT",
+    "vkCmdDrawMultiIndexedEXT",
+    "vkCmdDrawIndirect",
+    "vkCmdDrawIndexedIndirect",
+    "vkCmdDispatch",
+    "vkCmdDispatchIndirect",
+    "vkCmdSubpassShadingHUAWEI",
+    "vkCmdDrawClusterHUAWEI",
+    "vkCmdDrawClusterIndirectHUAWEI",
+    "vkCmdUpdatePipelineIndirectBufferNV",
+    "vkCmdCopyBuffer",
+    "vkCmdCopyImage",
+    "vkCmdBlitImage",
+    "vkCmdCopyBufferToImage",
+    "vkCmdCopyImageToBuffer",
+    "vkCmdCopyMemoryIndirectNV",
+    "vkCmdCopyMemoryToImageIndirectNV",
+    "vkCmdUpdateBuffer",
+    "vkCmdFillBuffer",
+    "vkCmdClearColorImage",
+    "vkCmdClearDepthStencilImage",
+    "vkCmdClearAttachments",
+    "vkCmdResolveImage",
+    "vkCmdSetEvent",
+    "vkCmdResetEvent",
+    "vkCmdWaitEvents",
+    "vkCmdPipelineBarrier",
+    "vkCmdBeginQuery",
+    "vkCmdEndQuery",
+    "vkCmdBeginConditionalRenderingEXT",
+    "vkCmdEndConditionalRenderingEXT",
+    "vkCmdResetQueryPool",
+    "vkCmdWriteTimestamp",
+    "vkCmdCopyQueryPoolResults",
+    "vkCmdPushConstants",
+    "vkCmdBeginRenderPass",
+    "vkCmdNextSubpass",
+    "vkCmdEndRenderPass",
+    "vkCmdExecuteCommands",
+    "vkCreateAndroidSurfaceKHR",
+    "vkGetPhysicalDeviceDisplayPropertiesKHR",
+    "vkGetPhysicalDeviceDisplayPlanePropertiesKHR",
+    "vkGetDisplayPlaneSupportedDisplaysKHR",
+    "vkGetDisplayModePropertiesKHR",
+    "vkCreateDisplayModeKHR",
+    "vkGetDisplayPlaneCapabilitiesKHR",
+    "vkCreateDisplayPlaneSurfaceKHR",
+    "vkCreateSharedSwapchainsKHR",
+    "vkDestroySurfaceKHR",
+    "vkGetPhysicalDeviceSurfaceSupportKHR",
+    "vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
+    "vkGetPhysicalDeviceSurfaceFormatsKHR",
+    "vkGetPhysicalDeviceSurfacePresentModesKHR",
+    "vkCreateSwapchainKHR",
+    "vkDestroySwapchainKHR",
+    "vkGetSwapchainImagesKHR",
+    "vkAcquireNextImageKHR",
+    "vkQueuePresentKHR",
+    "vkCreateViSurfaceNN",
+    "vkCreateWaylandSurfaceKHR",
+    "vkGetPhysicalDeviceWaylandPresentationSupportKHR",
+    "vkCreateWin32SurfaceKHR",
+    "vkGetPhysicalDeviceWin32PresentationSupportKHR",
+    "vkCreateXlibSurfaceKHR",
+    "vkGetPhysicalDeviceXlibPresentationSupportKHR",
+    "vkCreateXcbSurfaceKHR",
+    "vkGetPhysicalDeviceXcbPresentationSupportKHR",
+    "vkCreateDirectFBSurfaceEXT",
+    "vkGetPhysicalDeviceDirectFBPresentationSupportEXT",
+    "vkCreateImagePipeSurfaceFUCHSIA",
+    "vkCreateStreamDescriptorSurfaceGGP",
+    "vkCreateScreenSurfaceQNX",
+    "vkGetPhysicalDeviceScreenPresentationSupportQNX",
+    "vkCreateDebugReportCallbackEXT",
+    "vkDestroyDebugReportCallbackEXT",
+    "vkDebugReportMessageEXT",
+    "vkDebugMarkerSetObjectNameEXT",
+    "vkDebugMarkerSetObjectTagEXT",
+    "vkCmdDebugMarkerBeginEXT",
+    "vkCmdDebugMarkerEndEXT",
+    "vkCmdDebugMarkerInsertEXT",
+    "vkGetPhysicalDeviceExternalImageFormatPropertiesNV",
+    "vkGetMemoryWin32HandleNV",
+    "vkCmdExecuteGeneratedCommandsNV",
+    "vkCmdPreprocessGeneratedCommandsNV",
+    "vkCmdBindPipelineShaderGroupNV",
+    "vkGetGeneratedCommandsMemoryRequirementsNV",
+    "vkCreateIndirectCommandsLayoutNV",
+    "vkDestroyIndirectCommandsLayoutNV",
+    "vkGetPhysicalDeviceFeatures2",
+    "vkGetPhysicalDeviceFeatures2KHR",
+    "vkGetPhysicalDeviceProperties2",
+    "vkGetPhysicalDeviceProperties2KHR",
+    "vkGetPhysicalDeviceFormatProperties2",
+    "vkGetPhysicalDeviceFormatProperties2KHR",
+    "vkGetPhysicalDeviceImageFormatProperties2",
+    "vkGetPhysicalDeviceImageFormatProperties2KHR",
+    "vkGetPhysicalDeviceQueueFamilyProperties2",
+    "vkGetPhysicalDeviceQueueFamilyProperties2KHR",
+    "vkGetPhysicalDeviceMemoryProperties2",
+    "vkGetPhysicalDeviceMemoryProperties2KHR",
+    "vkGetPhysicalDeviceSparseImageFormatProperties2",
+    "vkGetPhysicalDeviceSparseImageFormatProperties2KHR",
+    "vkCmdPushDescriptorSetKHR",
+    "vkTrimCommandPool",
+    "vkTrimCommandPoolKHR",
+    "vkGetPhysicalDeviceExternalBufferProperties",
+    "vkGetPhysicalDeviceExternalBufferPropertiesKHR",
+    "vkGetMemoryWin32HandleKHR",
+    "vkGetMemoryWin32HandlePropertiesKHR",
+    "vkGetMemoryFdKHR",
+    "vkGetMemoryFdPropertiesKHR",
+    "vkGetMemoryZirconHandleFUCHSIA",
+    "vkGetMemoryZirconHandlePropertiesFUCHSIA",
+    "vkGetMemoryRemoteAddressNV",
+    "vkGetMemorySciBufNV",
+    "vkGetPhysicalDeviceExternalMemorySciBufPropertiesNV",
+    "vkGetPhysicalDeviceSciBufAttributesNV",
+    "vkGetPhysicalDeviceExternalSemaphoreProperties",
+    "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR",
+    "vkGetSemaphoreWin32HandleKHR",
+    "vkImportSemaphoreWin32HandleKHR",
+    "vkGetSemaphoreFdKHR",
+    "vkImportSemaphoreFdKHR",
+    "vkGetSemaphoreZirconHandleFUCHSIA",
+    "vkImportSemaphoreZirconHandleFUCHSIA",
+    "vkGetPhysicalDeviceExternalFenceProperties",
+    "vkGetPhysicalDeviceExternalFencePropertiesKHR",
+    "vkGetFenceWin32HandleKHR",
+    "vkImportFenceWin32HandleKHR",
+    "vkGetFenceFdKHR",
+    "vkImportFenceFdKHR",
+    "vkGetFenceSciSyncFenceNV",
+    "vkGetFenceSciSyncObjNV",
+    "vkImportFenceSciSyncFenceNV",
+    "vkImportFenceSciSyncObjNV",
+    "vkGetSemaphoreSciSyncObjNV",
+    "vkImportSemaphoreSciSyncObjNV",
+    "vkGetPhysicalDeviceSciSyncAttributesNV",
+    "vkCreateSemaphoreSciSyncPoolNV",
+    "vkDestroySemaphoreSciSyncPoolNV",
+    "vkReleaseDisplayEXT",
+    "vkAcquireXlibDisplayEXT",
+    "vkGetRandROutputDisplayEXT",
+    "vkAcquireWinrtDisplayNV",
+    "vkGetWinrtDisplayNV",
+    "vkDisplayPowerControlEXT",
+    "vkRegisterDeviceEventEXT",
+    "vkRegisterDisplayEventEXT",
+    "vkGetSwapchainCounterEXT",
+    "vkGetPhysicalDeviceSurfaceCapabilities2EXT",
+    "vkEnumeratePhysicalDeviceGroups",
+    "vkEnumeratePhysicalDeviceGroupsKHR",
+    "vkGetDeviceGroupPeerMemoryFeatures",
+    "vkGetDeviceGroupPeerMemoryFeaturesKHR",
+    "vkBindBufferMemory2",
+    "vkBindBufferMemory2KHR",
+    "vkBindImageMemory2",
+    "vkBindImageMemory2KHR",
+    "vkCmdSetDeviceMask",
+    "vkCmdSetDeviceMaskKHR",
+    "vkGetDeviceGroupPresentCapabilitiesKHR",
+    "vkGetDeviceGroupSurfacePresentModesKHR",
+    "vkAcquireNextImage2KHR",
+    "vkCmdDispatchBase",
+    "vkCmdDispatchBaseKHR",
+    "vkGetPhysicalDevicePresentRectanglesKHR",
+    "vkCreateDescriptorUpdateTemplate",
+    "vkCreateDescriptorUpdateTemplateKHR",
+    "vkDestroyDescriptorUpdateTemplate",
+    "vkDestroyDescriptorUpdateTemplateKHR",
+    "vkUpdateDescriptorSetWithTemplate",
+    "vkUpdateDescriptorSetWithTemplateKHR",
+    "vkCmdPushDescriptorSetWithTemplateKHR",
+    "vkSetHdrMetadataEXT",
+    "vkGetSwapchainStatusKHR",
+    "vkGetRefreshCycleDurationGOOGLE",
+    "vkGetPastPresentationTimingGOOGLE",
+    "vkCreateIOSSurfaceMVK",
+    "vkCreateMacOSSurfaceMVK",
+    "vkCreateMetalSurfaceEXT",
+    "vkCmdSetViewportWScalingNV",
+    "vkCmdSetDiscardRectangleEXT",
+    "vkCmdSetDiscardRectangleEnableEXT",
+    "vkCmdSetDiscardRectangleModeEXT",
+    "vkCmdSetSampleLocationsEXT",
+    "vkGetPhysicalDeviceMultisamplePropertiesEXT",
+    "vkGetPhysicalDeviceSurfaceCapabilities2KHR",
+    "vkGetPhysicalDeviceSurfaceFormats2KHR",
+    "vkGetPhysicalDeviceDisplayProperties2KHR",
+    "vkGetPhysicalDeviceDisplayPlaneProperties2KHR",
+    "vkGetDisplayModeProperties2KHR",
+    "vkGetDisplayPlaneCapabilities2KHR",
+    "vkGetBufferMemoryRequirements2",
+    "vkGetBufferMemoryRequirements2KHR",
+    "vkGetImageMemoryRequirements2",
+    "vkGetImageMemoryRequirements2KHR",
+    "vkGetImageSparseMemoryRequirements2",
+    "vkGetImageSparseMemoryRequirements2KHR",
+    "vkGetDeviceBufferMemoryRequirements",
+    "vkGetDeviceBufferMemoryRequirementsKHR",
+    "vkGetDeviceImageMemoryRequirements",
+    "vkGetDeviceImageMemoryRequirementsKHR",
+    "vkGetDeviceImageSparseMemoryRequirements",
+    "vkGetDeviceImageSparseMemoryRequirementsKHR",
+    "vkCreateSamplerYcbcrConversion",
+    "vkCreateSamplerYcbcrConversionKHR",
+    "vkDestroySamplerYcbcrConversion",
+    "vkDestroySamplerYcbcrConversionKHR",
+    "vkGetDeviceQueue2",
+    "vkCreateValidationCacheEXT",
+    "vkDestroyValidationCacheEXT",
+    "vkGetValidationCacheDataEXT",
+    "vkMergeValidationCachesEXT",
+    "vkGetDescriptorSetLayoutSupport",
+    "vkGetDescriptorSetLayoutSupportKHR",
+    "vkGetSwapchainGrallocUsageANDROID",
+    "vkGetSwapchainGrallocUsage2ANDROID",
+    "vkAcquireImageANDROID",
+    "vkQueueSignalReleaseImageANDROID",
+    "vkGetShaderInfoAMD",
+    "vkSetLocalDimmingAMD",
+    "vkGetPhysicalDeviceCalibrateableTimeDomainsKHR",
+    "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT",
+    "vkGetCalibratedTimestampsKHR",
+    "vkGetCalibratedTimestampsEXT",
+    "vkSetDebugUtilsObjectNameEXT",
+    "vkSetDebugUtilsObjectTagEXT",
+    "vkQueueBeginDebugUtilsLabelEXT",
+    "vkQueueEndDebugUtilsLabelEXT",
+    "vkQueueInsertDebugUtilsLabelEXT",
+    "vkCmdBeginDebugUtilsLabelEXT",
+    "vkCmdEndDebugUtilsLabelEXT",
+    "vkCmdInsertDebugUtilsLabelEXT",
+    "vkCreateDebugUtilsMessengerEXT",
+    "vkDestroyDebugUtilsMessengerEXT",
+    "vkSubmitDebugUtilsMessageEXT",
+    "vkGetMemoryHostPointerPropertiesEXT",
+    "vkCmdWriteBufferMarkerAMD",
+    "vkCreateRenderPass2",
+    "vkCreateRenderPass2KHR",
+    "vkCmdBeginRenderPass2",
+    "vkCmdBeginRenderPass2KHR",
+    "vkCmdNextSubpass2",
+    "vkCmdNextSubpass2KHR",
+    "vkCmdEndRenderPass2",
+    "vkCmdEndRenderPass2KHR",
+    "vkGetSemaphoreCounterValue",
+    "vkGetSemaphoreCounterValueKHR",
+    "vkWaitSemaphores",
+    "vkWaitSemaphoresKHR",
+    "vkSignalSemaphore",
+    "vkSignalSemaphoreKHR",
+    "vkGetAndroidHardwareBufferPropertiesANDROID",
+    "vkGetMemoryAndroidHardwareBufferANDROID",
+    "vkCmdDrawIndirectCount",
+    "vkCmdDrawIndirectCountKHR",
+    "vkCmdDrawIndirectCountAMD",
+    "vkCmdDrawIndexedIndirectCount",
+    "vkCmdDrawIndexedIndirectCountKHR",
+    "vkCmdDrawIndexedIndirectCountAMD",
+    "vkCmdSetCheckpointNV",
+    "vkGetQueueCheckpointDataNV",
+    "vkCmdBindTransformFeedbackBuffersEXT",
+    "vkCmdBeginTransformFeedbackEXT",
+    "vkCmdEndTransformFeedbackEXT",
+    "vkCmdBeginQueryIndexedEXT",
+    "vkCmdEndQueryIndexedEXT",
+    "vkCmdDrawIndirectByteCountEXT",
+    "vkCmdSetExclusiveScissorNV",
+    "vkCmdSetExclusiveScissorEnableNV",
+    "vkCmdBindShadingRateImageNV",
+    "vkCmdSetViewportShadingRatePaletteNV",
+    "vkCmdSetCoarseSampleOrderNV",
+    "vkCmdDrawMeshTasksNV",
+    "vkCmdDrawMeshTasksIndirectNV",
+    "vkCmdDrawMeshTasksIndirectCountNV",
+    "vkCmdDrawMeshTasksEXT",
+    "vkCmdDrawMeshTasksIndirectEXT",
+    "vkCmdDrawMeshTasksIndirectCountEXT",
+    "vkCompileDeferredNV",
+    "vkCreateAccelerationStructureNV",
+    "vkCmdBindInvocationMaskHUAWEI",
+    "vkDestroyAccelerationStructureKHR",
+    "vkDestroyAccelerationStructureNV",
+    "vkGetAccelerationStructureMemoryRequirementsNV",
+    "vkBindAccelerationStructureMemoryNV",
+    "vkCmdCopyAccelerationStructureNV",
+    "vkCmdCopyAccelerationStructureKHR",
+    "vkCopyAccelerationStructureKHR",
+    "vkCmdCopyAccelerationStructureToMemoryKHR",
+    "vkCopyAccelerationStructureToMemoryKHR",
+    "vkCmdCopyMemoryToAccelerationStructureKHR",
+    "vkCopyMemoryToAccelerationStructureKHR",
+    "vkCmdWriteAccelerationStructuresPropertiesKHR",
+    "vkCmdWriteAccelerationStructuresPropertiesNV",
+    "vkCmdBuildAccelerationStructureNV",
+    "vkWriteAccelerationStructuresPropertiesKHR",
+    "vkCmdTraceRaysKHR",
+    "vkCmdTraceRaysNV",
+    "vkGetRayTracingShaderGroupHandlesKHR",
+    "vkGetRayTracingShaderGroupHandlesNV",
+    "vkGetRayTracingCaptureReplayShaderGroupHandlesKHR",
+    "vkGetAccelerationStructureHandleNV",
+    "vkCreateRayTracingPipelinesNV",
+    "vkCreateRayTracingPipelinesKHR",
+    "vkGetPhysicalDeviceCooperativeMatrixPropertiesNV",
+    "vkCmdTraceRaysIndirectKHR",
+    "vkCmdTraceRaysIndirect2KHR",
+    "vkGetDeviceAccelerationStructureCompatibilityKHR",
+    "vkGetRayTracingShaderGroupStackSizeKHR",
+    "vkCmdSetRayTracingPipelineStackSizeKHR",
+    "vkGetImageViewHandleNVX",
+    "vkGetImageViewAddressNVX",
+    "vkGetPhysicalDeviceSurfacePresentModes2EXT",
+    "vkGetDeviceGroupSurfacePresentModes2EXT",
+    "vkAcquireFullScreenExclusiveModeEXT",
+    "vkReleaseFullScreenExclusiveModeEXT",
+    "vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR",
+    "vkGetPhysicalDeviceQueueFamilyPerformanceQueryPassesKHR",
+    "vkAcquireProfilingLockKHR",
+    "vkReleaseProfilingLockKHR",
+    "vkGetImageDrmFormatModifierPropertiesEXT",
+    "vkGetBufferOpaqueCaptureAddress",
+    "vkGetBufferOpaqueCaptureAddressKHR",
+    "vkGetBufferDeviceAddress",
+    "vkGetBufferDeviceAddressKHR",
+    "vkGetBufferDeviceAddressEXT",
+    "vkCreateHeadlessSurfaceEXT",
+    "vkGetPhysicalDeviceSupportedFramebufferMixedSamplesCombinationsNV",
+    "vkInitializePerformanceApiINTEL",
+    "vkUninitializePerformanceApiINTEL",
+    "vkCmdSetPerformanceMarkerINTEL",
+    "vkCmdSetPerformanceStreamMarkerINTEL",
+    "vkCmdSetPerformanceOverrideINTEL",
+    "vkAcquirePerformanceConfigurationINTEL",
+    "vkReleasePerformanceConfigurationINTEL",
+    "vkQueueSetPerformanceConfigurationINTEL",
+    "vkGetPerformanceParameterINTEL",
+    "vkGetDeviceMemoryOpaqueCaptureAddress",
+    "vkGetDeviceMemoryOpaqueCaptureAddressKHR",
+    "vkGetPipelineExecutablePropertiesKHR",
+    "vkGetPipelineExecutableStatisticsKHR",
+    "vkGetPipelineExecutableInternalRepresentationsKHR",
+    "vkCmdSetLineStippleEXT",
+    "vkGetFaultData",
+    "vkGetPhysicalDeviceToolProperties",
+    "vkGetPhysicalDeviceToolPropertiesEXT",
+    "vkCreateAccelerationStructureKHR",
+    "vkCmdBuildAccelerationStructuresKHR",
+    "vkCmdBuildAccelerationStructuresIndirectKHR",
+    "vkBuildAccelerationStructuresKHR",
+    "vkGetAccelerationStructureDeviceAddressKHR",
+    "vkCreateDeferredOperationKHR",
+    "vkDestroyDeferredOperationKHR",
+    "vkGetDeferredOperationMaxConcurrencyKHR",
+    "vkGetDeferredOperationResultKHR",
+    "vkDeferredOperationJoinKHR",
+    "vkGetPipelineIndirectMemoryRequirementsNV",
+    "vkGetPipelineIndirectDeviceAddressNV",
+    "vkCmdSetCullMode",
+    "vkCmdSetCullModeEXT",
+    "vkCmdSetFrontFace",
+    "vkCmdSetFrontFaceEXT",
+    "vkCmdSetPrimitiveTopology",
+    "vkCmdSetPrimitiveTopologyEXT",
+    "vkCmdSetViewportWithCount",
+    "vkCmdSetViewportWithCountEXT",
+    "vkCmdSetScissorWithCount",
+    "vkCmdSetScissorWithCountEXT",
+    "vkCmdBindIndexBuffer2KHR",
+    "vkCmdBindVertexBuffers2",
+    "vkCmdBindVertexBuffers2EXT",
+    "vkCmdSetDepthTestEnable",
+    "vkCmdSetDepthTestEnableEXT",
+    "vkCmdSetDepthWriteEnable",
+    "vkCmdSetDepthWriteEnableEXT",
+    "vkCmdSetDepthCompareOp",
+    "vkCmdSetDepthCompareOpEXT",
+    "vkCmdSetDepthBoundsTestEnable",
+    "vkCmdSetDepthBoundsTestEnableEXT",
+    "vkCmdSetStencilTestEnable",
+    "vkCmdSetStencilTestEnableEXT",
+    "vkCmdSetStencilOp",
+    "vkCmdSetStencilOpEXT",
+    "vkCmdSetPatchControlPointsEXT",
+    "vkCmdSetRasterizerDiscardEnable",
+    "vkCmdSetRasterizerDiscardEnableEXT",
+    "vkCmdSetDepthBiasEnable",
+    "vkCmdSetDepthBiasEnableEXT",
+    "vkCmdSetLogicOpEXT",
+    "vkCmdSetPrimitiveRestartEnable",
+    "vkCmdSetPrimitiveRestartEnableEXT",
+    "vkCmdSetTessellationDomainOriginEXT",
+    "vkCmdSetDepthClampEnableEXT",
+    "vkCmdSetPolygonModeEXT",
+    "vkCmdSetRasterizationSamplesEXT",
+    "vkCmdSetSampleMaskEXT",
+    "vkCmdSetAlphaToCoverageEnableEXT",
+    "vkCmdSetAlphaToOneEnableEXT",
+    "vkCmdSetLogicOpEnableEXT",
+    "vkCmdSetColorBlendEnableEXT",
+    "vkCmdSetColorBlendEquationEXT",
+    "vkCmdSetColorWriteMaskEXT",
+    "vkCmdSetRasterizationStreamEXT",
+    "vkCmdSetConservativeRasterizationModeEXT",
+    "vkCmdSetExtraPrimitiveOverestimationSizeEXT",
+    "vkCmdSetDepthClipEnableEXT",
+    "vkCmdSetSampleLocationsEnableEXT",
+    "vkCmdSetColorBlendAdvancedEXT",
+    "vkCmdSetProvokingVertexModeEXT",
+    "vkCmdSetLineRasterizationModeEXT",
+    "vkCmdSetLineStippleEnableEXT",
+    "vkCmdSetDepthClipNegativeOneToOneEXT",
+    "vkCmdSetViewportWScalingEnableNV",
+    "vkCmdSetViewportSwizzleNV",
+    "vkCmdSetCoverageToColorEnableNV",
+    "vkCmdSetCoverageToColorLocationNV",
+    "vkCmdSetCoverageModulationModeNV",
+    "vkCmdSetCoverageModulationTableEnableNV",
+    "vkCmdSetCoverageModulationTableNV",
+    "vkCmdSetShadingRateImageEnableNV",
+    "vkCmdSetCoverageReductionModeNV",
+    "vkCmdSetRepresentativeFragmentTestEnableNV",
+    "vkCreatePrivateDataSlot",
+    "vkCreatePrivateDataSlotEXT",
+    "vkDestroyPrivateDataSlot",
+    "vkDestroyPrivateDataSlotEXT",
+    "vkSetPrivateData",
+    "vkSetPrivateDataEXT",
+    "vkGetPrivateData",
+    "vkGetPrivateDataEXT",
+    "vkCmdCopyBuffer2",
+    "vkCmdCopyBuffer2KHR",
+    "vkCmdCopyImage2",
+    "vkCmdCopyImage2KHR",
+    "vkCmdBlitImage2",
+    "vkCmdBlitImage2KHR",
+    "vkCmdCopyBufferToImage2",
+    "vkCmdCopyBufferToImage2KHR",
+    "vkCmdCopyImageToBuffer2",
+    "vkCmdCopyImageToBuffer2KHR",
+    "vkCmdResolveImage2",
+    "vkCmdResolveImage2KHR",
+    "vkCmdRefreshObjectsKHR",
+    "vkGetPhysicalDeviceRefreshableObjectTypesKHR",
+    "vkCmdSetFragmentShadingRateKHR",
+    "vkGetPhysicalDeviceFragmentShadingRatesKHR",
+    "vkCmdSetFragmentShadingRateEnumNV",
+    "vkGetAccelerationStructureBuildSizesKHR",
+    "vkCmdSetVertexInputEXT",
+    "vkCmdSetColorWriteEnableEXT",
+    "vkCmdSetEvent2",
+    "vkCmdSetEvent2KHR",
+    "vkCmdResetEvent2",
+    "vkCmdResetEvent2KHR",
+    "vkCmdWaitEvents2",
+    "vkCmdWaitEvents2KHR",
+    "vkCmdPipelineBarrier2",
+    "vkCmdPipelineBarrier2KHR",
+    "vkQueueSubmit2",
+    "vkQueueSubmit2KHR",
+    "vkCmdWriteTimestamp2",
+    "vkCmdWriteTimestamp2KHR",
+    "vkCmdWriteBufferMarker2AMD",
+    "vkGetQueueCheckpointData2NV",
+    "vkCopyMemoryToImageEXT",
+    "vkCopyImageToMemoryEXT",
+    "vkCopyImageToImageEXT",
+    "vkTransitionImageLayoutEXT",
+    "vkGetCommandPoolMemoryConsumption",
+    "vkGetPhysicalDeviceVideoCapabilitiesKHR",
+    "vkGetPhysicalDeviceVideoFormatPropertiesKHR",
+    "vkGetPhysicalDeviceVideoEncodeQualityLevelPropertiesKHR",
+    "vkCreateVideoSessionKHR",
+    "vkDestroyVideoSessionKHR",
+    "vkCreateVideoSessionParametersKHR",
+    "vkUpdateVideoSessionParametersKHR",
+    "vkGetEncodedVideoSessionParametersKHR",
+    "vkDestroyVideoSessionParametersKHR",
+    "vkGetVideoSessionMemoryRequirementsKHR",
+    "vkBindVideoSessionMemoryKHR",
+    "vkCmdDecodeVideoKHR",
+    "vkCmdBeginVideoCodingKHR",
+    "vkCmdControlVideoCodingKHR",
+    "vkCmdEndVideoCodingKHR",
+    "vkCmdEncodeVideoKHR",
+    "vkCmdDecompressMemoryNV",
+    "vkCmdDecompressMemoryIndirectCountNV",
+    "vkCreateCuModuleNVX",
+    "vkCreateCuFunctionNVX",
+    "vkDestroyCuModuleNVX",
+    "vkDestroyCuFunctionNVX",
+    "vkCmdCuLaunchKernelNVX",
+    "vkGetDescriptorSetLayoutSizeEXT",
+    "vkGetDescriptorSetLayoutBindingOffsetEXT",
+    "vkGetDescriptorEXT",
+    "vkCmdBindDescriptorBuffersEXT",
+    "vkCmdSetDescriptorBufferOffsetsEXT",
+    "vkCmdBindDescriptorBufferEmbeddedSamplersEXT",
+    "vkGetBufferOpaqueCaptureDescriptorDataEXT",
+    "vkGetImageOpaqueCaptureDescriptorDataEXT",
+    "vkGetImageViewOpaqueCaptureDescriptorDataEXT",
+    "vkGetSamplerOpaqueCaptureDescriptorDataEXT",
+    "vkGetAccelerationStructureOpaqueCaptureDescriptorDataEXT",
+    "vkSetDeviceMemoryPriorityEXT",
+    "vkAcquireDrmDisplayEXT",
+    "vkGetDrmDisplayEXT",
+    "vkWaitForPresentKHR",
+    "vkCreateBufferCollectionFUCHSIA",
+    "vkSetBufferCollectionBufferConstraintsFUCHSIA",
+    "vkSetBufferCollectionImageConstraintsFUCHSIA",
+    "vkDestroyBufferCollectionFUCHSIA",
+    "vkGetBufferCollectionPropertiesFUCHSIA",
+    "vkCreateCudaModuleNV",
+    "vkGetCudaModuleCacheNV",
+    "vkCreateCudaFunctionNV",
+    "vkDestroyCudaModuleNV",
+    "vkDestroyCudaFunctionNV",
+    "vkCmdCudaLaunchKernelNV",
+    "vkCmdBeginRendering",
+    "vkCmdBeginRenderingKHR",
+    "vkCmdEndRendering",
+    "vkCmdEndRenderingKHR",
+    "vkGetDescriptorSetLayoutHostMappingInfoVALVE",
+    "vkGetDescriptorSetHostMappingVALVE",
+    "vkCreateMicromapEXT",
+    "vkCmdBuildMicromapsEXT",
+    "vkBuildMicromapsEXT",
+    "vkDestroyMicromapEXT",
+    "vkCmdCopyMicromapEXT",
+    "vkCopyMicromapEXT",
+    "vkCmdCopyMicromapToMemoryEXT",
+    "vkCopyMicromapToMemoryEXT",
+    "vkCmdCopyMemoryToMicromapEXT",
+    "vkCopyMemoryToMicromapEXT",
+    "vkCmdWriteMicromapsPropertiesEXT",
+    "vkWriteMicromapsPropertiesEXT",
+    "vkGetDeviceMicromapCompatibilityEXT",
+    "vkGetMicromapBuildSizesEXT",
+    "vkGetShaderModuleIdentifierEXT",
+    "vkGetShaderModuleCreateInfoIdentifierEXT",
+    "vkGetImageSubresourceLayout2KHR",
+    "vkGetImageSubresourceLayout2EXT",
+    "vkGetPipelinePropertiesEXT",
+    "vkExportMetalObjectsEXT",
+    "vkGetFramebufferTilePropertiesQCOM",
+    "vkGetDynamicRenderingTilePropertiesQCOM",
+    "vkGetPhysicalDeviceOpticalFlowImageFormatsNV",
+    "vkCreateOpticalFlowSessionNV",
+    "vkDestroyOpticalFlowSessionNV",
+    "vkBindOpticalFlowSessionImageNV",
+    "vkCmdOpticalFlowExecuteNV",
+    "vkGetDeviceFaultInfoEXT",
+    "vkCmdSetDepthBias2EXT",
+    "vkReleaseSwapchainImagesEXT",
+    "vkGetDeviceImageSubresourceLayoutKHR",
+    "vkMapMemory2KHR",
+    "vkUnmapMemory2KHR",
+    "vkCreateShadersEXT",
+    "vkDestroyShaderEXT",
+    "vkGetShaderBinaryDataEXT",
+    "vkCmdBindShadersEXT",
+    "vkGetScreenBufferPropertiesQNX",
+    "vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR",
+    "vkGetExecutionGraphPipelineScratchSizeAMDX",
+    "vkGetExecutionGraphPipelineNodeIndexAMDX",
+    "vkCreateExecutionGraphPipelinesAMDX",
+    "vkCmdInitializeGraphScratchMemoryAMDX",
+    "vkCmdDispatchGraphAMDX",
+    "vkCmdDispatchGraphIndirectAMDX",
+    "vkCmdDispatchGraphIndirectCountAMDX",
+    "vkCmdBindDescriptorSets2KHR",
+    "vkCmdPushConstants2KHR",
+    "vkCmdPushDescriptorSet2KHR",
+    "vkCmdPushDescriptorSetWithTemplate2KHR",
+    "vkCmdSetDescriptorBufferOffsets2EXT",
+    "vkCmdBindDescriptorBufferEmbeddedSamplers2EXT",
+    "vkSetLatencySleepModeNV",
+    "vkLatencySleepNV",
+    "vkSetLatencyMarkerNV",
+    "vkGetLatencyTimingsNV",
+    "vkQueueNotifyOutOfBandNV",
     "VK_KHR_SURFACE_SPEC_VERSION",
     "VK_KHR_SURFACE_EXTENSION_NAME",
     "VK_KHR_SWAPCHAIN_SPEC_VERSION",
