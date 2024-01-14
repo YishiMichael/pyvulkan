@@ -153,15 +153,17 @@ class TypeAlias(Type):
         self: Self,
         file: TextIO
     ) -> None:
-        file.write("\n")
+        pass
+        #file.write("\n")
         #file.write(f"typedef {self.alias} {self.name};\n")
 
     def write_py(
         self: Self,
         file: TextIO
     ) -> None:
-        file.write("\n")
-        file.write(f"{self.name} = {self.alias}\n")
+        pass
+        #file.write("\n")
+        #file.write(f"{self.name} = {self.alias}\n")
 
 
 class ElementaryType(Type):
@@ -236,7 +238,7 @@ class Enum(Type):
     __slots__ = (
         "fields",
         "aliases",
-        "is_bitmask"
+        "long_bitwidth"
     )
 
     def __init__(
@@ -246,7 +248,7 @@ class Enum(Type):
         super().__init__(name)
         self.fields: dict[str, int] = {}
         self.aliases: dict[str, str] = {}
-        self.is_bitmask: bool = False
+        self.long_bitwidth: bool | None = None
 
     @classmethod
     def parse_field_value(
@@ -277,7 +279,7 @@ class Enum(Type):
         field_value: int
     ) -> None:
         if field_name in self.fields:
-            # Skip if duplicate.
+            # Skip if duplicated.
             assert self.fields[field_name] == field_value
             return
         self.fields[field_name] = field_value
@@ -288,7 +290,7 @@ class Enum(Type):
         alias: str
     ) -> None:
         if field_name in self.aliases:
-            # Skip if duplicate.
+            # Skip if duplicated.
             assert self.aliases[field_name] == alias
             return
         self.aliases[field_name] = alias
@@ -297,51 +299,67 @@ class Enum(Type):
         self: Self,
         file: TextIO
     ) -> None:
-        if self.is_bitmask:
-            return
         file.write("\n")
-        if self.fields or self.aliases:
-            file.write(f"typedef enum {{\n")
-            for field_name, field_value in self.fields.items():
-                file.write(f"    {field_name} = {field_value},\n")
-            for field_name, alias in self.aliases.items():
-                file.write(f"    {field_name} = {alias},\n")
-            file.write(f"}} {self.name};\n")
+        if self.long_bitwidth is None:
+            if self.fields or self.aliases:
+                file.write(f"typedef enum {{\n")
+                for field_name, field_value in self.fields.items():
+                    file.write(f"    {field_name} = {field_value},\n")
+                for field_name, alias in self.aliases.items():
+                    file.write(f"    {field_name} = {alias},\n")
+                file.write(f"}} {self.name};\n")
+            else:
+                file.write(f"typedef uint32_t {self.name};\n")
+        elif not self.long_bitwidth:
+            if self.fields or self.aliases:
+                file.write(f"typedef enum {{\n")
+                for field_name, field_value in self.fields.items():
+                    file.write(f"    {field_name} = 0x{field_value:08X},\n")
+                for field_name, alias in self.aliases.items():
+                    file.write(f"    {field_name} = {alias},\n")
+                file.write(f"}} {self.name};\n")
+            else:
+                file.write(f"typedef uint32_t {self.name};\n")
         else:
-            file.write(f"typedef uint32_t {self.name};\n")
+            file.write(f"typedef VkFlags64 {self.name};\n")
+            for field_name, field_value in self.fields.items():
+                file.write(f"static const {self.name} {field_name} = 0x{field_value:016X};\n")
+            for field_name, alias in self.aliases.items():
+                file.write(f"static const {self.name} {field_name} = {alias};\n")
 
     def write_py(
         self: Self,
         file: TextIO
     ) -> None:
-        if self.is_bitmask:
-            return
         file.write("\n")
-        file.write(f"class {self.name}(Enum):\n")
         if self.fields or self.aliases:
+            file.write(f"class {self.name}(Enum):\n")
             for field_name, field_value in self.fields.items():
                 file.write(f"    {field_name} = {field_value}\n")
             for field_name, alias in self.aliases.items():
                 file.write(f"    {field_name} = {alias}\n")
         else:
+            file.write(f"class {self.name}(Enum):\n")
             file.write("    pass\n")
 
 
 class Flag(Type):
     __slots__ = (
         "long_bitwidth",
-        "bitmask_enum",
-        "bitmask_enum_name"
+        "bitmask_enum_name",
+        "bitmask_enum"
     )
 
     def __init__(
         self: Self,
         name: str,
+        #cdef: str,
         long_bitwidth: bool,
         bitmask_enum_name: str | None
     ) -> None:
         super().__init__(name)
         self.long_bitwidth: bool = long_bitwidth
+        #self.cdef: str = cdef
         self.bitmask_enum_name: str | None = bitmask_enum_name
         self.bitmask_enum: Enum | None = None
 
@@ -351,62 +369,47 @@ class Flag(Type):
     ) -> None:
         assert self.bitmask_enum is None
         assert bitmask_enum.name == self.bitmask_enum_name
-        assert not bitmask_enum.is_bitmask
+        assert bitmask_enum.long_bitwidth is self.long_bitwidth
         self.bitmask_enum = bitmask_enum
-        bitmask_enum.is_bitmask = True
 
     def write_c(
         self: Self,
         file: TextIO
     ) -> None:
         file.write("\n")
-        if self.long_bitwidth:
-            file.write(f"typedef VkFlags64 {self.name};\n")
-            if (bitmask_enum := self.bitmask_enum) is not None:
-                file.write(f"typedef VkFlags64 {bitmask_enum.name};\n")
-                for field_name, field_value in bitmask_enum.fields.items():
-                    file.write(f"static const {bitmask_enum.name} {field_name} = 0x{field_value:016X};\n")
-                for field_name, alias in bitmask_enum.aliases.items():
-                    file.write(f"static const {bitmask_enum.name} {field_name} = {alias};\n")
-        else:
-            file.write(f"typedef VkFlags {self.name};\n")
-            if (bitmask_enum := self.bitmask_enum) is not None:
-                if bitmask_enum.fields or bitmask_enum.aliases:
-                    file.write(f"typedef enum {{\n")
-                    for field_name, field_value in bitmask_enum.fields.items():
-                        file.write(f"    {field_name} = 0x{field_value:08X},\n")
-                    for field_name, alias in bitmask_enum.aliases.items():
-                        file.write(f"    {field_name} = {alias},\n")
-                    file.write(f"}} {bitmask_enum.name};\n")
-                else:
-                    file.write(f"typedef VkFlags {bitmask_enum.name};\n")
-        #if (bitmask_enum := self.bitmask_enum) is None or (not bitmask_enum.fields and not bitmask_enum.aliases):
-        #    file.write(f"typedef {"VkFlags64" if self.long_bitwidth else "VkFlags"} {self.name};\n")
-        #    return
-        #file.write(f"typedef enum {{\n")
-        #for field_name, field_value in self.fields.items():
-        #    file.write(f"    {field_name} = {field_value},\n")
-        #for field_name, alias in self.aliases.items():
-        #    file.write(f"    {field_name} = {alias},\n")
-        #file.write(f"}} {self.name};\n")
+        file.write(f"typedef {"VkFlags64" if self.long_bitwidth else "VkFlags"} {self.name};\n")
+        #if (bitmask_enum := self.bitmask_enum) is not None:
+        #    if self.long_bitwidth:
+        #        file.write(f"typedef VkFlags64 {bitmask_enum.name};\n")
+        #        for field_name, field_value in bitmask_enum.fields.items():
+        #            file.write(f"static const {bitmask_enum.name} {field_name} = 0x{field_value:016X};\n")
+        #        for field_name, alias in bitmask_enum.aliases.items():
+        #            file.write(f"static const {bitmask_enum.name} {field_name} = {alias};\n")
+        #    else:
+        #        if bitmask_enum.fields or bitmask_enum.aliases:
+        #            file.write(f"typedef enum {{\n")
+        #            for field_name, field_value in bitmask_enum.fields.items():
+        #                file.write(f"    {field_name} = 0x{field_value:08X},\n")
+        #            for field_name, alias in bitmask_enum.aliases.items():
+        #                file.write(f"    {field_name} = {alias},\n")
+        #            file.write(f"}} {bitmask_enum.name};\n")
+        #        else:
+        #            file.write(f"typedef VkFlags {bitmask_enum.name};\n")
 
     def write_py(
         self: Self,
         file: TextIO
     ) -> None:
         file.write("\n")
-        file.write(f"class {self.name}(Flag):\n")
-        if (bitmask_enum := self.bitmask_enum) is not None:
-            if bitmask_enum.fields or bitmask_enum.aliases:
-                bitwidth = 64 if self.long_bitwidth else 32
-                for field_name, field_value in bitmask_enum.fields.items():
-                    file.write(f"    {field_name} = 0x{field_value:0{bitwidth // 4}X}\n")
-                for field_name, alias in bitmask_enum.aliases.items():
-                    file.write(f"    {field_name} = {alias}\n")
-            else:
-                file.write("    pass\n")
-            file.write(f"{bitmask_enum.name} = {self.name}\n")
+        if (bitmask_enum := self.bitmask_enum) is not None and (bitmask_enum.fields or bitmask_enum.aliases):
+            bitwidth = 64 if self.long_bitwidth else 32
+            file.write(f"class {self.name}(Flag):\n")
+            for field_name, field_value in bitmask_enum.fields.items():
+                file.write(f"    {field_name} = 0x{field_value:0{bitwidth // 4}X}\n")
+            for field_name, alias in bitmask_enum.aliases.items():
+                file.write(f"    {field_name} = {alias}\n")
         else:
+            file.write(f"class {self.name}(Flag):\n")
             file.write("    pass\n")
 
 
@@ -550,6 +553,9 @@ class Registry:
                     self.add_type(name, external_type)
                     self.append_obj(external_type)
 
+                case "include":
+                    pass
+
                 case "define":
                     if (pydef := Macro.parse_pydef(
                         cdef="".join(type_xml.itertext())
@@ -591,8 +597,19 @@ class Registry:
                     self.add_type(name, flag)
                     self.append_obj(flag)
 
+                case "struct":
+                    pass
+
+                case "union":
+                    pass
+
+                case _ as category:
+                    raise ValueError(f"Unexpected category name: {category}")
+
         for enums_xml in registry_xml.iterfind("enums"):
             enum = self.get_enum(enum_name) if self.has_type(enum_name := enums_xml.attrib["name"]) else None
+            if enum is not None and enums_xml.attrib.get("type") == "bitmask":
+                enum.long_bitwidth = enums_xml.attrib.get("bitwidth") == "64"
             for enum_xml in enums_xml.iterfind("enum"):
                 if not check_api_attr(enum_xml):
                     continue
@@ -629,7 +646,7 @@ class Registry:
         self: Self,
         cdef_path: pathlib.Path
     ) -> None:
-        with cdef_path.open("w", newline="\n") as file:
+        with cdef_path.open("w") as file:
             file.write("// Auto-generated C definitions\n")
 
             for obj in self.objs:
@@ -650,7 +667,7 @@ class Registry:
         pydef_path: pathlib.Path,
         preamble_path: pathlib.Path
     ) -> None:
-        with pydef_path.open("w", newline="\n") as file:
+        with pydef_path.open("w") as file:
             file.write(preamble_path.read_text())
 
             for obj in self.objs:
@@ -667,20 +684,20 @@ class Registry:
 
 
 def main() -> None:
-    here = pathlib.Path()
+    this_dir = pathlib.Path()
     registry = Registry()
     for xml in (
-        here.joinpath("xml/video.xml"),
-        here.joinpath("xml/vk.xml")
+        this_dir.joinpath("xml/video.xml"),
+        this_dir.joinpath("xml/vk.xml")
     ):
         registry.read_registry(registry_xml=etree.parse(xml).getroot())
 
-    generated_dir = here.joinpath("generated")
+    generated_dir = this_dir.joinpath("generated")
     generated_dir.mkdir(exist_ok=True)
     cdef_path = generated_dir.joinpath("_vulkan.h")
     pydef_path = generated_dir.joinpath("_vulkan.py")
     ffi_path = generated_dir.joinpath("_vulkan_ffi.py")
-    preamble_path = here.joinpath("preamble.py")
+    preamble_path = this_dir.joinpath("preamble.py")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("all", "cdef", "ffi", "pydef"))
@@ -699,14 +716,6 @@ def main() -> None:
 
         case "pydef":
             registry.build_pydef(pydef_path, preamble_path)
-
-    #with (
-    #    generated_dir.joinpath("_vulkan.h").open("w", newline="\n") as vulkan_h,
-    #    generated_dir.joinpath("_vulkan.py").open("w", newline="\n") as vulkan_py
-    #):
-    #    vulkan_py.write(pathlib.Path("preamble.py").read_text())
-    #    registry.write_c(vulkan_h)
-    #    registry.write_py(vulkan_py)
 
 
 if __name__ == "__main__":

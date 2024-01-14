@@ -3,5 +3,4 @@ __pycache__/
 
 /playground/
 /scripts/generated/
-/scripts/xml/video.xml
-/scripts/xml/vk.xml
+/scripts/xml/*.xml

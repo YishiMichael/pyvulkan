@@ -21,6 +21,7 @@ It's not guaranteed the interface is kept up-to-date with Vulkan development. To
 - Clone this repository;
 - Under `pyvulkan/scripts/xml/`, fetch files `vk.xml` and `video.xml` from [here](https://github.com/KhronosGroup/Vulkan-Docs/tree/main/xml/);
 - Under `pyvulkan/scripts/`, run `python generate.py all`.
+
 If run successfully, you should see all files needed under the directory `generated` (there may be other intermediate files).
 
 
