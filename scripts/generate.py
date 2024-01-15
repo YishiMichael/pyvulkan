@@ -3,6 +3,7 @@ import pathlib
 import re
 import xml.etree.ElementTree as etree
 from typing import (
+    Iterator,
     Self,
     TextIO
 )
@@ -33,125 +34,7 @@ class Obj:
         pass
 
 
-class Macro(Obj):
-    __slots__ = ("py_macro",)
-
-    def __init__(
-        self: Self,
-        name: str,
-        py_macro: str
-    ) -> None:
-        super().__init__(name)
-        self.py_macro: str = py_macro
-
-    @classmethod
-    def parse_c_macro(
-        cls: type[Self],
-        c_macro: str
-    ) -> str | None:
-
-        def format_line(
-            line: str
-        ) -> str:
-            line = line.strip()
-            if "//" in line:  # Remove comments.
-                line = line[:line.index("//")].rstrip()
-            if line.endswith("\\"):  # Join line continuation.
-                return line.rstrip("\\")
-            return line + "\n"
-
-        c_macro = "".join(filter(None, (
-            format_line(line)
-            for line in c_macro.splitlines()
-        ))).strip()
-
-        if (match := re.fullmatch(r"#define (\w+) (\d+)", c_macro)) is not None:
-            # A number.
-            name = match.group(1)
-            value = match.group(2)
-            return f"{name} = {value}"
-        if (match := re.fullmatch(r"#define (\w+) (\w+)\(((?:\w+, )*\w+)\)", c_macro)) is not None:
-            # A number from a macro function call.
-            name = match.group(1)
-            func_name = match.group(2)
-            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(3)))
-            return f"{name} = {func_name}({", ".join(args)})"
-        if (match := re.fullmatch(r"#define (\w+)\(((?:\w+, )*\w+)\) \((.*)\)", c_macro)) is not None:
-            # A macro function.
-            name = match.group(1)
-            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(2)))
-            result = match.group(3)
-            result = re.sub(
-                r"\(uint32_t\)\((\w+)\)",
-                lambda match: match.group(1),
-                result
-            )
-            result = re.sub(
-                r"\b(\d+|0x[\dA-F]+)U",
-                lambda match: match.group(1),
-                result
-            )
-            result = re.sub(
-                r"\((\w+)\)",
-                lambda match: match.group(1),
-                result
-            )
-            return "\n".join((
-                f"def {name}(",
-                *(f"    {arg}: int," for  arg in args),
-                ") -> int:",
-                f"    return {result}"
-            ))
-        return None
-
-    def write_py(
-        self: Self,
-        file: TextIO
-    ) -> None:
-        file.write("\n")
-        file.write(f"{self.py_macro}\n")
-
-
-class Constant(Macro):
-    __slots__ = ("value_str",)
-
-    def __init__(
-        self: Self,
-        name: str,
-        value_str: str
-    ) -> None:
-        super().__init__(name, f"{name} = {value_str}")
-        self.value_str: str = value_str
-
-    @classmethod
-    def parse_value(
-        cls: type[Self],
-        value: str | None
-    ) -> str | None:
-        if value is None:
-            return None
-        if (match := re.fullmatch(r"\d+", value)) is not None:
-            return match.group()
-        if (match := re.fullmatch(r"0x[\dA-F]+", value)) is not None:
-            return match.group()
-        if (match := re.fullmatch(r"\(~(\d+)U\)", value)) is not None:
-            return f"0x{(1 << 32) - 1 - int(match.group(1)):X}"
-        if (match := re.fullmatch(r"\(~(\d+)ULL\)", value)) is not None:
-            return f"0x{(1 << 64) - 1 - int(match.group(1)):X}"
-        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(E[+-]?\d+)?)F?", value, flags=re.IGNORECASE)) is not None:
-            return match.group(1)
-        if (match := re.fullmatch(r"\"\w+\"", value)) is not None:
-            return match.group()
-        if (match := re.fullmatch(r"\w+", value)) is not None:
-            return match.group()
-        raise ValueError
-
-
-#class Type(Obj):
-#    __slots__ = ()
-
-
-class TypeAlias(Obj):
+class Alias(Obj):
     __slots__ = ("alias",)
 
     def __init__(
@@ -177,15 +60,131 @@ class TypeAlias(Obj):
         #file.write(f"{self.name} = {self.alias}\n")
 
 
+class Macro(Obj):
+    __slots__ = (
+        "c_macro",
+        "py_macro"
+    )
+
+    def __init__(
+        self: Self,
+        name: str,
+        c_macro: str | None
+        #py_macro: str
+    ) -> None:
+        super().__init__(name)
+        c_macro, py_macro = type(self).parse_c_macro(c_macro)
+        self.c_macro: str | None = c_macro
+        self.py_macro: str | None = py_macro
+
+    @classmethod
+    def parse_c_macro(
+        cls: type[Self],
+        c_macro: str | None
+    ) -> tuple[str | None, str | None]:
+
+        def format_line(
+            line: str
+        ) -> str:
+            line = line.strip()
+            if "//" in line:  # Remove comments.
+                line = line[:line.index("//")].rstrip()
+            if line.endswith("\\"):  # Join line continuation.
+                return line.rstrip("\\")
+            return line + "\n"
+
+        if c_macro is None:
+            return None, None
+
+        c_macro = "".join(filter(None, (
+            format_line(line)
+            for line in c_macro.splitlines()
+        ))).strip()
+        if (macro_match := re.fullmatch(r"#define\s+(\b\w+\b)\s*(.*)", c_macro)) is None:
+            return None, None
+
+        name = macro_match.group(1)
+        value = macro_match.group(2)
+
+        # Literals.
+        if (match := re.fullmatch(r"\d+", value)) is not None:
+            return c_macro, f"{name} = {value}"
+        if (match := re.fullmatch(r"0x[\dA-F]+", value)) is not None:
+            return c_macro, f"{name} = {value}"
+        if (match := re.fullmatch(r"\(~(\d+)U\)", value)) is not None:
+            return None, f"{name} = 0x{(1 << 32) - 1 - int(match.group(1)):X}"
+        if (match := re.fullmatch(r"\(~(\d+)ULL\)", value)) is not None:
+            return None, f"{name} = 0x{(1 << 64) - 1 - int(match.group(1)):X}"
+        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", value, flags=re.IGNORECASE)) is not None:
+            return None, f"{name} = {match.group(1)}"
+        if (match := re.fullmatch(r"\"\w+\"", value)) is not None:
+            return None, f"{name} = {value}"
+        if (match := re.fullmatch(r"\w+", value)) is not None:
+            return None, f"{name} = {value}"
+
+        # A number from a macro function call.
+        if (match := re.fullmatch(r"(\w+)\(((?:\w+,\s*)*\w+)\)", value)) is not None:
+            func_name = match.group(1)
+            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(2)))
+            return None, f"{name} = {func_name}({", ".join(args)})"
+
+        # A macro function.
+        if (match := re.fullmatch(r"\(((?:\w+,\s*)*\w+)\)\s*\((.*)\)", value)) is not None:
+            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(1)))
+            result = match.group(2)
+            result = re.sub(
+                r"\(uint32_t\)\((\w+)\)",
+                lambda match: match.group(1),
+                result
+            )
+            result = re.sub(
+                r"\b(\d+|0x[\dA-F]+)U",
+                lambda match: match.group(1),
+                result
+            )
+            result = re.sub(
+                r"\((\w+)\)",
+                lambda match: match.group(1),
+                result
+            )
+            return None, "\n".join((
+                f"def {name}(",
+                *(f"    {arg}: int," for  arg in args),
+                ") -> int:",
+                f"    return {result}"
+            ))
+
+        return None, None
+
+    def write_c(
+        self: Self,
+        file: TextIO
+    ) -> None:
+        if self.c_macro is None:
+            return
+        file.write("\n")
+        file.write(f"{self.c_macro}\n")
+
+    def write_py(
+        self: Self,
+        file: TextIO
+    ) -> None:
+        file.write("\n")
+        if self.py_macro is None:
+            file.write(f"{self.name} = None\n")
+            return
+        file.write(f"{self.py_macro}\n")
+
+
 class Declaration(Obj):
     __slots__ = (
         "cdecl",
         "base_type_name",
-        "array_size_names",
+        "array_sizes",
         "pointer_count",
         "is_nonconst_pointer",
-        "base_type",
-        "array_sizes"
+        "base_type"
+        #"array_sizes"
     )
 
     def __init__(
@@ -195,37 +194,74 @@ class Declaration(Obj):
         #pointer_count: int,
         #array_sizes: tuple[int, ...]
     ) -> None:
-        name, base_type_name, array_size_names, pointer_count, is_nonconst_pointer = type(self).parse_cdecl(cdecl)
+        cdecl, name, base_type_name, array_sizes, pointer_count, is_nonconst_pointer = type(self).parse_cdecl(cdecl)
         super().__init__(name)
         self.cdecl: str = cdecl
         self.base_type_name: str = base_type_name
-        self.array_size_names: tuple[str, ...] = array_size_names
+        self.array_sizes: tuple[str, ...] = array_sizes
         self.pointer_count: int = pointer_count
         self.is_nonconst_pointer: bool = is_nonconst_pointer
         self.base_type: Obj = NotImplemented
-        self.array_sizes: tuple[int, ...] = NotImplemented
+        #self.array_sizes: tuple[int, ...] = NotImplemented
 
     @classmethod
     def parse_cdecl(
         cls: type[Self],
         cdecl: str
-    ) -> tuple[str, str, tuple[str, ...], int, bool]:
-        assert (match := re.fullmatch(
-            r"\s*(\bconst\b)?\s*(?:\bstruct\b)?\s*(\b\w+\b)\s*(\*)?\s*(\bconst\b)?\s*(\*)?\s*(\b\w+\b)?((?:\[\w+\])*)(?:\s*:\s*\d+)?\s*",
-            cdecl
-        )) is not None
-        name = name_group if (name_group := match.group(6)) is not None else ""
-        base_type_name = match.group(2)
-        array_size_names = tuple(
-            array_size_name_match.group()
-            for array_size_name_match in re.finditer(r"\w+", match.group(7))
-        )
-        pointer_count = len(array_size_names) + int(match.group(3) is not None) + int(match.group(5) is not None)
-        is_nonconst_pointer = any((
-            match.group(1) is None and match.group(3) is not None,
-            match.group(4) is None and match.group(5) is not None
-        ))
-        return name, base_type_name, array_size_names, pointer_count, is_nonconst_pointer
+    ) -> tuple[str, str, str, tuple[str, ...], int, bool]:
+        array_sizes: tuple[str, ...] = ()
+        pointer_count: int = 0
+        is_nonconst_pointer: bool = False
+        components = re.findall(r"\w+|\S", cdecl)
+        match components:
+            case (base_type_name, name):
+                pass
+            case (base_type_name, "*", name):
+                pointer_count = 1
+                is_nonconst_pointer = True
+            case ("struct", base_type_name, "*", name):
+                pointer_count = 1
+                is_nonconst_pointer = True
+            case (base_type_name, "*", "*", name):
+                pointer_count = 2
+                is_nonconst_pointer = True
+            case ("struct", base_type_name, "*", "*", name):
+                pointer_count = 2
+                is_nonconst_pointer = True
+            case (base_type_name, name, "[", array_size_0, "]"):
+                array_sizes = (array_size_0,)
+            case (base_type_name, name, "[", array_size_0, "]", "[", array_size_1, "]"):
+                array_sizes = (array_size_0, array_size_1)
+            case (base_type_name, name, ":", _):
+                pass
+            case ("const", base_type_name, "*", name):
+                pointer_count = 1
+            case ("const", "struct", base_type_name, "*", name):
+                pointer_count = 1
+            case ("const", base_type_name, "*", "const", "*", name):
+                pointer_count = 2
+            case ("const", base_type_name, name, "[", array_size_0, "]"):
+                array_sizes = (array_size_0,)
+            case _:
+                raise ValueError
+        formatted_cdecl = " ".join(components)
+        #print(cdecl.strip())
+        #assert (match := re.fullmatch(
+        #    r"(\bconst\b)?\s*(?:\bstruct\b)?\s*(\b\w+\b)\s*(\*)?\s*(\bconst\b)?\s*(\*)?\s*(\b\w+\b)?\s*((?:\[\w+\])*)(?:\s*:\s*\d+)?",
+        #    cdecl.strip()
+        #)) is not None
+        #name = name_group if (name_group := match.group(6)) is not None else ""
+        #base_type_name = match.group(2)
+        #array_sizes = tuple(
+        #    array_size_name_match.group()
+        #    for array_size_name_match in re.finditer(r"\w+", match.group(7))
+        #)
+        #pointer_count = len(array_sizes) + int(match.group(3) is not None) + int(match.group(5) is not None)
+        #is_nonconst_pointer = any((
+        #    match.group(1) is None and match.group(3) is not None,
+        #    match.group(4) is None and match.group(5) is not None
+        #))
+        return formatted_cdecl, name, base_type_name, array_sizes, pointer_count, is_nonconst_pointer
 
 
 class Signature(Obj):
@@ -306,19 +342,22 @@ class ExternalType(Obj):
 
 class Enum(Obj):
     __slots__ = (
+        #"flag_name",
+        "long_bitwidth",
         "fields",
-        "aliases",
-        "long_bitwidth"
+        "aliases"
     )
 
     def __init__(
         self: Self,
         name: str
+        #flag_name: str | None
     ) -> None:
         super().__init__(name)
+        #self.flag_name: str | None = flag_name
+        self.long_bitwidth: bool | None = None
         self.fields: dict[str, int] = {}
         self.aliases: dict[str, str] = {}
-        self.long_bitwidth: bool | None = None
 
     @classmethod
     def parse_field_value(
@@ -402,55 +441,102 @@ class Enum(Obj):
         file: TextIO
     ) -> None:
         file.write("\n")
-        if self.fields or self.aliases:
-            file.write(f"class {self.name}(Enum):\n")
-            for field_name, field_value in self.fields.items():
-                file.write(f"    {field_name} = {field_value}\n")
-            for field_name, alias in self.aliases.items():
-                file.write(f"    {field_name} = {alias}\n")
+        if self.long_bitwidth is None:
+            if self.fields or self.aliases:
+                file.write(f"class {self.name}(Enum):\n")
+                for field_name, field_value in self.fields.items():
+                    file.write(f"    {field_name} = {field_value}\n")
+                for field_name, alias in self.aliases.items():
+                    file.write(f"    {field_name} = {alias}\n")
+            else:
+                file.write(f"class {self.name}(Enum):\n")
+                file.write("    pass\n")
         else:
-            file.write(f"class {self.name}(Enum):\n")
-            file.write("    pass\n")
+            if self.fields or self.aliases:
+                bitwidth = 64 if self.long_bitwidth else 32
+                file.write(f"class {self.name}(Flag):\n")
+                for field_name, field_value in self.fields.items():
+                    file.write(f"    {field_name} = 0x{field_value:0{bitwidth // 4}X}\n")
+                for field_name, alias in self.aliases.items():
+                    file.write(f"    {field_name} = {alias}\n")
+            else:
+                file.write(f"class {self.name}(Flag):\n")
+                file.write("    pass\n")
+
+    #def write_c(
+    #    self: Self,
+    #    file: TextIO
+    #) -> None:
+    #    self.write_c_variant(file, self.long_bitwidth)
+
+    #def write_py(
+    #    self: Self,
+    #    file: TextIO
+    #) -> None:
+    #    self.write_py_variant(file, self.long_bitwidth)
+    #    #if self.flag_name is not None:
+    #    #    file.write("\n")
+    #    #    file.write(f"{self.flag_name} = {self.name}\n")
+    #    #file.write("\n")
+    #    #if self.fields or self.aliases:
+    #    #    file.write(f"class {self.name}(Enum):\n")
+    #    #    for field_name, field_value in self.fields.items():
+    #    #        file.write(f"    {field_name} = {field_value}\n")
+    #    #    for field_name, alias in self.aliases.items():
+    #    #        file.write(f"    {field_name} = {alias}\n")
+    #    #else:
+    #    #    file.write(f"class {self.name}(Enum):\n")
+    #    #    file.write("    pass\n")
 
 
 class Flag(Obj):
     __slots__ = (
-        "long_bitwidth",
-        "bitmask_enum_name",
-        "bitmask_enum"
+        #"long_bitwidth",
+        #"bitmask_enum_name",
+        "cdecl",
+        "bitmask_enum_name"
     )
 
     def __init__(
         self: Self,
         name: str,
-        long_bitwidth: bool,
+        cdecl: str,
+        #has_bitmask_enum: bool
+        #long_bitwidth: bool,
         bitmask_enum_name: str | None
     ) -> None:
         super().__init__(name)
-        self.long_bitwidth: bool = long_bitwidth
+        #self.long_bitwidth: bool = long_bitwidth
+        #self.bitmask_enum_name: str | None = bitmask_enum_name
+        self.cdecl: str = cdecl
         self.bitmask_enum_name: str | None = bitmask_enum_name
-        self.bitmask_enum: Enum | None = NotImplemented
 
     def write_c(
         self: Self,
         file: TextIO
     ) -> None:
+        #type_name = "VkFlags64" if self.bitmask_enum is not None and self.bitmask_enum.long_bitwidth else "VkFlags"
         file.write("\n")
-        file.write(f"typedef {"VkFlags64" if self.long_bitwidth else "VkFlags"} {self.name};\n")
+        #file.write(f"typedef {type_name} {self.name};\n")
+        file.write(f"{self.cdecl}\n")
 
     def write_py(
         self: Self,
         file: TextIO
     ) -> None:
         file.write("\n")
-        if (bitmask_enum := self.bitmask_enum) is not None and (bitmask_enum.fields or bitmask_enum.aliases):
-            bitwidth = 64 if self.long_bitwidth else 32
-            file.write(f"class {self.name}(Flag):\n")
-            for field_name, field_value in bitmask_enum.fields.items():
-                file.write(f"    {field_name} = 0x{field_value:0{bitwidth // 4}X}\n")
-            for field_name, alias in bitmask_enum.aliases.items():
-                file.write(f"    {field_name} = {alias}\n")
+        if self.bitmask_enum_name is not None:
+            file.write(f"{self.name} = {self.bitmask_enum_name}\n")
         else:
+        #bitwidth = 64 if self.bitmask_enum is not None and self.bitmask_enum.long_bitwidth else 32
+        #file.write("\n")
+        #if (bitmask_enum := self.bitmask_enum) is not None and (bitmask_enum.fields or bitmask_enum.aliases):
+        #    file.write(f"class {self.name}(Flag):\n")
+        #    for field_name, field_value in bitmask_enum.fields.items():
+        #        file.write(f"    {field_name} = 0x{field_value:0{bitwidth // 4}X}\n")
+        #    for field_name, alias in bitmask_enum.aliases.items():
+        #        file.write(f"    {field_name} = {alias}\n")
+        #else:
             file.write(f"class {self.name}(Flag):\n")
             file.write("    pass\n")
 
@@ -485,7 +571,7 @@ class Struct(Signature):
     ) -> None:
         super().__init__(
             name=name,
-            return_cdecl="void",
+            return_cdecl="void _",
             #arg_names=arg_names,
             arg_cdecls=arg_cdecls
         )
@@ -502,7 +588,7 @@ class Union(Signature):
     ) -> None:
         super().__init__(
             name=name,
-            return_cdecl="void",
+            return_cdecl="void _",
             #arg_names=arg_names,
             arg_cdecls=arg_cdecls
         )
@@ -559,6 +645,12 @@ class Registry:
     #) -> None:
     #    self.objs.append(obj)
 
+    def iter_objs(
+        self: Self
+    ) -> Iterator[Obj]:
+        for obj in self.obj_dict.values():
+            yield obj
+
     def add_obj(
         self: Self,
         type_obj: Obj
@@ -578,13 +670,13 @@ class Registry:
     ) -> Obj:
         return self.obj_dict[type_name]
 
-    def get_constant(
-        self: Self,
-        constant_name: str
-    ) -> Constant:
-        constant = self.get_obj(constant_name)
-        assert isinstance(constant, Constant)
-        return constant
+    #def get_constant(
+    #    self: Self,
+    #    constant_name: str
+    #) -> Constant:
+    #    constant = self.get_obj(constant_name)
+    #    assert isinstance(constant, Constant)
+    #    return constant
 
     def get_elementary_type(
         self: Self,
@@ -608,162 +700,209 @@ class Registry:
         enum_xml: etree.Element,
         number: str | None
     ) -> None:
-        name = enum_xml.attrib["name"]
-        alias = enum_xml.attrib.get("alias")
+        name = enum_xml.get("name", "")
+        alias = enum_xml.get("alias")
         if enum is None:
             if alias is not None:
-                self.add_obj(Constant(
+                self.add_obj(Macro(
                     name=name,
-                    value_str=alias
+                    c_macro=f"#define {name} {alias}"
                 ))
                 return
-            if (value_str := Constant.parse_value(
-                value=enum_xml.attrib.get("value")
-            )) is None:
+            if (value := enum_xml.get("value")) is None:
                 return
-            self.add_obj(Constant(
+            self.add_obj(Macro(
                 name=name,
-                value_str=value_str
+                c_macro=f"#define {name} {value}"
             ))
             return
         if alias is not None:
             enum.read_alias(name, alias)
             return
         enum.read_field(name, Enum.parse_field_value(
-            value=enum_xml.attrib.get("value"),
-            bitpos=enum_xml.attrib.get("bitpos"),
-            offset=enum_xml.attrib.get("offset"),
-            extnumber=enum_xml.attrib.get("extnumber"),
-            direction=enum_xml.attrib.get("direction"),
+            value=enum_xml.get("value"),
+            bitpos=enum_xml.get("bitpos"),
+            offset=enum_xml.get("offset"),
+            extnumber=enum_xml.get("extnumber"),
+            direction=enum_xml.get("direction"),
             number=number
         ))
+
+    #def fill_in_base_type(
+    #    self: Self,
+    #    signature: Signature
+    #) -> Signature:
+    #    for declaration in (signature.return_declaration, *signature.arg_declarations):
+    #        base_type_name = declaration.base_type_name
+    #        declaration.base_type = weakref.ref(
+    #            self.get_obj(base_type_name) if base_type_name != signature.name else signature
+    #        )
+    #    return signature
 
     def read_registry(
         self: Self,
         registry_xml: etree.Element
     ) -> None:
 
-        def check_api_attr(
-            xml: etree.Element
-        ) -> bool:
-            api_attr = xml.attrib.get("api")
-            return api_attr is None or "vulkan" in api_attr.split(",")
+        def sort_xml_by_requirement(
+            xml_iter: Iterator[etree.Element]
+        ) -> Iterator[tuple[str, etree.Element]]:
+            name_to_dependent_xml_item_list: dict[str, list[tuple[str, etree.Element]]] = {}
+            occurred_names: set[str] = set()
+            for xml in xml_iter:
+                name = xml.findtext("name") or xml.get("name", "")
+                occurred_names.add(name)
+                requires = (
+                    None  # Ignore requires attribute for macros.
+                    if xml.get("category") not in ("include", "define")
+                    else xml.get("bitvalues") or xml.get("requires")
+                )
+                if requires is not None and requires not in occurred_names:
+                    name_to_dependent_xml_item_list.setdefault(requires, []).append((name, xml))
+                    continue
+                yield name, xml
+                if (dependent_xml_item_list := name_to_dependent_xml_item_list.pop(name, None)) is not None:
+                    yield from dependent_xml_item_list
+            assert not name_to_dependent_xml_item_list
 
-        for comment_xml in registry_xml.iter("comment"):
-            comment_xml.clear()
+        for xml in list(registry_xml.iter()):
+            xml[:] = filter(
+                lambda child_xml: (
+                    child_xml.tag != "comment"
+                    and ((api_attr := child_xml.get("api")) is None or "vulkan" in api_attr.split(","))
+                ),
+                xml
+            )
 
-        for type_xml in registry_xml.iterfind("types/type"):
-            if not check_api_attr(type_xml):
-                continue
+        #bitmask_enum_name_to_flag_name_dict: dict[str, str] = {}
+        #type_xml_list = registry_xml.findall("types/type")
+        #name_to_dependent_type_xml_list: dict[str, list[etree.Element]] = {}
+        #occurred_names: set[str] = set()
 
-            name = name_text if (name_text := type_xml.findtext("name")) is not None else type_xml.attrib["name"]
-            if (alias := type_xml.attrib.get("alias")) is not None:
-                self.add_obj(TypeAlias(
-                    name,
+        for name, type_xml in sort_xml_by_requirement(registry_xml.iterfind("types/type")):
+        #while type_xml_list:
+        #    type_xml = type_xml_list.pop(0)
+        #    name = type_xml.findtext("name") or type_xml.get("name", "")
+        #    occurred_names.add(name)
+        #    if (requires := type_xml.get("requires")) is not None:
+        #        #print(requires)
+        #        if requires in occurred_names:
+        #            print(requires)
+        #        else:
+        #            name_to_dependent_type_xml_list.setdefault(requires, []).append(type_xml)
+        #            continue
+        #    if (dependent_type_xml_list := name_to_dependent_type_xml_list.pop(name, None)) is not None:
+        #        type_xml_list = dependent_type_xml_list + type_xml_list
+            #if name in ("VKSC_API_VARIANT", "VK_MAKE_API_VERSION"):
+            #    print(name)
+
+            if (alias := type_xml.get("alias")) is not None:
+                self.add_obj(Alias(
+                    name=name,
                     alias=alias
                 ))
                 continue
 
-            match type_xml.attrib.get("category"):
+            match type_xml.get("category"):
                 case None:
                     if self.has_obj(name):
                         continue
-                    self.add_obj(ExternalType(name))
-                    #self.append_obj(external_type)
+                    self.add_obj(ExternalType(
+                        name=name
+                    ))
 
                 case "include":
                     pass
 
                 case "define":
-                    if (py_macro := Macro.parse_c_macro(
-                        c_macro="".join(type_xml.itertext())
-                    )) is None:
-                        continue
                     self.add_obj(Macro(
-                        name,
-                        py_macro=py_macro
+                        name=name,
+                        c_macro="".join(type_xml.itertext())
                     ))
 
                 case "basetype":
-                    self.add_obj(
-                        ElementaryTypedef(name, self.get_elementary_type(match.group(1)))
-                        if (match := re.fullmatch(r"typedef (\w+) \w+;", "".join(type_xml.itertext()))) is not None
-                        else ExternalType(name)
-                    )
-                    #self.append_obj(elementary_typedef)
+                    if (match := re.fullmatch(r"typedef\s+(\w+)\s+\w+;", "".join(type_xml.itertext()))) is not None:
+                        self.add_obj(ElementaryTypedef(
+                            name=name,
+                            elementary_type=self.get_elementary_type(match.group(1))
+                        ))
+                    else:
+                        self.add_obj(ExternalType(
+                            name=name
+                        ))
 
                 case "enum":
-                    self.add_obj(Enum(name))
-                    #self.append_obj(enum)
+                    self.add_obj(Enum(
+                        name=name
+                        #flag_name=bitmask_enum_name_to_flag_name_dict.pop(name, None)
+                    ))
 
                 case "bitmask":
+                    #bitmask_enum_name = type_xml.get("requires") or type_xml.get("bitvalues")
                     self.add_obj(Flag(
-                        name,
-                        long_bitwidth=type_xml.findtext("type") == "VkFlags64",
-                        bitmask_enum_name=type_xml.attrib.get("requires") or type_xml.attrib.get("bitvalues")
+                        name=name,
+                        cdecl="".join(type_xml.itertext()),
+                        bitmask_enum_name=type_xml.get("requires") or type_xml.get("bitvalues")
                     ))
-                    #self.append_obj(flag)
+                    #if bitmask_enum_name is not None:
+                    #    bitmask_enum_name_to_flag_name_dict[bitmask_enum_name] = name
 
                 case "handle":
-                    self.add_obj(Handle(name))
-                    #self.append_obj(handle)
+                    self.add_obj(Handle(
+                        name=name
+                    ))
 
                 case "struct":
                     self.add_obj(Struct(
-                        name,
+                        name=name,
                         arg_cdecls=tuple(
                             "".join(member_xml.itertext())
                             for member_xml in type_xml.iterfind("member")
                         )
                     ))
-                    #self.append_obj(struct)
 
                 case "union":
                     self.add_obj(Union(
-                        name,
+                        name=name,
                         arg_cdecls=tuple(
                             "".join(member_xml.itertext())
                             for member_xml in type_xml.iterfind("member")
                         )
                     ))
-                    #self.append_obj(union)
 
                 case "funcpointer":
                     assert (match := re.fullmatch(
-                        r"typedef (.*) \(VKAPI_PTR \*\w+\)\((.*)\);",
+                        r"typedef\s+(.*)\s+\(VKAPI_PTR \*\w+\)\((.*)\);",
                         "".join(type_xml.itertext()),
                         flags=re.DOTALL
                     )) is not None
                     assert (args_cdecl := match.group(2)) is not None
                     self.add_obj(FunctionPointer(
-                        name,
-                        return_cdecl=match.group(1),
-                        arg_cdecls=tuple(args_cdecl.split(","))
+                        name=name,
+                        return_cdecl=f"{match.group(1)} _",
+                        arg_cdecls=tuple(args_cdecl.split(",")) if args_cdecl != "void" else ()
                     ))
-                    #self.append_obj(function_pointer)
 
                 case _ as category:
                     raise ValueError(f"Unexpected category name: {category}")
 
+        #assert not name_to_dependent_type_xml_list
+
         for enums_xml in registry_xml.iterfind("enums"):
-            enum = self.get_enum(enum_name) if self.has_obj(enum_name := enums_xml.attrib["name"]) else None
+            enum = self.get_enum(enum_name) if self.has_obj(enum_name := enums_xml.get("name", "")) else None
             if enum is not None:
                 enum.long_bitwidth = (
-                    enums_xml.attrib.get("bitwidth") == "64"
-                    if enums_xml.attrib.get("type") == "bitmask"
+                    enums_xml.get("bitwidth") == "64"
+                    if enums_xml.get("type") == "bitmask"
                     else None
                 )
             for enum_xml in enums_xml.iterfind("enum"):
-                if not check_api_attr(enum_xml):
-                    continue
                 self.read_field_or_constant(enum, enum_xml, None)
 
         for command_xml in registry_xml.iterfind("commands/command"):
-            if not check_api_attr(command_xml):
-                continue
-            if (alias := command_xml.attrib.get("alias")) is not None:
-                self.add_obj(TypeAlias(
-                    command_xml.attrib["name"],
+            if (alias := command_xml.get("alias")) is not None:
+                self.add_obj(Alias(
+                    name=command_xml.get("name", ""),
                     alias=alias
                 ))
                 continue
@@ -771,55 +910,45 @@ class Registry:
             assert (name := proto_xml.findtext("name")) is not None
             self.add_obj(Command(
                 name=name,
-                return_cdecl="".join(proto_xml.itertext()).removesuffix(name),
+                return_cdecl="".join(proto_xml.itertext()),
                 arg_cdecls=tuple(
                     "".join(param_xml.itertext())
                     for param_xml in command_xml.iterfind("param")
                 )
             ))
 
-        for feature_xml in registry_xml.iterfind("feature"):
-            if not check_api_attr(feature_xml):
-                continue
-            for enum_xml in feature_xml.iterfind("require/enum"):
-                if not check_api_attr(enum_xml):
-                    continue
-                enum = self.get_enum(enum_name) if (enum_name := enum_xml.attrib.get("extends")) is not None else None
-                self.read_field_or_constant(enum, enum_xml, None)
+        for enum_xml in registry_xml.iterfind("feature/require/enum"):
+            enum = self.get_enum(enum_name) if (enum_name := enum_xml.get("extends")) is not None else None
+            self.read_field_or_constant(enum, enum_xml, None)
 
         for extension_xml in registry_xml.iterfind("extensions/extension"):
-            number = extension_xml.attrib.get("number")
-            for require_xml in extension_xml.iterfind("require"):
-                if not check_api_attr(require_xml):
-                    continue
-                for enum_xml in require_xml.iterfind("enum"):
-                    if not check_api_attr(enum_xml):
-                        continue
-                    enum = self.get_enum(enum_name) if (enum_name := enum_xml.attrib.get("extends")) is not None else None
-                    self.read_field_or_constant(enum, enum_xml, number)
+            number = extension_xml.get("number")
+            for enum_xml in extension_xml.iterfind("require/enum"):
+                enum = self.get_enum(enum_name) if (enum_name := enum_xml.get("extends")) is not None else None
+                self.read_field_or_constant(enum, enum_xml, number)
 
-        for flag in self.obj_dict.values():
-            if not isinstance(flag, Flag):
-                continue
-            if (bitmask_enum_name := flag.bitmask_enum_name) is None:
-                bitmask_enum = None
-            else:
-                bitmask_enum = self.get_enum(bitmask_enum_name)
-                assert bitmask_enum.name == flag.bitmask_enum_name
-                assert bitmask_enum.long_bitwidth is flag.long_bitwidth
-            flag.bitmask_enum = bitmask_enum
+        #for flag in self.obj_dict.values():
+        #    if not isinstance(flag, Flag):
+        #        continue
+        #    if (bitmask_enum_name := flag.bitmask_enum_name) is None:
+        #        bitmask_enum = None
+        #    else:
+        #        bitmask_enum = self.get_enum(bitmask_enum_name)
+        #        #assert bitmask_enum.name == flag.bitmask_enum_name
+        #        #assert bitmask_enum.long_bitwidth is flag.long_bitwidth
+        #    flag.bitmask_enum = bitmask_enum
 
-        for signature in self.obj_dict.values():
+        for signature in self.iter_objs():
             if not isinstance(signature, Signature):
                 continue
             for declaration in (signature.return_declaration, *signature.arg_declarations):
                 declaration.base_type = self.get_obj(declaration.base_type_name)
-                declaration.array_sizes = tuple(
-                    int(array_size_name)
-                    if re.fullmatch(r"\d+", array_size_name)
-                    else int(self.get_constant(array_size_name).value_str)
-                    for array_size_name in declaration.array_size_names
-                )
+                #declaration.array_sizes = tuple(
+                #    int(array_size_name)
+                #    if re.fullmatch(r"\d+", array_size_name)
+                #    else int(self.get_constant(array_size_name).value_str)
+                #    for array_size_name in declaration.array_size_names
+                #)
 
     def build_cdef(
         self: Self,
@@ -828,7 +957,7 @@ class Registry:
         with cdef_path.open("w") as file:
             file.write("// Auto-generated C definitions\n")
 
-            for obj in self.obj_dict.values():
+            for obj in self.iter_objs():
                 obj.write_c(file)
 
     def build_ffi(
@@ -849,7 +978,7 @@ class Registry:
         with pydef_path.open("w") as file:
             file.write(preamble_path.read_text())
 
-            for obj in self.obj_dict.values():
+            for obj in self.iter_objs():
                 obj.write_py(file)
 
             file.write("\n")
@@ -861,7 +990,7 @@ class Registry:
 
             file.write("\n")
             file.write("__all__ = (\n")
-            for obj in self.obj_dict.values():
+            for obj in self.iter_objs():
                 if isinstance(obj, ElementaryType | ExternalType):
                     continue
                 file.write(f"    \"{obj.name}\",\n")
