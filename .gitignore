@@ -1,6 +1,6 @@
-__pycache__/
+__pycache__/*
 *.py[cod]
 
-/playground/
-/scripts/generated/
-/scripts/xml/*.xml
+/playground/*
+/scripts/*
+!/scripts/parser.py
