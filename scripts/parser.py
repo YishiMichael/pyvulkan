@@ -3,7 +3,6 @@ import re
 import xml.etree.ElementTree as etree
 from typing import (
     Any,
-    Iterable,
     Self
 )
 
@@ -33,7 +32,7 @@ CursorKind = Proxy(clang.CursorKind)
 TypeKind = Proxy(clang.TypeKind)
 lib = Proxy(clang.Config().lib)
 
-
+kinds = set()
 class VulkanHeaderParser:
     __slots__ = ()
 
@@ -49,7 +48,7 @@ class VulkanHeaderParser:
         decl: clang.Cursor
     ) -> etree.Element | None:
         for child_decl in decl.get_children():
-            match child_decl.location.file.name.removeprefix(".\\"), child_decl.kind:
+            match cls._extract_filename(child_decl.location.file.name), child_decl.kind:
                 case "vulkan/vulkan.cppm", CursorKind.NAMESPACE:
                     if (xml := cls.parse_namespace(child_decl)) is not None:
                         return xml
@@ -60,54 +59,56 @@ class VulkanHeaderParser:
         cls: type[Self],
         decl: clang.Cursor
     ) -> etree.Element | None:
+        print(decl.spelling, decl.displayname, decl.mangled_name, decl.semantic_parent.spelling, decl.lexical_parent.spelling)
         return cls._make_xml(
             "namespace",
             dict(
                 name=decl.spelling,
                 #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
             ),
-            (
+            tuple(
                 cls.parse_namespace_obj(child_decl)
                 for child_decl in decl.get_children()
             )
         )
-        #xml = etree.Element("namespace", )
-        #for child_decl in decl.get_children():
-        #    match cls._extract_filename(child_decl.location.file.name.removeprefix(".\\")), child_decl.kind:
-        #        case "vulkan.cppm", CursorKind.NAMESPACE:
-        #            xml.append(cls.parse_namespace(child_decl))
-        #        case "vulkan.cppm", CursorKind.USING_DECLARATION:
-        #            ref_decl = lib.clang_getOverloadedDecl(child_decl.referenced, 0)
-        #            match cls._extract_filename(ref_decl.location.file.name.removeprefix(".\\")), ref_decl.kind:
-        #                case "vulkan_enums.hpp", CursorKind.ENUM_DECL:
-        #                    xml.append(cls.parse_enum(ref_decl))
-        #                case "vulkan_structs.hpp", CursorKind.STRUCT_DECL:
-        #                    xml.append(cls.parse_struct(ref_decl))
-        #                case "vulkan_structs.hpp", CursorKind.UNION_DECL:
-        #                    xml.append(cls.parse_union(ref_decl))
-        #                case "vulkan.hpp", CursorKind.VAR_DECL:
-        #                    xml.append(cls.parse_constant(ref_decl))
-        #return xml
 
     @classmethod
     def parse_namespace_obj(
         cls: type[Self],
         decl: clang.Cursor
     ) -> etree.Element | None:
-        match decl.location.file.name.removeprefix(".\\"), decl.kind:
+        match cls._extract_filename(decl.location.file.name), decl.kind:
             case "vulkan/vulkan.cppm", CursorKind.NAMESPACE:
                 return cls.parse_namespace(decl)
             case "vulkan/vulkan.cppm", CursorKind.USING_DECLARATION:
-                ref_decl = lib.clang_getOverloadedDecl(decl.referenced, 0)
-                match ref_decl.location.file.name.removeprefix(".\\"), ref_decl.kind:
+                #def_decl = decl.referenced.get_definition()
+                def_decl = None
+                #print(lib.clang_getNumOverloadedDecls(decl.referenced))
+                for index in range(lib.clang_getNumOverloadedDecls(decl.referenced)):
+                    def_decl = lib.clang_getOverloadedDecl(decl.referenced, index)
+                    if def_decl is not None:
+                        break
+                #if decl.spelling == "InstanceCreateInfo":
+                #    print(cls._extract_filename(def_decl.location.file.name))
+                #    print(def_decl.kind.is_declaration())
+                #    print(def_decl.kind.is_reference())
+                #    print(def_decl.is_definition())
+                #    print(cls._extract_filename(def_decl.get_definition().location.file.name))
+                if def_decl is None:
+                    print(decl.referenced.spelling)
+                    return None
+                if (cls._extract_filename(def_decl.location.file.name), def_decl.kind) not in kinds:
+                    kinds.add((cls._extract_filename(def_decl.location.file.name), def_decl.kind))
+                    #print(cls._extract_filename(def_decl.location.file.name), def_decl.kind)
+                match cls._extract_filename(def_decl.location.file.name), def_decl.kind:
                     case "vulkan/vulkan_enums.hpp", CursorKind.ENUM_DECL:
-                        return cls.parse_enum(ref_decl)
+                        return cls.parse_enum(def_decl)
                     case "vulkan/vulkan_structs.hpp", CursorKind.STRUCT_DECL:
-                        return cls.parse_struct(ref_decl)
+                        return cls.parse_struct(def_decl)
                     case "vulkan/vulkan_structs.hpp", CursorKind.UNION_DECL:
-                        return cls.parse_union(ref_decl)
+                        return cls.parse_union(def_decl)
                     case "vulkan/vulkan.hpp", CursorKind.VAR_DECL:
-                        return cls.parse_constant(ref_decl)
+                        return cls.parse_constant(def_decl)
                     case _:
                         return None
             case _:
@@ -124,7 +125,7 @@ class VulkanHeaderParser:
                 name=decl.spelling,
                 #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
             ),
-            (
+            tuple(
                 cls._make_xml(
                     "member",
                     dict(
@@ -176,7 +177,7 @@ class VulkanHeaderParser:
             dict(
                 name=decl.spelling
             ),
-            (
+            tuple(
                 cls.parse_function(constructor_decl)
                 for constructor_decl in decl.get_children()
                 if constructor_decl.kind == CursorKind.CONSTRUCTOR
@@ -203,7 +204,7 @@ class VulkanHeaderParser:
             dict(
                 name=decl.spelling
             ),
-            (
+            tuple(
                 cls._make_xml(
                     "argument",
                     dict(
@@ -252,7 +253,7 @@ class VulkanHeaderParser:
         cls: type[Self],
         tag: str,
         attrib: dict[str, str | None],
-        subelements: Iterable[etree.Element | None] | None = None
+        subelements: tuple[etree.Element | None, ...] | None = None
     ) -> etree.Element:
         xml = etree.Element(tag, {k: v for k, v in attrib.items() if v is not None})
         if subelements is not None:
@@ -264,7 +265,8 @@ class VulkanHeaderParser:
         cls: type[Self],
         extent: clang.SourceRange
     ) -> str:
-        file_content_lines = cls.FILES[extent.start.file.name.removeprefix(".\\")].splitlines()
+        assert (filename := cls._extract_filename(extent.start.file.name)) is not None
+        file_content_lines = cls.FILES[filename].splitlines()
         if extent.start.line == extent.end.line:
             return file_content_lines[extent.start.line - 1][extent.start.column - 1:extent.end.column - 1]
         return "\n".join((
@@ -273,12 +275,14 @@ class VulkanHeaderParser:
             file_content_lines[extent.end.line - 1][:extent.end.column - 1]
         ))
 
-    #@classmethod
-    #def _extract_filename(
-    #    cls: type[Self],
-    #    name: str
-    #) -> str | None:
-    #    return cls._slice_right(name.replace("\\", "/"), "vulkan/")
+    @classmethod
+    def _extract_filename(
+        cls: type[Self],
+        name: str
+    ) -> str | None:
+        if name == "vulkan/vulkan.cppm":
+            return name
+        return cls._slice_right(name.replace("\\", "/"), "includes/")
 
     @classmethod
     def _slice_right(
@@ -483,15 +487,18 @@ print(kinds)
 
 
 tu = clang.TranslationUnit.from_source(
-    filename="vulkan/vulkan.cppm",
+    filename="includes/vulkan/vulkan.cppm",
     args=[
         "-x", "c++-header",
-        "-I", "."
+        "-nostdinc",
+        "-I", "includes"
     ],
-    options=clang.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+    #unsaved_files=list(VulkanHeaderParser.FILES.items()),
+    options=clang.TranslationUnit.PARSE_INCOMPLETE | clang.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
 )
 
 xml = VulkanHeaderParser.parse(tu.cursor)
 assert xml is not None
-etree.indent(xml)
-etree.ElementTree(xml).write("registry.xml")
+#etree.indent(xml)
+#etree.ElementTree(xml).write("registry.xml")
+print(kinds)

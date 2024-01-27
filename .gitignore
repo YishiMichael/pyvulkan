@@ -4,3 +4,4 @@ __pycache__/*
 /playground/*
 /scripts/*
 !/scripts/parser.py
+!/scripts/registry.xml
