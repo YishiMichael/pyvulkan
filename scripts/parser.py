@@ -1,8 +1,10 @@
 import pathlib
 import re
 import xml.etree.ElementTree as etree
+from functools import lru_cache
 from typing import (
     Any,
+    Iterator,
     Self
 )
 
@@ -33,163 +35,294 @@ TypeKind = Proxy(clang.TypeKind)
 lib = Proxy(clang.Config().lib)
 
 kinds = set()
+
+
 class VulkanHeaderParser:
-    __slots__ = ()
+    __slots__ = (
+        "_translation_unit",
+        "_src_file"
+    )
 
-    FILES = {
-        f"vulkan/{filename}": directory_path.joinpath(filename).read_text()
-        for directory_path, _, filenames in pathlib.Path("vulkan").walk()
-        for filename in filenames
-    }
-
-    @classmethod
-    def parse(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> etree.Element | None:
-        for child_decl in decl.get_children():
-            match cls._extract_filename(child_decl.location.file.name), child_decl.kind:
-                case "vulkan/vulkan.cppm", CursorKind.NAMESPACE:
-                    if (xml := cls.parse_namespace(child_decl)) is not None:
-                        return xml
-        return None
-
-    @classmethod
-    def parse_namespace(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> etree.Element | None:
-        print(decl.spelling, decl.displayname, decl.mangled_name, decl.semantic_parent.spelling, decl.lexical_parent.spelling)
-        return cls._make_xml(
-            "namespace",
-            dict(
-                name=decl.spelling,
-                #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
+    def __init__(
+        self: Self,
+        src_file: str,
+        include_dir: str
+    ) -> None:
+        super().__init__()
+        self._translation_unit: clang.TranslationUnit = clang.TranslationUnit.from_source(
+            filename=src_file,
+            args=(
+                "-x", "c++-header",
+                "-I", include_dir
             ),
+            options=clang.TranslationUnit.PARSE_INCOMPLETE | clang.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+        )
+        self._src_file: str = src_file
+
+    def parse(
+        self: Self
+    ) -> etree.Element:
+        return type(self)._make_xml(
+            "registry",
+            dict(),
             tuple(
-                cls.parse_namespace_obj(child_decl)
-                for child_decl in decl.get_children()
+                child
+                for child_decl in self._translation_unit.cursor.get_children()
+                if child_decl.kind == CursorKind.NAMESPACE
+                and pathlib.Path(child_decl.location.file.name) == pathlib.Path(self._src_file)
+                for child in type(self)._iter_namespace_child(child_decl)
             )
         )
 
     @classmethod
-    def parse_namespace_obj(
+    def _iter_namespace_child(
         cls: type[Self],
         decl: clang.Cursor
-    ) -> etree.Element | None:
-        match cls._extract_filename(decl.location.file.name), decl.kind:
-            case "vulkan/vulkan.cppm", CursorKind.NAMESPACE:
-                return cls.parse_namespace(decl)
-            case "vulkan/vulkan.cppm", CursorKind.USING_DECLARATION:
-                #def_decl = decl.referenced.get_definition()
-                def_decl = None
-                #print(lib.clang_getNumOverloadedDecls(decl.referenced))
-                for index in range(lib.clang_getNumOverloadedDecls(decl.referenced)):
-                    def_decl = lib.clang_getOverloadedDecl(decl.referenced, index)
-                    if def_decl is not None:
-                        break
-                #if decl.spelling == "InstanceCreateInfo":
-                #    print(cls._extract_filename(def_decl.location.file.name))
-                #    print(def_decl.kind.is_declaration())
-                #    print(def_decl.kind.is_reference())
-                #    print(def_decl.is_definition())
-                #    print(cls._extract_filename(def_decl.get_definition().location.file.name))
-                if def_decl is None:
-                    print(decl.referenced.spelling)
-                    return None
-                if (cls._extract_filename(def_decl.location.file.name), def_decl.kind) not in kinds:
-                    kinds.add((cls._extract_filename(def_decl.location.file.name), def_decl.kind))
-                    #print(cls._extract_filename(def_decl.location.file.name), def_decl.kind)
-                match cls._extract_filename(def_decl.location.file.name), def_decl.kind:
-                    case "vulkan/vulkan_enums.hpp", CursorKind.ENUM_DECL:
-                        return cls.parse_enum(def_decl)
-                    case "vulkan/vulkan_structs.hpp", CursorKind.STRUCT_DECL:
-                        return cls.parse_struct(def_decl)
-                    case "vulkan/vulkan_structs.hpp", CursorKind.UNION_DECL:
-                        return cls.parse_union(def_decl)
-                    case "vulkan/vulkan.hpp", CursorKind.VAR_DECL:
-                        return cls.parse_constant(def_decl)
-                    case _:
-                        return None
-            case _:
-                return None
-
-    @classmethod
-    def parse_enum(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> etree.Element | None:
-        return cls._make_xml(
-            "enum",
-            dict(
-                name=decl.spelling,
-                #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
-            ),
-            tuple(
-                cls._make_xml(
-                    "member",
+    ) -> Iterator[etree.Element]:
+        match decl.kind:
+            case CursorKind.NAMESPACE:
+                yield cls._make_xml(
+                    "namespace",
                     dict(
-                        name=enum_constant_decl.spelling
+                        name=decl.spelling
+                        #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
+                    ),
+                    tuple(
+                        child
+                        for child_decl in decl.get_children()
+                        for child in cls._iter_namespace_child(child_decl)
                     )
                 )
-                for enum_constant_decl in decl.get_children()
-                if enum_constant_decl.kind == CursorKind.ENUM_CONSTANT_DECL
-            )
-        )
-
-    @classmethod
-    def parse_struct(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> etree.Element | None:
-        # Every struct has 3 or 4 constructor overloadings in order:
-        # - Default constructor;
-        # - Copy constructor;
-        # - Converting constructor from the corresponding C-style struct;
-        # - (optional) Enhanced constructor.
-        constructor_decl = tuple(
-            constructor_decl
-            for constructor_decl in decl.get_children()
-            if constructor_decl.kind == CursorKind.CONSTRUCTOR
-            and not (
-                len(argument_types := constructor_decl.type.argument_types()) == 1
-                and argument_types[0].spelling in (
-                    f"const {decl.spelling} &",  # Discard copy constructor.
-                    f"const Vk{decl.spelling} &"  # Discard converting constructor.
+            case CursorKind.USING_DECLARATION:
+                for index in range(lib.clang_getNumOverloadedDecls(decl.referenced)):
+                    def_decl = lib.clang_getOverloadedDecl(decl.referenced, index)
+                    if def_decl is not None and def_decl.is_definition():
+                        yield from cls._iter_namespace_child(def_decl)
+            case CursorKind.ENUM_DECL | CursorKind.STRUCT_DECL | CursorKind.UNION_DECL | CursorKind.CLASS_DECL:
+                if not decl.is_definition():
+                    return
+                if decl.get_num_template_arguments() != -1:
+                    return
+                match decl.kind:
+                    case CursorKind.ENUM_DECL:
+                        tag_name = "enum"
+                        child_iter_method = cls._iter_enum_child
+                    case CursorKind.STRUCT_DECL:
+                        tag_name = "struct"
+                        child_iter_method = cls._iter_struct_child
+                    case CursorKind.UNION_DECL:
+                        tag_name = "union"
+                        child_iter_method = cls._iter_union_child
+                    case CursorKind.CLASS_DECL:
+                        tag_name = "class"
+                        child_iter_method = cls._iter_class_child
+                    case _:
+                        assert False
+                yield cls._make_xml(
+                    tag_name,
+                    dict(
+                        name=decl.spelling
+                        #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
+                    ),
+                    tuple(
+                        child
+                        for child_decl in decl.get_children()
+                        for child in child_iter_method(child_decl)
+                    )
                 )
-            )
-        )[-1]  # Pick the enhanced constructor, if it exists.
-        return cls._make_xml(
-            "struct",
-            dict(
-                name=decl.spelling
-            ),
-            (cls.parse_function(constructor_decl),)
-        )
+            #case CursorKind.STRUCT_DECL:
+            #    if not decl.is_definition():
+            #        return
+            #    if decl.get_num_template_arguments() != -1:
+            #        return
+            #    print(decl.spelling)
+            #    yield cls._make_xml(
+            #        tag_name,
+            #        dict(
+            #            name=decl.spelling,
+            #            namespace=namespace
+            #        ),
+            #        tuple(
+            #            cls._parse_function(function_decl)
+            #            for function_decl in decl.get_children()
+            #            if (print(function_decl.kind, function_decl.access_specifier, function_decl.availability) or function_decl.kind == CursorKind.FUNCTION_DECL
+            #            #if print(constructor_decl.kind) or constructor_decl.kind == CursorKind.CONSTRUCTOR
+            #            #and constructor_decl.is_converting_constructor()
+            #        )
+            #    )
+            case CursorKind.VAR_DECL:
+                yield cls._make_xml(
+                    "constant",
+                    dict(
+                        name=decl.spelling,
+                        type=decl.type.spelling
+                    )
+                )
+                ##def_decl = decl.referenced.get_definition()
+                #def_decl = None
+                ##print(lib.clang_getNumOverloadedDecls(decl.referenced))
+                #for index in range(lib.clang_getNumOverloadedDecls(decl.referenced)):
+                #    def_decl = lib.clang_getOverloadedDecl(decl.referenced, index)
+                #    if def_decl is not None:
+                #        break
+                ##if decl.spelling == "InstanceCreateInfo":
+                ##    print(self._extract_filename(def_decl.location.file.name))
+                ##    print(def_decl.kind.is_declaration())
+                ##    print(def_decl.kind.is_reference())
+                ##    print(def_decl.is_definition())
+                ##    print(self._extract_filename(def_decl.get_definition().location.file.name))
+                #if def_decl is None:
+                #    print(decl.referenced.spelling)
+                #    return None
+                #if def_decl.kind not in kinds:
+                #    kinds.add(def_decl.kind)
+                #    #print(self._extract_filename(def_decl.location.file.name), def_decl.kind)
+                #match def_decl.kind:
+                #    case CursorKind.ENUM_DECL:
+                #        return self.parse_enum(def_decl)
+                #    case CursorKind.STRUCT_DECL:
+                #        return self.parse_struct(def_decl)
+                #    case CursorKind.UNION_DECL:
+                #        return self.parse_union(def_decl)
+                #    case CursorKind.VAR_DECL:
+                #        return self.parse_constant(def_decl)
+                #    case _:
+                #        return None
+            case _:
+                kinds.add(decl.kind)
+                return
+
+    #def parse_namespace(
+    #    self: Self,
+    #    decl: clang.Cursor
+    #) -> etree.Element | None:
+    #    #print(decl.spelling, decl.displayname, decl.mangled_name, decl.semantic_parent.spelling, decl.lexical_parent.spelling)
+    #    return self._make_xml(
+    #        "namespace",
+    #        dict(
+    #            name=decl.spelling,
+    #            #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
+    #        ),
+    #        tuple(
+    #            self.parse_obj(child_decl)
+    #            for child_decl in decl.get_children()
+    #        )
+    #    )
+
+    #def parse_enum(
+    #    self: Self,
+    #    decl: clang.Cursor,
+    #    namespace: str
+    #) -> etree.Element:
+    #    return self._make_xml(
+    #        "enum",
+    #        dict(
+    #            name=decl.spelling,
+    #            namespace=namespace
+    #            #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
+    #        ),
+    #        tuple(
+    #            self._make_xml(
+    #                "member",
+    #                dict(
+    #                    name=enum_constant_decl.spelling
+    #                )
+    #            )
+    #            for enum_constant_decl in decl.get_children()
+    #            if enum_constant_decl.kind == CursorKind.ENUM_CONSTANT_DECL
+    #        )
+    #    )
+
+    #def parse_struct(
+    #    self: Self,
+    #    decl: clang.Cursor,
+    #    namespace: str
+    #) -> etree.Element:
+    #    # Every struct has 3 or 4 constructor overloadings in order:
+    #    # - Default constructor;
+    #    # - Copy constructor;
+    #    # - Converting constructor from the corresponding C-style struct;
+    #    # - (optional) Enhanced constructor.
+    #    constructor_decl = tuple(
+    #        constructor_decl
+    #        for constructor_decl in decl.get_children()
+    #        if print(constructor_decl.kind) or constructor_decl.kind == CursorKind.CONSTRUCTOR
+    #        and not (
+    #            len(argument_types := constructor_decl.type.argument_types()) == 1
+    #            and argument_types[0].spelling in (
+    #                f"const {decl.spelling} &",  # Discard copy constructor.
+    #                f"const Vk{decl.spelling} &"  # Discard converting constructor.
+    #            )
+    #        )
+    #    )#[-1]  # Pick the enhanced constructor, if it exists.
+    #    return self._make_xml(
+    #        "struct",
+    #        dict(
+    #            name=decl.spelling,
+    #            namespace=namespace
+    #        ),
+    #        #(self.parse_function(constructor_decl),)
+    #    )
+
+    #def parse_union(
+    #    self: Self,
+    #    decl: clang.Cursor,
+    #    namespace: str
+    #) -> etree.Element:
+    #    return self._make_xml(
+    #        "union",
+    #        dict(
+    #            name=decl.spelling,
+    #            namespace=namespace
+    #        ),
+    #        tuple(
+    #            self.parse_function(constructor_decl)
+    #            for constructor_decl in decl.get_children()
+    #            if print(constructor_decl.kind) or constructor_decl.kind == CursorKind.CONSTRUCTOR
+    #            and constructor_decl.is_converting_constructor()
+    #        )
+    #    )
 
     @classmethod
-    def parse_union(
+    def _iter_enum_child(
         cls: type[Self],
         decl: clang.Cursor
-    ) -> etree.Element | None:
-        return cls._make_xml(
-            "union",
-            dict(
-                name=decl.spelling
-            ),
-            tuple(
-                cls.parse_function(constructor_decl)
-                for constructor_decl in decl.get_children()
-                if constructor_decl.kind == CursorKind.CONSTRUCTOR
-                and constructor_decl.is_converting_constructor()
-            )
-        )
+    ) -> Iterator[etree.Element]:
+        match decl.kind:
+            case CursorKind.ENUM_CONSTANT_DECL:
+                yield cls._make_xml(
+                    "member",
+                    dict(
+                        name=decl.spelling
+                    )
+                )
 
     @classmethod
-    def parse_function(
+    def _iter_struct_child(
         cls: type[Self],
         decl: clang.Cursor
-    ) -> etree.Element | None:
+    ) -> Iterator[etree.Element]:
+        yield from ()
+
+    @classmethod
+    def _iter_union_child(
+        cls: type[Self],
+        decl: clang.Cursor
+    ) -> Iterator[etree.Element]:
+        yield from ()
+
+    @classmethod
+    def _iter_class_child(
+        cls: type[Self],
+        decl: clang.Cursor
+    ) -> Iterator[etree.Element]:
+        yield from ()
+
+    @classmethod
+    def _parse_function(
+        cls: type[Self],
+        decl: clang.Cursor
+    ) -> etree.Element:
 
         def re_translate(
             string: str,
@@ -212,7 +345,7 @@ class VulkanHeaderParser:
                         type=arg_decl.type.spelling,
                         default=(
                             re_translate(
-                                default_str.strip().replace("\n", " "),
+                                arg_decl_str.split("=", 1)[1].strip().replace("\n", " "),
                                 {
                                     r"\s+": " ",
                                     r"\bVULKAN_HPP_NAMESPACE\b": "vk",
@@ -220,7 +353,6 @@ class VulkanHeaderParser:
                                 }
                             )
                             if "=" in (arg_decl_str := cls._str_from_extent(arg_decl.extent))
-                            and (default_str := cls._slice_right(arg_decl_str, "=")) is not None
                             else None
                         )
                     )
@@ -229,35 +361,36 @@ class VulkanHeaderParser:
             )
         )
 
-    @classmethod
-    def parse_constant(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> etree.Element | None:
-        return cls._make_xml(
-            "constant",
-            dict(
-                name=decl.spelling,
-                type=decl.type.spelling
-            )
-        ) if decl.spelling not in ("True", "False") else None
-        #if decl.spelling in ("True", "False"):
-        #            continue
-        #        objs.append(ConstantData(
-        #            name=decl.spelling,
-        #            type=decl.type.spelling
-        #        ))
+    #def parse_constant(
+    #    self: Self,
+    #    decl: clang.Cursor,
+    #    namespace: str
+    #) -> etree.Element:
+    #    return self._make_xml(
+    #        "constant",
+    #        dict(
+    #            name=decl.spelling,
+    #            namespace=namespace,
+    #            type=decl.type.spelling
+    #        )
+    #    )# if decl.spelling not in ("True", "False") else None
+    #    #if decl.spelling in ("True", "False"):
+    #    #            continue
+    #    #        objs.append(ConstantData(
+    #    #            name=decl.spelling,
+    #    #            type=decl.type.spelling
+    #    #        ))
 
     @classmethod
     def _make_xml(
         cls: type[Self],
         tag: str,
         attrib: dict[str, str | None],
-        subelements: tuple[etree.Element | None, ...] | None = None
+        subelements: tuple[etree.Element, ...] | None = None
     ) -> etree.Element:
         xml = etree.Element(tag, {k: v for k, v in attrib.items() if v is not None})
         if subelements is not None:
-            xml.extend(subelement for subelement in subelements if subelement is not None)
+            xml.extend(subelements)
         return xml
 
     @classmethod
@@ -265,8 +398,7 @@ class VulkanHeaderParser:
         cls: type[Self],
         extent: clang.SourceRange
     ) -> str:
-        assert (filename := cls._extract_filename(extent.start.file.name)) is not None
-        file_content_lines = cls.FILES[filename].splitlines()
+        file_content_lines = cls._get_content(extent.start.file.name).splitlines()
         if extent.start.line == extent.end.line:
             return file_content_lines[extent.start.line - 1][extent.start.column - 1:extent.end.column - 1]
         return "\n".join((
@@ -275,22 +407,29 @@ class VulkanHeaderParser:
             file_content_lines[extent.end.line - 1][:extent.end.column - 1]
         ))
 
-    @classmethod
-    def _extract_filename(
-        cls: type[Self],
-        name: str
-    ) -> str | None:
-        if name == "vulkan/vulkan.cppm":
-            return name
-        return cls._slice_right(name.replace("\\", "/"), "includes/")
+    @staticmethod
+    @lru_cache()
+    def _get_content(
+        filename: str
+    ) -> str:
+        return pathlib.Path(filename).read_text()
 
-    @classmethod
-    def _slice_right(
-        cls: type[Self],
-        s: str,
-        sub: str
-    ) -> str | None:
-        return s[index + len(sub):] if (index := s.rfind(sub)) != -1 else None
+    #@classmethod
+    #def _extract_filename(
+    #    cls: type[Self],
+    #    name: str
+    #) -> str | None:
+    #    if name == "vulkan/vulkan.cppm":
+    #        return name
+    #    return cls._slice_right(name.replace("\\", "/"), "includes/")
+
+    #@classmethod
+    #def _slice_right(
+    #    cls: type[Self],
+    #    s: str,
+    #    sub: str
+    #) -> str | None:
+    #    return s[index + len(sub):] if (index := s.rfind(sub)) != -1 else None
 
 
 """
@@ -485,20 +624,8 @@ for module_decl in tu.cursor.get_children():
 print(kinds)
 """
 
-
-tu = clang.TranslationUnit.from_source(
-    filename="includes/vulkan/vulkan.cppm",
-    args=[
-        "-x", "c++-header",
-        "-nostdinc",
-        "-I", "includes"
-    ],
-    #unsaved_files=list(VulkanHeaderParser.FILES.items()),
-    options=clang.TranslationUnit.PARSE_INCOMPLETE | clang.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
-)
-
-xml = VulkanHeaderParser.parse(tu.cursor)
+xml = VulkanHeaderParser("includes/vulkan/vulkan.cppm", "includes").parse()
 assert xml is not None
-#etree.indent(xml)
-#etree.ElementTree(xml).write("registry.xml")
+etree.indent(xml)
+etree.ElementTree(xml).write("registry.xml")
 print(kinds)
