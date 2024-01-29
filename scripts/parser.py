@@ -4,6 +4,7 @@ import xml.etree.ElementTree as etree
 from functools import lru_cache
 from typing import (
     Any,
+    Iterable,
     Iterator,
     Self
 )
@@ -32,12 +33,11 @@ class Proxy:
 
 CursorKind = Proxy(clang.CursorKind)
 TypeKind = Proxy(clang.TypeKind)
+AccessSpecifier = Proxy(clang.AccessSpecifier)
 lib = Proxy(clang.Config().lib)
 
-kinds = set()
 
-
-class VulkanHeaderParser:
+class HeaderParser:
     __slots__ = (
         "_translation_unit",
         "_src_file"
@@ -65,71 +65,121 @@ class VulkanHeaderParser:
         return type(self)._make_xml(
             "registry",
             dict(),
-            tuple(
+            (
                 child
                 for child_decl in self._translation_unit.cursor.get_children()
                 if child_decl.kind == CursorKind.NAMESPACE
                 and pathlib.Path(child_decl.location.file.name) == pathlib.Path(self._src_file)
-                for child in type(self)._iter_namespace_child(child_decl)
+                for child in type(self)._iter_namespace_child(child_decl, None)
             )
         )
 
     @classmethod
     def _iter_namespace_child(
         cls: type[Self],
-        decl: clang.Cursor
+        decl: clang.Cursor,
+        namespace: str | None
     ) -> Iterator[etree.Element]:
+        filename = pathlib.Path(decl.location.file.name).name
         match decl.kind:
             case CursorKind.NAMESPACE:
-                yield cls._make_xml(
-                    "namespace",
-                    dict(
-                        name=decl.spelling
-                        #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
-                    ),
-                    tuple(
-                        child
-                        for child_decl in decl.get_children()
-                        for child in cls._iter_namespace_child(child_decl)
-                    )
-                )
+                new_namespace = f"{namespace}::{decl.spelling}" if namespace is not None else decl.spelling
+                for child_decl in decl.get_children():
+                    yield from cls._iter_namespace_child(child_decl, new_namespace)
             case CursorKind.USING_DECLARATION:
                 for index in range(lib.clang_getNumOverloadedDecls(decl.referenced)):
                     def_decl = lib.clang_getOverloadedDecl(decl.referenced, index)
                     if def_decl is not None and def_decl.is_definition():
-                        yield from cls._iter_namespace_child(def_decl)
-            case CursorKind.ENUM_DECL | CursorKind.STRUCT_DECL | CursorKind.UNION_DECL | CursorKind.CLASS_DECL:
+                        yield from cls._iter_namespace_child(def_decl, namespace)
+            case CursorKind.ENUM_DECL:
                 if not decl.is_definition():
                     return
-                if decl.get_num_template_arguments() != -1:
+                yield cls._make_xml(
+                    "enum",
+                    dict(
+                        name=decl.spelling,
+                        namespace=namespace,
+                        filename=filename
+                        #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
+                    ),
+                    (
+                        child
+                        for child_decl in decl.get_children()
+                        for child in cls._iter_enum_child(child_decl)
+                    )
+                )
+            case CursorKind.STRUCT_DECL | CursorKind.UNION_DECL | CursorKind.CLASS_DECL | CursorKind.CLASS_TEMPLATE:
+                if not decl.is_definition():
                     return
+                #if decl.get_num_template_arguments() != -1:
+                #    return
                 match decl.kind:
-                    case CursorKind.ENUM_DECL:
-                        tag_name = "enum"
-                        child_iter_method = cls._iter_enum_child
                     case CursorKind.STRUCT_DECL:
                         tag_name = "struct"
-                        child_iter_method = cls._iter_struct_child
                     case CursorKind.UNION_DECL:
                         tag_name = "union"
-                        child_iter_method = cls._iter_union_child
-                    case CursorKind.CLASS_DECL:
+                    case CursorKind.CLASS_DECL | CursorKind.CLASS_TEMPLATE:
                         tag_name = "class"
-                        child_iter_method = cls._iter_class_child
                     case _:
                         assert False
                 yield cls._make_xml(
                     tag_name,
                     dict(
-                        name=decl.spelling
+                        name=decl.spelling,
+                        namespace=namespace,
+                        filename=filename,
+                        template_raw=cls._extract_template(decl)
                         #elaborated=decl.enum_type.kind == TypeKind.ELABORATED
                     ),
-                    tuple(
+                    (
                         child
                         for child_decl in decl.get_children()
-                        for child in child_iter_method(child_decl)
+                        for child in cls._iter_class_child(child_decl)
                     )
                 )
+            case CursorKind.FUNCTION_DECL | CursorKind.FUNCTION_TEMPLATE:
+                #if decl.kind == CursorKind.FUNCTION_TEMPLATE:
+                #    print(decl.spelling)
+                #    print(cls._str_from_extent(decl.extent))
+                #    print()
+                yield cls._make_xml(
+                    "function",
+                    dict(
+                        name=decl.spelling,
+                        namespace=namespace,
+                        filename=filename,
+                        template_raw=cls._extract_template(decl)
+                    ),
+                    (
+                        cls._make_xml(
+                            "argument",
+                            dict(
+                                name=arg_decl.spelling,
+                                type=arg_decl.type.spelling,
+                                default_raw=cls._extract_rvalue(arg_decl)
+                            )
+                        )
+                        for arg_decl in decl.get_arguments()
+                    )
+                )
+            case CursorKind.TYPE_ALIAS_DECL:
+                yield cls._make_xml(
+                    "type_alias",
+                    dict(
+                        name=decl.spelling,
+                        namespace=namespace,
+                        filename=filename,
+                        alias_raw=cls._extract_rvalue(decl)
+                    )
+                )
+                #kinds = tuple(child_decl.kind for child_decl in decl.get_children())
+                #if not (
+                #    len(kinds) >= 2 and all(
+                #        kind == CursorKind.TEMPLATE_REF if index == 0 else CursorKind.TYPE_REF
+                #        for index, kind in enumerate(kinds)
+                #    )
+                #):
+                #    print(decl.spelling, [(d.kind, d.spelling) for d in decl.get_children()])
             #case CursorKind.STRUCT_DECL:
             #    if not decl.is_definition():
             #        return
@@ -155,6 +205,7 @@ class VulkanHeaderParser:
                     "constant",
                     dict(
                         name=decl.spelling,
+                        namespace=namespace,
                         type=decl.type.spelling
                     )
                 )
@@ -188,9 +239,6 @@ class VulkanHeaderParser:
                 #        return self.parse_constant(def_decl)
                 #    case _:
                 #        return None
-            case _:
-                kinds.add(decl.kind)
-                return
 
     #def parse_namespace(
     #    self: Self,
@@ -298,68 +346,94 @@ class VulkanHeaderParser:
                 )
 
     @classmethod
-    def _iter_struct_child(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> Iterator[etree.Element]:
-        yield from ()
-
-    @classmethod
-    def _iter_union_child(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> Iterator[etree.Element]:
-        yield from ()
-
-    @classmethod
     def _iter_class_child(
         cls: type[Self],
         decl: clang.Cursor
     ) -> Iterator[etree.Element]:
-        yield from ()
-
-    @classmethod
-    def _parse_function(
-        cls: type[Self],
-        decl: clang.Cursor
-    ) -> etree.Element:
-
-        def re_translate(
-            string: str,
-            translation: dict[str, str]
-        ) -> str:
-            for pattern, repl in translation.items():
-                string = re.sub(pattern, repl, string)
-            return string
-
-        return cls._make_xml(
-            "function",
-            dict(
-                name=decl.spelling
-            ),
-            tuple(
-                cls._make_xml(
-                    "argument",
+        if decl.access_specifier != AccessSpecifier.PUBLIC:
+            return
+        match decl.kind:
+            case CursorKind.CXX_BASE_SPECIFIER:
+                yield cls._make_xml(
+                    "base",
                     dict(
-                        name=arg_decl.spelling,
-                        type=arg_decl.type.spelling,
-                        default=(
-                            re_translate(
-                                arg_decl_str.split("=", 1)[1].strip().replace("\n", " "),
-                                {
-                                    r"\s+": " ",
-                                    r"\bVULKAN_HPP_NAMESPACE\b": "vk",
-                                    r"\bVULKAN_HPP_RAII_NAMESPACE\b": "raii"
-                                }
-                            )
-                            if "=" in (arg_decl_str := cls._str_from_extent(arg_decl.extent))
-                            else None
-                        )
+                        name=decl.spelling
                     )
                 )
-                for arg_decl in decl.get_arguments() 
-            )
-        )
+            case CursorKind.FIELD_DECL:
+                yield cls._make_xml(
+                    "member",
+                    dict(
+                        name=decl.spelling
+                    )
+                )
+            case CursorKind.CONSTRUCTOR | CursorKind.DESTRUCTOR | CursorKind.CONVERSION_FUNCTION \
+                    | CursorKind.CXX_METHOD | CursorKind.FUNCTION_TEMPLATE:
+                match decl.kind:
+                    case CursorKind.CONSTRUCTOR:
+                        tag_name = "constructor"
+                    case CursorKind.DESTRUCTOR:
+                        tag_name = "destructor"
+                    case CursorKind.CONVERSION_FUNCTION:
+                        tag_name = "conversion_function"
+                    case CursorKind.CXX_METHOD | CursorKind.FUNCTION_TEMPLATE:
+                        tag_name = "method"
+                    case _:
+                        assert False
+                yield cls._make_xml(
+                    tag_name,
+                    dict(
+                        name=decl.spelling,
+                        template_raw=cls._extract_template(decl)
+                    ),
+                    (
+                        cls._make_xml(
+                            "argument",
+                            dict(
+                                name=arg_decl.spelling,
+                                type=arg_decl.type.spelling,
+                                default_raw=(
+                                    rvalue_str or "{}"
+                                    if (rvalue_str := cls._extract_rvalue(arg_decl)) is not None
+                                    else None
+                                )
+                            )
+                        )
+                        for arg_decl in decl.get_arguments()
+                    )
+                )
+                #yield cls._parse_function(decl, tag_name=tag_name)
+
+    #@classmethod
+    #def _parse_function(
+    #    cls: type[Self],
+    #    decl: clang.Cursor,
+    #    tag_name: str = "function",
+    #    namespace: str | None = None
+    #) -> etree.Element:
+    #    return cls._make_xml(
+    #        tag_name,
+    #        dict(
+    #            name=decl.spelling,
+    #            namespace=namespace,
+    #            template_raw=cls._extract_template(decl)
+    #        ),
+    #        (
+    #            cls._make_xml(
+    #                "argument",
+    #                dict(
+    #                    name=arg_decl.spelling,
+    #                    type=arg_decl.type.spelling,
+    #                    default_raw=(
+    #                        rvalue_str or "{}"
+    #                        if (rvalue_str := cls._extract_rvalue(arg_decl)) is not None
+    #                        else None
+    #                    )
+    #                )
+    #            )
+    #            for arg_decl in decl.get_arguments()
+    #        )
+    #    )
 
     #def parse_constant(
     #    self: Self,
@@ -386,11 +460,11 @@ class VulkanHeaderParser:
         cls: type[Self],
         tag: str,
         attrib: dict[str, str | None],
-        subelements: tuple[etree.Element, ...] | None = None
+        subelements: Iterable[etree.Element] | None = None
     ) -> etree.Element:
         xml = etree.Element(tag, {k: v for k, v in attrib.items() if v is not None})
         if subelements is not None:
-            xml.extend(subelements)
+            xml.extend(tuple(subelements))
         return xml
 
     @classmethod
@@ -398,14 +472,42 @@ class VulkanHeaderParser:
         cls: type[Self],
         extent: clang.SourceRange
     ) -> str:
-        file_content_lines = cls._get_content(extent.start.file.name).splitlines()
-        if extent.start.line == extent.end.line:
-            return file_content_lines[extent.start.line - 1][extent.start.column - 1:extent.end.column - 1]
-        return "\n".join((
-            file_content_lines[extent.start.line - 1][extent.start.column - 1:],
-            *file_content_lines[extent.start.line:extent.end.line - 1],
-            file_content_lines[extent.end.line - 1][:extent.end.column - 1]
-        ))
+        content = cls._get_content(extent.start.file.name)
+        result = content[extent.start.offset - extent.start.line + 1 : extent.end.offset - extent.end.line + 1]
+        result = re.sub(r"\s+", " ", result.replace("\n", " "))
+        #if result.startswith("VULKAN_HPP_NAMESPACE::ShaderStageFlags"):
+        #    #print(content[extent.start.offset - extent.start.line + 1 : extent.end.offset - extent.end.line + 1])
+        #    file_content_lines = content.splitlines()
+        #    print(
+        #        file_content_lines[extent.start.line - 1][extent.start.column - 1:extent.end.column - 1]
+        #        if extent.start.line == extent.end.line
+        #        else "\n".join((
+        #            file_content_lines[extent.start.line - 1][extent.start.column - 1:],
+        #            *file_content_lines[extent.start.line:extent.end.line - 1],
+        #            file_content_lines[extent.end.line - 1][:extent.end.column - 1]
+        #        ))
+        #    )
+        return result
+
+    @classmethod
+    def _extract_template(
+        cls: type[Self],
+        decl: clang.Cursor
+    ) -> str | None:
+        decl_str = cls._str_from_extent(decl.extent)
+        if (match := re.search(fr"\btemplate <(.*?)>", re.split(fr"\b{decl.spelling}\b", decl_str, 1)[0])) is None:
+            return None
+        return match.group()
+
+    @classmethod
+    def _extract_rvalue(
+        cls: type[Self],
+        decl: clang.Cursor
+    ) -> str | None:
+        decl_str = cls._str_from_extent(decl.extent)
+        if "=" not in decl_str:
+            return None
+        return decl_str.split("=", 1)[1].strip()
 
     @staticmethod
     @lru_cache()
@@ -624,8 +726,7 @@ for module_decl in tu.cursor.get_children():
 print(kinds)
 """
 
-xml = VulkanHeaderParser("includes/vulkan/vulkan.cppm", "includes").parse()
+xml = HeaderParser("includes/vulkan/vulkan.cppm", "includes").parse()
 assert xml is not None
 etree.indent(xml)
 etree.ElementTree(xml).write("registry.xml")
-print(kinds)
