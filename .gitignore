@@ -1,7 +1,6 @@
-__pycache__/*
+__pycache__/
 *.py[cod]
 
-/playground/*
-/scripts/*
-!/scripts/parser.py
-!/scripts/registry.xml
+/build/
+/playground/
+/scripts/extern/
