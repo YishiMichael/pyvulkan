@@ -72,7 +72,7 @@ class HeaderParser:
                 for child_decl in self._translation_unit.cursor.get_children()
                 if child_decl.kind == CursorKind.NAMESPACE
                 and pathlib.Path(child_decl.location.file.name) == pathlib.Path(self._src_file)
-                for child in type(self)._iter_namespace_child(child_decl, None, self._include_dir)
+                for child in type(self)._iter_namespace_child(child_decl, "", self._include_dir)
             )
         )
 
@@ -80,13 +80,21 @@ class HeaderParser:
     def _iter_namespace_child(
         cls: type[Self],
         decl: clang.Cursor,
-        namespace: str | None,
+        namespace: str,
         include_dir: str
     ) -> Iterator[etree.Element]:
         filename = str(pathlib.Path(decl.location.file.name).relative_to(include_dir)).replace("\\", "/")
         match decl.kind:
             case CursorKind.NAMESPACE:
-                new_namespace = f"{namespace}::{decl.spelling}" if namespace is not None else decl.spelling
+                yield cls._make_xml(
+                    "namespace",
+                    dict(
+                        name=decl.spelling,
+                        namespace=namespace,
+                        filename=filename
+                    )
+                )
+                new_namespace = f"{namespace}::{decl.spelling}"
                 for child_decl in decl.get_children():
                     yield from cls._iter_namespace_child(child_decl, new_namespace, include_dir)
             case CursorKind.USING_DECLARATION:
