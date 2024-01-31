@@ -1,3 +1,5 @@
+#define PYBIND11_DETAILED_ERROR_MESSAGES
+
 #include <pybind11/pybind11.h>
 //#include <pybind11/stl.h>
 //#include <pybind11/stl_bind.h>
@@ -30,12 +32,15 @@ namespace py = pybind11;
 //}}
 
 
-//inline const char * _converter_PyString_CString(const py::str & value) {
-//    std::string intermediate(value.cast<const std::string>());
-//    py::print("loading...", intermediate);
-//    //return value.c_str();
-//    return intermediate.c_str();
-//}
+namespace __converter {
+    static inline const char * string_to_cstring(const std::string & value) {
+        return value.c_str();
+    }
+
+    static inline const void * object_to_voidptr(const py::object & value) {
+        return value.cast<const void *>();
+    }
+}
 
 
 //inline const py::str _converter_CString_PyString(const char * value) {
@@ -87,29 +92,31 @@ PYBIND11_MODULE(pyvulkan, m) {
             std::string engine_name_,
             uint32_t engine_version_,
             uint32_t api_version_,
-            const void * next_
+            py::object next_
         ):
             _self(vk::ApplicationInfo(
-                application_name_.c_str(),
+                __converter::string_to_cstring(application_name_),
                 application_version_,
-                engine_name_.c_str(),
+                __converter::string_to_cstring(engine_name_),
                 engine_version_,
                 api_version_,
-                next_
+                __converter::object_to_voidptr(next_)
             )),
             application_name(application_name_),
-            engine_name(engine_name_)
+            engine_name(engine_name_),
+            next(next_)
         {}
 
     public:
         vk::ApplicationInfo _self;
         std::string application_name;
         std::string engine_name;
+        py::object next;
     };
 
     py::class_<vk_ApplicationInfo_Wrapper> s_vk_ApplicationInfo(n_vk, "ApplicationInfo");
     s_vk_ApplicationInfo.def(
-        py::init<std::string, uint32_t, std::string, uint32_t, uint32_t, const void *>(
+        py::init<std::string, uint32_t, std::string, uint32_t, uint32_t, py::object>(
             //&vk::ApplicationInfo::ApplicationInfo<const char *, uint32_t, const char *, uint32_t, uint32_t, const void *>
         /*[](
             std::string application_name,
@@ -120,7 +127,7 @@ PYBIND11_MODULE(pyvulkan, m) {
             py::object next
         ) {
             return std::unique_ptr<vk::ApplicationInfo>(new vk::ApplicationInfo(
-                (application_name.c_str()),
+                (__converter::string_to_cstring(application_name)),
                 application_version,
                 _converter_PyString_CString(engine_name),
                 engine_version,
@@ -165,12 +172,11 @@ PYBIND11_MODULE(pyvulkan, m) {
         py::cpp_function(
             [](
                 vk_ApplicationInfo_Wrapper & self,
-                std::string application_name
+                const std::string application_name_
             ) {
-                self.application_name = application_name;
-                self._self.setPApplicationName(application_name.c_str());
+                self.application_name = application_name_;
+                self._self.setPApplicationName(__converter::string_to_cstring(application_name_));
             },
-            //&vk::ApplicationInfo::setPApplicationName,
             py::keep_alive<1, 2>()
         )
     );
@@ -230,20 +236,27 @@ PYBIND11_MODULE(pyvulkan, m) {
     //        self.setApiVersion(api_version);
     //    }
     //);
-    //s_vk_ApplicationInfo.def_property(
-    //    "next",
-    //    [](
-    //        const vk::ApplicationInfo & self
-    //    ) {
-    //        return _converter_VoidPtr_PyObject(self.pNext);
-    //    },
-    //    [](
-    //        vk::ApplicationInfo & self,
-    //        py::object next
-    //    ) {
-    //        self.setPNext(_converter_PyObject_VoidPtr(next));
-    //    }
-    //);
+    s_vk_ApplicationInfo.def_property(
+        "next",
+        py::cpp_function(
+            [](
+                const vk_ApplicationInfo_Wrapper & self
+            ) {
+                return self.next;
+            },
+            py::return_value_policy::reference_internal
+        ),
+        py::cpp_function(
+            [](
+                vk_ApplicationInfo_Wrapper & self,
+                py::object next_
+            ) {
+                self.next = next_;
+                self._self.setPNext(__converter::object_to_voidptr(next_));
+            },
+            py::keep_alive<1, 2>()
+        )
+    );
 
     //py::class_<vk::InstanceCreateInfo> s_vk_InstanceCreateInfo(n_vk, "InstanceCreateInfo");
     //s_vk_InstanceCreateInfo.def(py::init(
