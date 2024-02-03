@@ -7526,7 +7526,6 @@
     <constructor name="ArrayProxyNoTemporaries&lt;T&gt;">
       <argument name="value" type="T &amp;" />
     </constructor>
-    <method name="ArrayProxyNoTemporaries&lt;T&gt;" template_raw="template &lt;typename V&gt;" />
     <method name="ArrayProxyNoTemporaries&lt;T&gt;" template_raw="template &lt;typename B = T, typename std::enable_if&lt;std::is_const&lt;B&gt;" />
     <method name="ArrayProxyNoTemporaries&lt;T&gt;" template_raw="template &lt;typename B = T, typename std::enable_if&lt;std::is_const&lt;B&gt;" />
     <constructor name="ArrayProxyNoTemporaries&lt;T&gt;">
