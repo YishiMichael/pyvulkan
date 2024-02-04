@@ -309,7 +309,8 @@ class HeaderParser:
                 yield cls._make_xml(
                     "field",
                     dict(
-                        name=decl.spelling
+                        name=decl.spelling,
+                        type=decl.type.spelling
                     )
                 )
             case CursorKind.CONSTRUCTOR | CursorKind.DESTRUCTOR | CursorKind.CONVERSION_FUNCTION \
@@ -404,4 +405,4 @@ xml = HeaderParser(
 ).parse()
 assert xml is not None
 etree.indent(xml)
-etree.ElementTree(xml).write("registry.xml")
+etree.ElementTree(xml).write("hpp_registry.xml")
