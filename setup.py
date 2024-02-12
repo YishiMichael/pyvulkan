@@ -5,7 +5,7 @@ from setuptools import setup
 ext_modules = [
     Pybind11Extension(
         name="pyvulkan",
-        sources=["scripts/module_template.cpp"],
+        sources=["scripts/module.cpp"],
         include_dirs=["scripts/extern/pybind11/include", "scripts/extern/vulkan/Include"],
         library_dirs=["scripts/extern/vulkan/Lib"],
         libraries=["vulkan-1"],
