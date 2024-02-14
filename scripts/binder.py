@@ -1,197 +1,262 @@
 from __future__ import annotations
 
+import collections
+import itertools
 import pathlib
 import re
 import xml.etree.ElementTree as etree
 #from dataclasses import dataclass
 #from functools import lru_cache
-from collections import deque
 from typing import (
     Callable,
-    ClassVar,
+    Iterable,
+    Iterator,
     Self,
     TextIO
 )
 
 
-class WordCase:
-    __slots__ = ()
+#class WordCase:
+#    __slots__ = ()
 
-    verifier: ClassVar[str] = NotImplemented
-    converter: ClassVar[Callable[[str], str]] = NotImplemented
+#    verifier: ClassVar[str] = NotImplemented
+#    converter: ClassVar[Callable[[str], str]] = NotImplemented
 
-    @classmethod
-    def verify(
-        cls: type[Self],
-        word: str
-    ) -> str:
-        assert re.fullmatch(cls.verifier, word) is not None
-        return word
+#    @classmethod
+#    def verify(
+#        cls: type[Self],
+#        word: str
+#    ) -> str:
+#        assert re.fullmatch(cls.verifier, word) is not None
+#        return word
 
-    @classmethod
-    def convert(
-        cls: type[Self],
-        word: str
-    ) -> str:
-        return cls.converter(word)
-
-
-class UpperCase(WordCase):
-    __slots__ = ()
-
-    verifier: ClassVar[str] = r"[A-Z\d]+"
-    converter: ClassVar[Callable[[str], str]] = str.upper
+#    @classmethod
+#    def convert(
+#        cls: type[Self],
+#        word: str
+#    ) -> str:
+#        return cls.converter(word)
 
 
-class LowerCase(WordCase):
-    __slots__ = ()
+#class UpperCase(WordCase):
+#    __slots__ = ()
 
-    verifier: ClassVar[str] = r"[a-z\d]+"
-    converter: ClassVar[Callable[[str], str]] = str.lower
-
-
-class TitleCase(WordCase):
-    __slots__ = ()
-
-    verifier: ClassVar[str] = r"[A-Z\d][a-z\d]*"
-    converter: ClassVar[Callable[[str], str]] = lambda s: f"{s[0].upper()}{s[1:].lower()}"
+#    verifier: ClassVar[str] = r"[A-Z\d]+"
+#    converter: ClassVar[Callable[[str], str]] = str.upper
 
 
-class ChunkCase:
-    __slots__ = ()
+#class LowerCase(WordCase):
+#    __slots__ = ()
 
-    head_word_case: ClassVar[type[WordCase]] = WordCase
-    tail_words_case: ClassVar[type[WordCase]] = WordCase
-    splitter: ClassVar[str] = NotImplemented
-    joiner: ClassVar[str] = NotImplemented
-
-    @classmethod
-    def split(
-        cls: type[Self],
-        chunk: str
-    ) -> list[str]:
-        words = re.split(cls.splitter, chunk)
-        return [
-            cls.head_word_case.verify(words[0]),
-            *(cls.tail_words_case.verify(tail_word) for tail_word in words[1:])
-        ]
-
-    @classmethod
-    def join(
-        cls: type[Self],
-        words: list[str]
-    ) -> str:
-        words = [
-            cls.head_word_case.convert(words[0]),
-            *(cls.tail_words_case.convert(tail_word) for tail_word in words[1:])
-        ]
-        return cls.joiner.join(words)
+#    verifier: ClassVar[str] = r"[a-z\d]+"
+#    converter: ClassVar[Callable[[str], str]] = str.lower
 
 
-class UpperCamelCase(ChunkCase):
-    __slots__ = ()
+#class TitleCase(WordCase):
+#    __slots__ = ()
 
-    head_word_case: ClassVar[type[WordCase]] = TitleCase
-    tail_words_case: ClassVar[type[WordCase]] = TitleCase
-    splitter: ClassVar[str] = r"(?<=[a-z])(?=[A-Z])"
-    joiner: ClassVar[str] = ""
+#    verifier: ClassVar[str] = r"[A-Z\d][a-z\d]*"
+#    converter: ClassVar[Callable[[str], str]] = lambda s: f"{s[0].upper()}{s[1:].lower()}"
 
 
-class LowerCamelCase(ChunkCase):
-    __slots__ = ()
+#class NameCase:
+#    __slots__ = ()
 
-    head_word_case: ClassVar[type[WordCase]] = LowerCase
-    tail_words_case: ClassVar[type[WordCase]] = TitleCase
-    splitter: ClassVar[str] = r"(?<=[a-z])(?=[A-Z])"
-    joiner: ClassVar[str] = ""
+#    head_word_case: ClassVar[type[WordCase]] = WordCase
+#    tail_words_case: ClassVar[type[WordCase]] = WordCase
+#    splitter: ClassVar[str] = NotImplemented
+#    joiner: ClassVar[str] = NotImplemented
+
+#    @classmethod
+#    def split(
+#        cls: type[Self],
+#        name: str
+#    ) -> list[str]:
+#        words = re.split(cls.splitter, name)
+#        return [
+#            cls.head_word_case.verify(words[0]),
+#            *(cls.tail_words_case.verify(tail_word) for tail_word in words[1:])
+#        ]
+
+#    @classmethod
+#    def join(
+#        cls: type[Self],
+#        words: list[str]
+#    ) -> str:
+#        words = [
+#            cls.head_word_case.convert(words[0]),
+#            *(cls.tail_words_case.convert(tail_word) for tail_word in words[1:])
+#        ]
+#        return cls.joiner.join(words)
 
 
-class UpperUnderscoreCase(ChunkCase):
-    __slots__ = ()
+#class UpperCamelCase(NameCase):
+#    __slots__ = ()
 
-    head_word_case: ClassVar[type[WordCase]] = UpperCase
-    tail_words_case: ClassVar[type[WordCase]] = UpperCase
-    splitter: ClassVar[str] = r"_"
-    joiner: ClassVar[str] = "_"
-
-
-class LowerUnderscoreCase(ChunkCase):
-    __slots__ = ()
-
-    head_word_case: ClassVar[type[WordCase]] = LowerCase
-    tail_words_case: ClassVar[type[WordCase]] = LowerCase
-    splitter: ClassVar[str] = r"_"
-    joiner: ClassVar[str] = "_"
+#    head_word_case: ClassVar[type[WordCase]] = TitleCase
+#    tail_words_case: ClassVar[type[WordCase]] = TitleCase
+#    splitter: ClassVar[str] = r"(?<=[a-z])(?=[A-Z])"
+#    joiner: ClassVar[str] = ""
 
 
-class Chunk:
-    __slots__ = ("_words",)
+#class LowerCamelCase(NameCase):
+#    __slots__ = ()
+
+#    head_word_case: ClassVar[type[WordCase]] = LowerCase
+#    tail_words_case: ClassVar[type[WordCase]] = TitleCase
+#    splitter: ClassVar[str] = r"(?<=[a-z])(?=[A-Z])"
+#    joiner: ClassVar[str] = ""
+
+
+#class UpperUnderscoreCase(NameCase):
+#    __slots__ = ()
+
+#    head_word_case: ClassVar[type[WordCase]] = UpperCase
+#    tail_words_case: ClassVar[type[WordCase]] = UpperCase
+#    splitter: ClassVar[str] = r"_"
+#    joiner: ClassVar[str] = "_"
+
+
+#class LowerUnderscoreCase(NameCase):
+#    __slots__ = ()
+
+#    head_word_case: ClassVar[type[WordCase]] = LowerCase
+#    tail_words_case: ClassVar[type[WordCase]] = LowerCase
+#    splitter: ClassVar[str] = r"_"
+#    joiner: ClassVar[str] = "_"
+
+
+MODULE = "m"
+
+
+class Name:
+    __slots__ = (
+        "_words",
+        "_joiner"
+    )
 
     def __init__(
         self: Self,
-        words: deque[str]
+        words: Iterable[str],
+        joiner: str
     ) -> None:
         super().__init__()
-        self._words: deque[str] = words
+        self._words: collections.deque[str] = collections.deque(words)
+        self._joiner: str = joiner
 
-    def copy(
+    def __iter__(
         self: Self
-    ) -> Self:
-        return type(self)(self._words)
+    ) -> Iterator[str]:
+        yield from self._words
 
-    def lstrip_re(
-        self: Self,
-        prefix_re: str
-    ) -> str | None:
-        if re.fullmatch(prefix_re, self._words[0]):
-            return self._words.popleft()
-        return None
+    #def copy(
+    #    self: Self
+    #) -> Self:
+    #    return type(self)(self._words.copy())
 
-    def rstrip_re(
-        self: Self,
-        suffix_re: str
-    ) -> str | None:
-        if re.fullmatch(suffix_re, self._words[-1]):
-            return self._words.pop()
-        return None
+    def lpop(
+        self: Self
+    ) -> str:
+        return self._words.popleft()
+
+    def rpop(
+        self: Self
+    ) -> str:
+        return self._words.pop()
 
     def lstrip(
         self: Self,
-        prefix: str
-    ) -> None:
-        assert self._words.popleft() == prefix
+        *prefixes: str
+    ) -> Self:
+        for prefix in filter(None, prefixes):
+            assert self._words.popleft() == prefix
+        return self
 
     def rstrip(
         self: Self,
-        suffix: str
-    ) -> None:
-        assert self._words.popleft() == suffix
+        *suffixes: str
+    ) -> Self:
+        for suffix in filter(None, reversed(suffixes)):
+            assert self._words.pop() == suffix
+        return self
 
     def lconcat(
         self: Self,
-        prefix: str
-    ) -> None:
-        self._words.appendleft(prefix)
+        *prefixes: str
+    ) -> Self:
+        self._words.extendleft(filter(None, reversed(prefixes)))
+        return self
 
     def rconcat(
         self: Self,
-        suffix: str
-    ) -> None:
-        self._words.appendleft(suffix)
+        *suffixes: str
+    ) -> Self:
+        self._words.extend(filter(None, suffixes))
+        return self
+
+    #@classmethod
+    #def from_str(
+    #    cls: type[Self],
+    #    name: str,
+    #    name_case: type[NameCase]
+    #) -> Self:
+    #    return cls(deque(name_case.split(name)))
+
+    def map(
+        self: Self,
+        translator: Callable[[str], str],
+        joiner: str
+    ) -> Self:
+        return type(self)(map(translator, self._words), joiner)
+
+    def join(
+        self: Self
+        #joiner: str
+    ) -> str:
+        return self._joiner.join(self._words)
 
     @classmethod
-    def from_str(
+    def from_underscore_case(
         cls: type[Self],
-        chunk: str,
-        chunk_case: type[ChunkCase]
+        name: str
     ) -> Self:
-        return cls(deque(chunk_case.split(chunk)))
+        return cls(name.split("_"), "_")
 
-    def to_str(
-        self: Self,
-        chunk_case: type[ChunkCase]
-    ) -> str:
-        return chunk_case.join(list(self._words))
+    @classmethod
+    def from_camel_case(
+        cls: type[Self],
+        name: str
+    ) -> Self:
+        return cls((
+            name[start:stop]
+            for start, stop in itertools.pairwise((
+                0, *itertools.chain.from_iterable(
+                    match.span() for match in re.finditer(r"[A-Z][a-z]+", name)
+                ), len(name)
+            ))
+            if start != stop
+        ), "")
+
+    def map_upper_underscore_case(
+        self: Self
+    ) -> Self:
+        return self.map(str.upper, "_")
+
+    def map_lower_underscore_case(
+        self: Self
+    ) -> Self:
+        return self.map(str.lower, "_")
+
+    def map_upper_camel_case(
+        self: Self
+    ) -> Self:
+        #translator = lambda s: re.sub(r"[a-z][a-z]*", lambda match: f"{match.group(1).upper()}{match.group(2)}", s.lower())
+        return self.map(str.title, "")
+
+    def map_lower_camel_case(
+        self: Self
+    ) -> Self:
+        return self.map(str.title, "").lconcat(self.lpop().lower())
 
 
 #class NameCases:
@@ -720,28 +785,173 @@ def write_struct(
 
 class Obj:
     __slots__ = (
-        "c_name",
-        "cpp_name",
-        "py_name",
-        "protects"
+        #"_xml",
+        #"_feature_required",
+        #"_feature_removed",
+        #"_feature_protect",
+        "required",
+        "removed",
+        "label",
+        "platform_protect",
+        "protect"
     )
 
     def __init__(
-        self: Self,
-        c_name: str,
-        cpp_name: str,
-        py_name: str,
-        #label: str = None,
-        #c_pattern: NamePattern,
-        #cpp_pattern: NamePattern,
-        #py_pattern: NamePattern,
-        protects: tuple[str, ...]
+        self: Self
+        #xml: etree.Element
     ) -> None:
-        #name = Name(c_name, c_pattern)
-        self.c_name: str = c_name
-        self.cpp_name: str = cpp_name
-        self.py_name: str = py_name
-        self.protects: tuple[str, ...] = protects
+        super().__init__()
+        #self._xml: etree.Element = xml
+        #self._feature_required: bool = False
+        #self._feature_removed: bool = False
+        #self._feature_protect: str = ""
+        self.required: bool = False
+        self.removed: bool = False
+        self.label: str = ""
+        self.platform_protect: str = ""
+        self.protect: str = ""
+
+    #def mark_required(
+    #    self: Self,
+    #    batch_tag: str,
+    #    protect: str
+    #) -> None:
+    #    match batch_tag:
+    #        case "require":
+    #            if self._feature_required:
+    #                assert self._feature_protect == protect
+    #                return
+    #            self._feature_required = True
+    #        case "remove":
+    #            assert not self._feature_removed
+    #            self._feature_removed = True
+    #        case _:
+    #            return
+    #    self._feature_protect = protect
+
+    def mark_requirement(
+        self: Self,
+        batch_tag: str,
+        label: str,
+        platform_protect: str,
+        protect: str
+    ) -> None:
+        match batch_tag:
+            case "require":
+                if self.required:
+                    #print(self.xml.tag, self.xml.attrib)
+                    assert self.label == label
+                    assert self.platform_protect == platform_protect
+                    assert self.protect == protect
+                    return
+                self.required = True
+            case "remove":
+                assert not self.removed
+                self.removed = True
+            case _:
+                return
+        self.label = label
+        self.platform_protect = platform_protect
+        self.protect = protect
+
+    def write_binding_with_protects(
+        self: Self,
+        module_cpp: TextIO
+    ) -> None:
+        if not self.required or self.removed:
+            return
+        if self.platform_protect:
+            module_cpp.write(f"""#ifdef {self.platform_protect}""")
+        if self.protect:
+            module_cpp.write(f"""#ifdef {self.protect}""")
+        self.write_binding(module_cpp)
+        if self.protect:
+            module_cpp.write(f"""#endif""")
+        if self.platform_protect:
+            module_cpp.write(f"""#endif""")
+
+    def write_binding(
+        self: Self,
+        module_cpp: TextIO
+    ) -> None:
+        pass
+
+
+    #@property
+    #def xml(
+    #    self: Self
+    #) -> etree.Element:
+    #    return self._xml
+
+    #def write_binding(
+    #    self: Self,
+    #    cpp_module: TextIO
+    #) -> None:
+    #    required = False
+    #    label = ""
+    #    
+    #    if not self._feature_required or self._feature_removed:
+    #        return
+    #    if not self._extension_required or self._extension_removed:
+    #        return
+
+
+
+    #@property
+    #def required(
+    #    self: Self
+    #) -> bool:
+    #    if self._feature_required and not self._feature_removed:
+    #        return True
+    #    if self._extension_required and not self._extension_removed:
+    #        return True
+    #    return False
+
+    #@property
+    #def label(
+    #    self: Self
+    #) -> str:
+    #    if self._feature_required and not self._feature_removed:
+    #        return ""
+    #    if self._extension_required and not self._extension_removed:
+    #        return self._extension_label
+    #    return ""
+
+    #@property
+    #def protects(
+    #    self: Self
+    #) -> tuple[str, ...]:
+    #    if self._feature_required and not self._feature_removed:
+    #        return (self._feature_protect,)
+    #    if self._extension_required and not self._extension_removed:
+    #        return (self._extension_protect, self._extension_platform_protect)
+    #    return ()
+
+
+#class Obj:
+#    __slots__ = (
+#        "c_name",
+#        "cpp_name",
+#        "py_name",
+#        "protects"
+#    )
+
+#    def __init__(
+#        self: Self,
+#        c_name: str,
+#        cpp_name: str,
+#        py_name: str,
+#        #label: str = None,
+#        #c_pattern: NamePattern,
+#        #cpp_pattern: NamePattern,
+#        #py_pattern: NamePattern,
+#        protects: tuple[str, ...]
+#    ) -> None:
+#        #name = Name(c_name, c_pattern)
+#        self.c_name: str = c_name
+#        self.cpp_name: str = cpp_name
+#        self.py_name: str = py_name
+#        self.protects: tuple[str, ...] = protects
 
     #c_name: str
     #cpp_namespace: str
@@ -768,24 +978,37 @@ class Obj:
 
 
 class Enum(Obj):
-    __slots__ = ()
+    __slots__ = ("c_name",)
 
     def __init__(
         self: Self,
-        c_name: str,
+        c_name: str
         #enums_c_name: str,
         #bitfield: bool,
         #label: str,
-        protects: tuple[str, ...],
-        enums: Enums
+        #protects: tuple[str, ...],
+        #enums: Enums
     ) -> None:
+        super().__init__()
+        self.c_name: str = c_name
+        enums_prefix = Name.from_camel_case(enums.c_name).lstrip("Vk")
+        if enums.bitfield:
+            enums_prefix.rstrip("Flag", "Bits")
         #enums_prefix = Name(enums_c_name, ("Vk", UpperCamelCase, "")).to(("", UpperUnderscoreCase, ""))
-        enums_prefix = Name(enums.c_name, (("Vk",), UpperCamelCase, ("FlagBits" if enums.bitfield else "",))).to(((), UpperUnderscoreCase, ()))
+        #enums_prefix = Name(enums.c_name, (("Vk",), UpperCamelCase, ("FlagBits" if enums.bitfield else "",))).to(((), UpperUnderscoreCase, ()))
+        name = Name.from_underscore_case(c_name).lstrip("VK", *enums_prefix.map_upper_underscore_case())
+        if enums.bitfield:
+            name.rstrip("BIT", label)
+        cpp_name = name.map_upper_camel_case().lconcat("e").join()
+        py_name = name.map_upper_underscore_case().join()
+        if py_name[0].isdigit():
+            py_name = f"_{py_name}"
         super().__init__(
             c_name=c_name,
-            c_pattern=(("VK", enums_prefix), UpperUnderscoreCase, ("BIT" if enums.bitfield else "", label)),
-            cpp_pattern=(("e",), UpperCamelCase, ()),
-            py_pattern=(("e",), LowerUnderscoreCase, ()),
+            cpp_name=cpp_name,
+            py_name=py_name,
+            #cpp_pattern=(("e",), UpperCamelCase, ()),
+            #py_pattern=(("e",), LowerUnderscoreCase, ()),
             #c_name_case=NameCases.upper_underscore_case,
             #cpp_name_case=NameCases.lower_camel_case,
             #py_name_case=NameCases.upper_underscore_case,
@@ -795,6 +1018,12 @@ class Enum(Obj):
             #py_prefixes=("e",),  # TODO: e1D
             protects=protects
         )
+
+    def write_binding(
+        self: Self,
+        module_cpp: TextIO
+    ) -> None:
+        c_name = self.c_name
 
     #enum_c_name: str
     #label: str
@@ -838,21 +1067,25 @@ class Constant(Obj):
         c_name: str,
         #label: str,
         protects: tuple[str, ...],
-        label_re: str
+        label: str,
+        #left_label: bool
     ) -> None:
-        name = Name.from_str(c_name, UpperUnderscoreCase)
-        name.lstrip("VK")
-        label = name.lstrip_re(label_re)
-        c_pattern = ("VK", "{label}", "{name:UpperUnderscoreCase}")
-        cpp_pattern = ("{label}", "{name:UpperCamelCase}")
-        py_pattern = ("{label}", "{name:UpperUnderscoreCase}")
-        assert (match := re.fullmatch(fr"VK_(?:({"|".join(labels)})_)?(\w+)", c_name)) is not None
-        label = match.group(1) or ""
-        segments = UpperUnderscoreCase.split(match.group(2))
+        #print(c_name, label)
+        name = Name.from_underscore_case(c_name).lstrip("VK", label)
+        cpp_name = name.map_upper_camel_case().lconcat(label).join()
+        py_name = name.map_upper_underscore_case().lconcat(label).join()
+        #name.lstrip("VK")
+        #label = name.lstrip_re(label_re)
+        #c_pattern = ("VK", "{label}", "{name:UpperUnderscoreCase}")
+        #cpp_pattern = ("{label}", "{name:UpperCamelCase}")
+        #py_pattern = ("{label}", "{name:UpperUnderscoreCase}")
+        #assert (match := re.fullmatch(fr"VK_(?:({"|".join(labels)})_)?(\w+)", c_name)) is not None
+        #label = match.group(1) or ""
+        #segments = UpperUnderscoreCase.split(match.group(2))
         super().__init__(
-            c_name="_".join(filter(None, ("VK", label, UpperUnderscoreCase.join(segments)))),
-            cpp_name="".join(filter(None, (label, UpperCamelCase.join(segments)))),
-            py_name="_".join(filter(None, (label, UpperUnderscoreCase.join(segments)))),
+            c_name=c_name,
+            cpp_name=cpp_name,
+            py_name=py_name,
             #c_pattern=(("VK", label), UpperUnderscoreCase, ()),
             #cpp_pattern=((label,), UpperCamelCase, ()),
             #py_pattern=((label,), UpperUnderscoreCase, ()),
@@ -864,6 +1097,13 @@ class Constant(Obj):
             #py_prefixes=(label,),  # TODO: e1D
             protects=protects
         )
+
+    def write_binding(
+        self: Self,
+        module_cpp: TextIO
+    ) -> None:
+        module_cpp.write(f"""    {MODULE}.attr("{self.py_name}") = py::cast(vk::{self.cpp_name});\n""")
+
     #label: str
 
     #@property
@@ -899,11 +1139,13 @@ class Define(Obj):
         c_name: str
         #protects: tuple[str, ...]
     ) -> None:
+        name = Name.from_underscore_case(c_name).lstrip("VK")
+        cpp_name = name.map_lower_camel_case().join()
+        py_name = name.map_lower_underscore_case().join()
         super().__init__(
             c_name=c_name,
-            c_pattern=(("VK",), UpperUnderscoreCase, ()),
-            cpp_pattern=((), LowerCamelCase, ()),
-            py_pattern=((), LowerUnderscoreCase, ()),
+            cpp_name=cpp_name,
+            py_name=py_name,
             protects=()
             #c_name_case=NameCases.upper_underscore_case,
             #cpp_name_case=NameCases.lower_camel_case,
@@ -936,6 +1178,7 @@ class Define(Obj):
 
 class Enums(Obj):
     __slots__ = (
+        "label",
         "bitfield",
         "members"
     )
@@ -947,21 +1190,35 @@ class Enums(Obj):
         protects: tuple[str, ...],
         bitfield: bool
     ) -> None:
+        print(c_name, label)
+        name = Name.from_camel_case(c_name).lstrip("Vk").rstrip(label)
+        cpp_name = name.map_upper_camel_case().rconcat(label).join()
+        py_name = name.map_upper_camel_case().rconcat(label).join()
         super().__init__(
             c_name=c_name,
-            c_pattern=(("Vk",), UpperCamelCase, (label,)),
-            cpp_pattern=((), UpperCamelCase, (label,)),
-            py_pattern=((), UpperCamelCase, (label,)),
+            cpp_name=cpp_name,
+            py_name=py_name,
+            #c_pattern=(("Vk",), UpperCamelCase, (label,)),
+            #cpp_pattern=((), UpperCamelCase, (label,)),
+            #py_pattern=((), UpperCamelCase, (label,)),
             protects=protects
         )
+        self.label: str = label
         self.bitfield: bool = bitfield
         self.members: list[Enum] = []
 
     def append_enum(
         self: Self,
-        enum: Enum
+        c_name: str,
+        label: str,
+        protects: tuple[str, ...]
     ) -> None:
-        self.members.append(enum)
+        self.members.append(Enum(
+            c_name=c_name,
+            label=label,
+            protects=protects,
+            enums=self
+        ))
 
     #@property
     #def cpp_name(
@@ -994,11 +1251,16 @@ class Command(Obj):
         label: str,
         protects: tuple[str, ...]
     ) -> None:
+        name = Name.from_camel_case(c_name).lstrip("vk").rstrip(label)
+        cpp_name = name.map_lower_camel_case().rconcat(label).join()
+        py_name = name.map_lower_underscore_case().rconcat(label).join()
         super().__init__(
             c_name=c_name,
-            c_pattern=(("vk",), UpperCamelCase, (label,)),
-            cpp_pattern=((), LowerCamelCase, (label,)),
-            py_pattern=((), LowerUnderscoreCase, (label,)),
+            cpp_name=cpp_name,
+            py_name=py_name,
+            #c_pattern=(("vk",), UpperCamelCase, (label,)),
+            #cpp_pattern=((), LowerCamelCase, (label,)),
+            #py_pattern=((), LowerUnderscoreCase, (label,)),
             protects=protects
         )
 
@@ -1036,11 +1298,16 @@ class Type(Obj):
         label: str,
         protects: tuple[str, ...]
     ) -> None:
+        name = Name.from_camel_case(c_name).lstrip("Vk").rstrip(label)
+        cpp_name = name.map_upper_camel_case().rconcat(label).join()
+        py_name = name.map_upper_camel_case().rconcat(label).join()
         super().__init__(
             c_name=c_name,
-            c_pattern=(("Vk",), UpperCamelCase, (label,)),
-            cpp_pattern=((), UpperCamelCase, (label,)),
-            py_pattern=((), UpperCamelCase, (label,)),
+            cpp_name=cpp_name,
+            py_name=py_name,
+            #c_pattern=(("Vk",), UpperCamelCase, (label,)),
+            #cpp_pattern=((), UpperCamelCase, (label,)),
+            #py_pattern=((), UpperCamelCase, (label,)),
             protects=protects
         )
 
@@ -1073,113 +1340,6 @@ class Struct(Type):
 
 class Union(Type):
     __slots__ = ()
-
-
-class Requirement:
-    __slots__ = (
-        "_xml",
-        "_feature_required",
-        "_feature_removed",
-        "_feature_protect",
-        "_extension_required",
-        "_extension_removed",
-        "_extension_protect",
-        #"_extension_label",
-        "_extension_platform_protect"
-    )
-
-    def __init__(
-        self: Self,
-        xml: etree.Element
-    ) -> None:
-        super().__init__()
-        self._xml: etree.Element = xml
-        self._feature_required: bool = False
-        self._feature_removed: bool = False
-        self._feature_protect: str = ""
-        self._extension_required: bool = False
-        self._extension_removed: bool = False
-        self._extension_protect: str = ""
-        #self._extension_label: str = ""
-        self._extension_platform_protect: str = ""
-
-    def mark_feature(
-        self: Self,
-        batch_tag: str,
-        protect: str
-    ) -> None:
-        match batch_tag:
-            case "require":
-                if self._feature_required:
-                    assert self._feature_protect == protect
-                    return
-                self._feature_required = True
-            case "remove":
-                assert not self._feature_removed
-                self._feature_removed = True
-            case _:
-                return
-        self._feature_protect = protect
-
-    def mark_extension(
-        self: Self,
-        batch_tag: str,
-        #label: str,
-        platform_protect: str,
-        protect: str
-    ) -> None:
-        match batch_tag:
-            case "require":
-                if self._extension_required:
-                    assert self._extension_protect == protect
-                    #assert self._extension_label == label
-                    assert self._extension_platform_protect == platform_protect
-                    return
-                self._extension_required = True
-            case "remove":
-                assert not self._extension_removed
-                self._extension_removed = True
-            case _:
-                return
-        self._extension_protect = protect
-        #self._extension_label = label
-        self._extension_platform_protect = platform_protect
-
-    @property
-    def xml(
-        self: Self
-    ) -> etree.Element:
-        return self._xml
-
-    @property
-    def required(
-        self: Self
-    ) -> bool:
-        if self._feature_required and not self._feature_removed:
-            return True
-        if self._extension_required and not self._extension_removed:
-            return True
-        return False
-
-    #@property
-    #def label(
-    #    self: Self
-    #) -> str:
-    #    if self._feature_required and not self._feature_removed:
-    #        return ""
-    #    if self._extension_required and not self._extension_removed:
-    #        return self._extension_label
-    #    return ""
-
-    @property
-    def protects(
-        self: Self
-    ) -> tuple[str, ...]:
-        if self._feature_required and not self._feature_removed:
-            return (self._feature_protect,)
-        if self._extension_required and not self._extension_removed:
-            return (self._extension_protect, self._extension_platform_protect)
-        return ()
 
 
 #class Requirements(dict[str, dict[str, Requirement]]):
@@ -1248,33 +1408,59 @@ class Binder:
         registry_xml_path: pathlib.Path,
         module_cpp_path: pathlib.Path
     ) -> None:
-        objs = cls.read_registry(etree.parse(registry_xml_path).getroot())
+        data = cls.read_registry(etree.parse(registry_xml_path).getroot(), "vulkan")
+        objs = cls.iter_objs(*data)
         with module_cpp_path.open("w") as module_cpp:
-            pass
+            module_cpp.write("#include <pybind11/pybind11.h>\n")
+            module_cpp.write("#include <vulkan/vulkan.hpp>\n")
+            module_cpp.write("\n")
+            module_cpp.write("namespace py = pybind11;\n")
+            module_cpp.write("\n")
+            module_cpp.write(f"PYBIND11_MODULE(pyvulkan, {MODULE}) {{\n")
+            #module_cpp.write(f"""    py::module n_vk = m.def_submodule("vk");\n""")
+            for obj in objs:
+                obj.write_binding(module_cpp)
+            module_cpp.write(f"}}\n")
         #obj_dict = self.read_registry(self._registry_xml_tree.getroot())
         #self.write_registry(obj_dict, module_cpp)
 
     @classmethod
     def read_registry(
         cls: type[Self],
-        registry_xml: etree.Element
-    ) -> list[Obj]:
+        registry_xml: etree.Element,
+        api: str
+    ) -> tuple[dict[str, Requirement], dict[str, etree.Element], dict[str, dict[str, Requirement]], dict[str, Requirement]]:
 
         def check_api(
-            xml: etree.Element
+            xml: etree.Element,
+            api: str
         ) -> bool:
-            return (api_attr := xml.get("api")) is None or "vulkan" in api_attr.split(",")
+            api_attr = xml.get("api", "")
+            return not api_attr or api in api_attr.split(",")
+
+        def extract_label(
+            extension_name: str
+        ) -> str:
+            label = match.group(1) if (match := re.match(r"^VK_([A-Z]+)_", extension_name)) is not None else ""
+            if label == "VERSION":
+                label = ""
+            return label
 
         platform_dict: dict[str, str] = {"": ""}
-        requirement_dicts: dict[str, dict[str, Requirement]] = {
-            "type": {},
-            "enum": {},
-            "command": {}
-        }
+        type_requirement_dict: dict[str, Requirement] = {}
+        enums_xml_dict: dict[str, etree.Element] = {}
+        enums_members_requirement_dict: dict[str, dict[str, Requirement]] = {}
+        #enum_dict: dict[str, Requirement] = {}
+        command_requirement_dict: dict[str, Requirement] = {}
+        #requirement_dicts: dict[str, dict[str, Requirement]] = {
+        #    "type": {},
+        #    "enum": {},
+        #    "command": {}
+        #}
         #enum_names_dict: dict[str, list[str]] = {}
         #type_dict: dict[str, etree.Element] = {}
         #enum_member_dict: dict[str, etree.Element] = {}
-        #command_dict: dict[str, etree.Element] = {}
+        #command_requirement_dict: dict[str, etree.Element] = {}
         for xml in registry_xml:
             match xml.tag:
                 case "platforms":
@@ -1282,86 +1468,146 @@ class Binder:
                         platform_dict[platform_xml.get("name", "")] = platform_xml.get("protect", "")
                 case "types":
                     for type_xml in xml.iterfind("type"):
-                        if not check_api(type_xml):
+                        if not check_api(type_xml, api):
                             continue
                         type_name = type_xml.get("name", type_xml.findtext("name", ""))
-                        requirement_dicts["type"][type_name] = Requirement(type_xml)
+                        type_requirement_dict[type_name] = Requirement(type_xml)
                         #type_dict[type_xml.get("name", type_xml.findtext("name", ""))] = type_xml
                 case "enums":
                     #enum_names: list[str] = []
-                    #if " " in (enums_name := xml.get("name", "")):
-                    #    enums_name = ""
+                    #enums_name = xml.get("name", "")
                     #enum_names_dict[enums_name] = enum_names
                     #enums_name = xml.get("name", "")
-                    for enum_xml in xml.iterfind("enum"):
-                        #if " " not in enums_name:
-                        #    enum_xml.set("extends", enums_name)
-                        enum_name = enum_xml.get("name", "")
-                        requirement_dicts["enum"][enum_name] = Requirement(enum_xml)
-                        #enum_names.append(enum_name)
-                        #enum_member_dict[enum_xml.get("name", "")] = enum_xml
+                    enums_name = xml.get("name", "")
+                    if enums_name == "API Constants":
+                        enums_name = ""
+                    enums_xml_dict[enums_name] = xml
+                    enums_members_requirement_dict[enums_name] = {
+                        enum_xml.get("name", ""): Requirement(enum_xml)
+                        for enum_xml in xml.iterfind("enum")
+                    }
+                    #for enum_xml in xml.iterfind("enum"):
+                    #    #if " " not in enums_name:
+                    #    #    enum_xml.set("extends", enums_name)
+                    #    enum_name = enum_xml.get("name", "")
+                    #    enum_dict[enum_name] = Requirement(enum_xml)
+                    #    #enum_names.append(enum_name)
+                    #    #enum_member_dict[enum_xml.get("name", "")] = enum_xml
                 case "commands":
                     for command_xml in xml.iterfind("command"):
-                        if not check_api(command_xml):
+                        if not check_api(command_xml, api):
                             continue
                         command_name = command_xml.get("name", command_xml.findtext("proto/name", ""))
-                        requirement_dicts["command"][command_name] = Requirement(command_xml)
-                        #command_dict[command_xml.findtext("proto/name", "")] = command_xml
+                        command_requirement_dict[command_name] = Requirement(command_xml)
+                        #command_requirement_dict[command_xml.findtext("proto/name", "")] = command_xml
                 case "features":
                     for feature_xml in xml.iterfind("feature"):
-                        if not check_api(feature_xml):
+                        if not check_api(feature_xml, api):
                             continue
                         for feature_batch_xml in feature_xml:
-                            for feature_obj_xml in feature_batch_xml:
-                                if not check_api(feature_obj_xml):
+                            for feature_unit_xml in feature_batch_xml:
+                                if not check_api(feature_unit_xml, api):
                                     continue
-                                if (requirement_dict := requirement_dicts.get(feature_obj_xml.tag)) is None:
-                                    continue
-                                requirement_dict.setdefault(feature_obj_xml.get("name", ""), Requirement(feature_obj_xml)).mark_feature(
+                                feature_unit_name = feature_unit_xml.get("name", "")
+                                match feature_unit_xml.tag:
+                                    case "type":
+                                        requirement = type_requirement_dict[feature_unit_name]
+                                    case "enum":
+                                        requirement = Requirement(feature_unit_xml)
+                                        enums_members_requirement_dict[feature_unit_xml.get("extends", "")][feature_unit_name] = requirement
+                                    case "command":
+                                        requirement = command_requirement_dict[feature_unit_name]
+                                    case _:
+                                        continue
+                                #if (requirement_dict := requirement_dicts.get(feature_obj_xml.tag)) is None:
+                                #    continue
+                                requirement.mark_feature(
                                     batch_tag=feature_batch_xml.tag,
-                                    protect=feature_obj_xml.get("protect", "")
+                                    protect=feature_unit_xml.get("protect", "")
                                 )
                 case "extensions":
                     for extension_xml in xml.iterfind("extension"):
-                        if not check_api(extension_xml):
+                        if not check_api(extension_xml, api):
                             continue
-                        #label = match.group(1) if (match := re.match(r"^VK_([A-Z]+)_", extension_xml.get("name", ""))) is not None else ""
+                        extension_label = extract_label(extension_xml.get("name", ""))
                         platform_protect = platform_dict[extension_xml.get("platform", "")]
                         for extension_batch_xml in extension_xml:
-                            if not check_api(extension_batch_xml):
+                            if not check_api(extension_batch_xml, api):
                                 continue
-                            for extension_obj_xml in extension_batch_xml:
-                                if not check_api(extension_obj_xml):
+                            extension_batch_label = extract_label(extension_batch_xml.get("depends", ""))
+                            for extension_unit_xml in extension_batch_xml:
+                                if not check_api(extension_unit_xml, api):
                                     continue
-                                if (requirement_dict := requirement_dicts.get(extension_obj_xml.tag)) is None:
-                                    continue
-                                #print(extension_obj_xml.get("name", ""), requirement._required)
-                                requirement_dict.setdefault(extension_obj_xml.get("name", ""), Requirement(extension_obj_xml)).mark_extension(
+                                extension_unit_name = extension_unit_xml.get("name", "")
+                                match extension_unit_xml.tag:
+                                    case "type":
+                                        label = extension_batch_label or extension_label
+                                        requirement = type_requirement_dict[extension_unit_name]
+                                    case "enum":
+                                        label = extension_batch_label or extension_label
+                                        requirement = Requirement(extension_unit_xml)
+                                        enums_members_requirement_dict[extension_unit_xml.get("extends", "")][extension_unit_name] = requirement
+                                    case "command":
+                                        label = extension_label
+                                        #print(extension_unit_name)
+                                        requirement = command_requirement_dict[extension_unit_name]
+                                    case _:
+                                        continue
+                                requirement.mark_extension(
                                     batch_tag=extension_batch_xml.tag,
-                                    protect=extension_obj_xml.get("protect", ""),
-                                    #label=label,
+                                    protect=extension_unit_xml.get("protect", ""),
+                                    label=label,
                                     platform_protect=platform_protect
                                 )
 
 
                         #self.read_obj(type_xml)
-
-        enums_bitfield_dict: dict[str, bool] = {}
-        enums_members_dict: dict[str, dict[str, Requirement]] = {}
-        for enums_xml in registry_xml.iterfind("enums"):
-            if " " in (enums_name := enums_xml.get("name", "")):
-                enums_name = ""
-            enums_bitfield_dict[enums_name] = enums_xml.get("type") == "bitmask"
-            enums_members_dict[enums_name] = {
-                (enum_name := enum_xml.get("name", "")): requirement_dicts["enum"][enum_name]
-                for enum_xml in enums_xml.iterfind("enum")
-            }
-        for enum_name, enum_requirement in requirement_dicts["enum"].items():
-            enums_members_dict[enum_requirement.xml.get("extends", "")][enum_name] = enum_requirement
+        return type_requirement_dict, enums_xml_dict, enums_members_requirement_dict, command_requirement_dict
 
 
-        objs: list[Obj] = []
-        for type_name, type_requirement in requirement_dicts["type"].items():
+    @classmethod
+    def iter_objs(
+        cls: type[Self],
+        type_requirement_dict: dict[str, Requirement],
+        enums_xml_dict: dict[str, etree.Element],
+        enums_members_requirement_dict: dict[str, dict[str, Requirement]],
+        command_requirement_dict: dict[str, Requirement]
+    ) -> Iterator[Obj]:
+        #enums_bitfield_dict: dict[str, bool] = {}
+        #enums_members_dict = {
+        #    (enums_name if " " not in enums_name else ""): {
+        #        (enum_name := enum_xml.get("name", "")): enum_dict[enum_name]
+        #        for enum_xml in enums_requirement.xml.iterfind("enum")
+        #    }
+        #    for enums_name, enums_requirement in enums_dict.items()
+        #}
+        #basic_enum_names = set().union(*enums_members_dict.values())
+        #print(basic_enum_names)
+        #for enums_name, enums_xml in enums_dict:
+        #    if " " in (enums_name := enums_xml.get("name", "")):
+        #        enums_name = ""
+        #    #print(enums_name)
+        #    #enums_bitfield_dict[enums_name] = enums_xml.get("type") == "bitmask"
+        #    enums_members_dict[enums_name] = {
+        #        (enum_name := enum_xml.get("name", "")): requirement_dicts["enum"][enum_name]
+        #        for enum_xml in enums_xml.iterfind("enum")
+        #    }
+        #for enum_name, enum_requirement in enum_dict.items():
+        #    if enum_name in basic_enum_names:
+        #        continue
+        #    enums_members_dict[enum_requirement.xml.get("extends", "")][enum_name] = enum_requirement
+
+        for constant_name, constant_requirement in enums_members_requirement_dict[""].items():
+            #print(constant_requirement.required, constant_name)
+            if not constant_requirement.required:
+                continue
+            yield Constant(
+                c_name=constant_name,
+                label=constant_requirement.label,
+                protects=constant_requirement.protects
+            )
+
+        for type_name, type_requirement in type_requirement_dict.items():
             if not type_requirement.required:
                 continue
             match type_requirement.xml.get("category", ""):
@@ -1377,25 +1623,30 @@ class Binder:
                     #    for enum_name, enum_requirement in requirement_dicts["enum"].items()
                     #    if enum_requirement.xml.get("extends") == type_name
                     #}
-                    bitfield = enums_bitfield_dict[type_name]
-                    obj = Enums(
+                    enums = Enums(
                         c_name=type_name,
                         label=type_requirement.label,
                         protects=type_requirement.protects,
-                        bitfield=bitfield,
-                        members=tuple(
-                            Enum(
-                                c_name=enum_name,
-                                enums_c_name=type_name,
-                                bitfield=bitfield,
-                                label=enum_requirement.label,
-                                protects=enum_requirement.protects
-                            )
-                            for enum_name, enum_requirement in enums_members_dict[type_name].items()
-                        )
+                        bitfield=enums_xml_dict[type_name].get("type") == "bitmask"
+                        #members=tuple(
+                        #    Enum(
+                        #        c_name=enum_name,
+                        #        #enums_c_name=type_name,
+                        #        #bitfield=bitfield,
+                        #        label=enum_requirement.label,
+                        #        protects=enum_requirement.protects,
+                        #        enums=enums
+                        #    )
+                        #    for enum_name, enum_requirement in enums_members_dict[type_name].items()
+                        #)
                     )
-                    objs.append(obj)
-        return objs
+                    for enum_name, enum_requirement in enums_members_requirement_dict[type_name].items():
+                        enums.append_enum(
+                            c_name=enum_name,
+                            label=enum_requirement.label,
+                            protects=enum_requirement.protects
+                        )
+                    yield enums
 
     #def read_obj(
     #    self: Self,
@@ -1432,20 +1683,6 @@ class Binder:
     #            }[category]
     #            varname = f"{char}_vk_{cpp_name}"
     #            module_cpp.write(f"""    py::class_<vk::{cpp_name}> {varname}(n_vk, "{py_name}");\n""")
-
-    def write_registry(
-        self: Self,
-        obj_dict: dict[str, Obj],
-        module_cpp: TextIO
-    ) -> None:
-        module_cpp.write("#include <pybind11/pybind11.h>\n")
-        module_cpp.write("#include <vulkan/vulkan.hpp>\n")
-        module_cpp.write("\n")
-        module_cpp.write("namespace py = pybind11;\n")
-        module_cpp.write("\n")
-        module_cpp.write("PYBIND11_MODULE(pyvulkan, m) {\n")
-        module_cpp.write(f"""    py::module n_vk = m.def_submodule("vk");\n""")
-        module_cpp.write("}\n")
 
 
 if __name__ == "__main__":
