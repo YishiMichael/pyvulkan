@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 
-/build/
+/extern/
+/generated/
 /playground/
-/scripts/extern/
+/Release/
