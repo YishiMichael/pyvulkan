@@ -62,6 +62,13 @@ class Label:
 class Obj:
     __slots__ = ()
 
+    def write_cdef_incomplete(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        pass
+
     def write_cdef(
         self: Self,
         file: TextIO,
@@ -142,92 +149,6 @@ class Container[ChildT: Obj](Obj):
         else:
             self._label_dict[name] = Label(name)
             self._forwardref_aliases.setdefault(aliased_name, []).append(name)
-
-
-class Macro(Obj):
-    __slots__ = ("pymacro",)
-
-    def __init__(
-        self: Self,
-        cmacro: str
-    ) -> None:
-        super().__init__()
-        self.pymacro: str | None = type(self).parse_cmacro(cmacro)
-
-    @classmethod
-    def parse_cmacro(
-        cls: type[Self],
-        cmacro: str
-    ) -> str | None:
-
-        def format_line(
-            line: str
-        ) -> str:
-            line = line.strip()
-            if "//" in line:  # Remove comments.
-                line = line[:line.index("//")].rstrip()
-            if line.endswith("\\"):  # Join line continuation.
-                return line.rstrip("\\")
-            return line + "\n"
-
-        cmacro = "".join(filter(None, (
-            format_line(line)
-            for line in cmacro.splitlines()
-        ))).strip()
-
-        if (macro_match := re.fullmatch(r"#define\s+(\b\w+\b)\s*(.*)", cmacro)) is None:
-            return None
-
-        name = macro_match.group(1)
-        value = macro_match.group(2)
-
-        # A number literal.
-        if value.isdigit():
-            return f"{name} = {value}"
-
-        # A number from a macro function call.
-        if (match := re.fullmatch(r"(\w+)\(((?:\w+,\s*)*\w+)\)", value)) is not None:
-            func_name = match.group(1)
-            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(2)))
-            return f"{name} = {func_name}({", ".join(args)})"
-
-        # A macro function.
-        if (match := re.fullmatch(r"\(((?:\w+,\s*)*\w+)\)\s*\((.*)\)", value)) is not None:
-            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(1)))
-            result = match.group(2)
-            result = re.sub(
-                r"\(uint32_t\)\((\w+)\)",
-                lambda match: match.group(1),
-                result
-            )
-            result = re.sub(
-                r"\b(\d+|0x[\dA-F]+)U",
-                lambda match: match.group(1),
-                result
-            )
-            result = re.sub(
-                r"\((\w+)\)",
-                lambda match: match.group(1),
-                result
-            )
-            return "\n".join((
-                f"def {name}(",
-                *(f"    {arg}: int," for  arg in args),
-                ") -> int:",
-                f"    return {result}"
-            ))
-
-        return None
-
-    def write_pydef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        if self.pymacro is None:
-            return
-        file.write("\n")
-        file.write(f"{self.pymacro}\n")
 
 
 class Declaration:
@@ -355,17 +276,103 @@ class ElementaryType(Obj):
 class ExternalType(Obj):
     __slots__ = ()
 
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"typedef struct {label.name}_T *{label.name};\n")
+    #def write_cdef(
+    #    self: Self,
+    #    file: TextIO,
+    #    label: Label
+    #) -> None:
+    #    file.write("\n")
+    #    file.write(f"typedef struct {label.name}_T *{label.name};\n")
 
 
 class ExternalInclude(Obj):
     __slots__ = ()
+
+
+class Macro(Obj):
+    __slots__ = ("pymacro",)
+
+    def __init__(
+        self: Self,
+        cmacro: str
+    ) -> None:
+        super().__init__()
+        self.pymacro: str | None = type(self).parse_cmacro(cmacro)
+
+    @classmethod
+    def parse_cmacro(
+        cls: type[Self],
+        cmacro: str
+    ) -> str | None:
+
+        def format_line(
+            line: str
+        ) -> str:
+            line = line.strip()
+            if "//" in line:  # Remove comments.
+                line = line[:line.index("//")].rstrip()
+            if line.endswith("\\"):  # Join line continuation.
+                return line.rstrip("\\")
+            return line + "\n"
+
+        cmacro = "".join(filter(None, (
+            format_line(line)
+            for line in cmacro.splitlines()
+        ))).strip()
+
+        if (macro_match := re.fullmatch(r"#define\s+(\b\w+\b)\s*(.*)", cmacro)) is None:
+            return None
+
+        name = macro_match.group(1)
+        value = macro_match.group(2)
+
+        # A number literal.
+        if value.isdigit():
+            return f"{name} = {value}"
+
+        # A number from a macro function call.
+        if (match := re.fullmatch(r"(\w+)\(((?:\w+,\s*)*\w+)\)", value)) is not None:
+            func_name = match.group(1)
+            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(2)))
+            return f"{name} = {func_name}({", ".join(args)})"
+
+        # A macro function.
+        if (match := re.fullmatch(r"\(((?:\w+,\s*)*\w+)\)\s*\((.*)\)", value)) is not None:
+            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(1)))
+            result = match.group(2)
+            result = re.sub(
+                r"\(uint32_t\)\((\w+)\)",
+                lambda match: match.group(1),
+                result
+            )
+            result = re.sub(
+                r"\b(\d+|0x[\dA-F]+)U",
+                lambda match: match.group(1),
+                result
+            )
+            result = re.sub(
+                r"\((\w+)\)",
+                lambda match: match.group(1),
+                result
+            )
+            return "\n".join((
+                f"def {name}(",
+                *(f"    {arg}: int," for  arg in args),
+                ") -> int:",
+                f"    return {result}"
+            ))
+
+        return None
+
+    def write_pydef(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        if self.pymacro is None:
+            return
+        file.write("\n")
+        file.write(f"{self.pymacro}\n")
 
 
 class Constant(Obj):
@@ -390,7 +397,9 @@ class Constant(Obj):
         cls: type[Self],
         cvalue: str
     ) -> tuple[str, bool]:
-        if cvalue.isdigit() or cvalue.isidentifier():
+        if cvalue.isidentifier():
+            return cvalue, False
+        if cvalue.isdigit():
             return cvalue, True
         if (match := re.fullmatch(r"0x[\dA-F]+", cvalue)) is not None:
             return cvalue, True
@@ -482,75 +491,6 @@ class Enums(Container[Enum]):
             file.write(f"    {enum_name.removeprefix("VK_")} = lib.{enum_name}\n")
 
 
-class Handle(Obj):
-    __slots__ = ()
-
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"typedef struct {label.name}_T *{label.name};\n")
-
-    def write_pydef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"class {label.name}(VulkanCData):\n")
-        file.write(f"    __slots__ = ()\n")
-
-
-class Struct(Signature):
-    __slots__ = ()
-
-    def __init__(
-        self: Self,
-        arg_cdecls: tuple[str, ...]
-    ) -> None:
-        super().__init__(
-            return_cdecl="void _",
-            arg_cdecls=arg_cdecls
-        )
-    
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"typedef struct {label.name} {{\n")
-        for arg_declaration in self.arg_declarations:
-            file.write(f"    {arg_declaration.cdecl};\n")
-        file.write(f"}} {label.name};\n")
-
-
-class Union(Signature):
-    __slots__ = ()
-
-    def __init__(
-        self: Self,
-        arg_cdecls: tuple[str, ...]
-    ) -> None:
-        super().__init__(
-            return_cdecl="void _",
-            arg_cdecls=arg_cdecls
-        )
-    
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"typedef union {{\n")
-        for arg_declaration in self.arg_declarations:
-            file.write(f"    {arg_declaration.cdecl};\n")
-        file.write(f"}} {label.name};\n")
-
-
 class FunctionPointer(Signature):
     __slots__ = ("cdecl",)
 
@@ -580,6 +520,91 @@ class FunctionPointer(Signature):
         });\n""")
 
 
+class Handle(Obj):
+    __slots__ = ()
+
+    def write_cdef_incomplete(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"typedef struct {label.name}_T *{label.name};\n")
+
+    def write_pydef(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"class {label.name}(VulkanCData):\n")
+        file.write(f"    __slots__ = ()\n")
+
+
+class Struct(Signature):
+    __slots__ = ()
+
+    def __init__(
+        self: Self,
+        arg_cdecls: tuple[str, ...]
+    ) -> None:
+        super().__init__(
+            return_cdecl="void _",
+            arg_cdecls=arg_cdecls
+        )
+
+    def write_cdef_incomplete(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"typedef struct {label.name} {label.name};\n")
+    
+    def write_cdef(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"typedef struct {label.name} {{\n")
+        for arg_declaration in self.arg_declarations:
+            file.write(f"    {arg_declaration.cdecl};\n")
+        file.write(f"}} {label.name};\n")
+
+
+class Union(Signature):
+    __slots__ = ()
+
+    def __init__(
+        self: Self,
+        arg_cdecls: tuple[str, ...]
+    ) -> None:
+        super().__init__(
+            return_cdecl="void _",
+            arg_cdecls=arg_cdecls
+        )
+
+    def write_cdef_incomplete(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"typedef union {label.name} {label.name};\n")
+    
+    def write_cdef(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"typedef union {label.name} {{\n")
+        for arg_declaration in self.arg_declarations:
+            file.write(f"    {arg_declaration.cdecl};\n")
+        file.write(f"}} {label.name};\n")
+
+
 class Command(Signature):
     __slots__ = ()
 
@@ -599,16 +624,17 @@ class Registry:
         "api",
         "platform",
         "defines",
+        "srcs",
         "elementary_type_container",
         "external_type_container",
         "external_include_container",
         "macro_container",
         "constant_container",
         "enums_container",
+        "function_pointer_container",
         "handle_container",
         "struct_container",
         "union_container",
-        "function_pointer_container",
         "command_container"
     )
 
@@ -616,22 +642,24 @@ class Registry:
         self: Self,
         api: str,
         platform: str,
-        defines: list[str]
+        defines: list[str],
+        srcs: list[str]
     ) -> None:
         super().__init__()
         self.api: str = api
         self.platform: str = platform
         self.defines: dict[str, bool] = dict.fromkeys(defines, True)
+        self.srcs: list[str] = srcs.copy()
         self.elementary_type_container: Container[ElementaryType] = Container()
         self.external_type_container: Container[ExternalType] = Container()
         self.external_include_container: Container[ExternalInclude] = Container()
         self.macro_container: Container[Macro] = Container()
         self.constant_container: Container[Constant] = Container()
         self.enums_container: Container[Enums] = Container()
+        self.function_pointer_container: Container[FunctionPointer] = Container()
         self.handle_container: Container[Handle] = Container()
         self.struct_container: Container[Struct] = Container()
         self.union_container: Container[Union] = Container()
-        self.function_pointer_container: Container[FunctionPointer] = Container()
         self.command_container: Container[Command] = Container()
 
         for name, pytype in (
@@ -667,10 +695,10 @@ class Registry:
             self.macro_container,
             self.constant_container,
             self.enums_container,
+            self.function_pointer_container,
             self.handle_container,
             self.struct_container,
-            self.union_container,
-            self.function_pointer_container
+            self.union_container
         ):
             yield from container.iter_filtered_children_items()
 
@@ -685,10 +713,10 @@ class Registry:
             self.macro_container,
             self.constant_container,
             self.enums_container,
+            self.function_pointer_container,
             self.handle_container,
             self.struct_container,
-            self.union_container,
-            self.function_pointer_container
+            self.union_container
         ):
             if container.contains(name):
                 return container.get_label(name)
@@ -702,8 +730,9 @@ class Registry:
         assert name
         match type_xml.get("category"):
             case None:
-                if not self.external_type_container.contains(name):
+                if not self.elementary_type_container.contains(name) and not self.external_type_container.contains(name):
                     self.external_type_container.add_child(name, ExternalType())
+                    self.external_type_container.get_label(name).required = True
 
             case "include":
                 if not self.external_include_container.contains(name):
@@ -729,6 +758,11 @@ class Registry:
                 else:
                     self.elementary_type_container.add_child_alias(name, type_xml.findtext("type", ""))
 
+            case "funcpointer":
+                self.function_pointer_container.add_child(name, FunctionPointer(
+                    cdecl="".join(type_xml.itertext())
+                ))
+
             case "handle":
                 self.handle_container.add_child(name, Handle())
 
@@ -746,11 +780,6 @@ class Registry:
                         "".join(member_xml.itertext())
                         for member_xml in type_xml.iterfind("member")
                     )
-                ))
-
-            case "funcpointer":
-                self.function_pointer_container.add_child(name, FunctionPointer(
-                    cdecl="".join(type_xml.itertext())
                 ))
 
             case _ as category:
@@ -806,18 +835,22 @@ class Registry:
     ) -> None:
 
         def check_api(
-            xml: etree.Element,
-            api: str
+            api: str | None,
+            target_api: str
         ) -> bool:
-            api_attr = xml.get("api")
-            return api_attr is None or api in api_attr.split(",")
+            return api is None or target_api in api.split(",")
+
+        def check_supported(
+            supported: str | None,
+            target_api: str
+        ) -> bool:
+            return check_api(supported, target_api) and supported != "disabled"
 
         def check_platform(
-            xml: etree.Element,
-            platform: str
+            platform: str | None,
+            target_platform: str
         ) -> bool:
-            platform_attr = xml.get("platform")
-            return platform_attr is None or platform_attr == platform
+            return platform is None or platform == target_platform
 
         def extract_tag(
             extension_name: str | None
@@ -844,7 +877,7 @@ class Registry:
 
                 case "types":
                     for type_xml in xml.iterfind("type"):
-                        if not check_api(type_xml, self.api):
+                        if not check_api(type_xml.get("api"), self.api):
                             continue
                         self.read_interface_obj(type_xml)
 
@@ -858,19 +891,20 @@ class Registry:
                         enums.long_bitwidth = xml.get("bitwidth") == "64"
                         for enum_xml in xml.iterfind("enum"):
                             self.read_enum(enums, enum_xml)
+                            enums.get_label(enum_xml.get("name", "")).required = True
 
                 case "commands":
                     for command_xml in xml.iterfind("command"):
-                        if not check_api(command_xml, self.api):
+                        if not check_api(command_xml.get("api"), self.api):
                             continue
                         self.read_command(command_xml)
 
                 case "feature":
-                    if not check_api(xml, self.api):
+                    if not check_api(xml.get("api"), self.api):
                         continue
                     for feature_batch_xml in xml:
                         for feature_unit_xml in feature_batch_xml:
-                            if not check_api(feature_unit_xml, self.api):
+                            if not check_api(feature_unit_xml.get("api"), self.api):
                                 continue
                             feature_unit_name = feature_unit_xml.get("name", "")
                             match feature_unit_xml.tag:
@@ -896,15 +930,16 @@ class Registry:
 
                 case "extensions":
                     for extension_xml in xml.iterfind("extension"):
-                        if not check_api(extension_xml, self.api) or not check_platform(extension_xml, self.platform):
+                        if not check_api(extension_xml.get("api"), self.api) or not check_supported(extension_xml.get("supported"), self.api) \
+                                or not check_platform(extension_xml.get("platform"), self.platform):
                             continue
                         extension_tag = extract_tag(extension_xml.get("name"))
                         for extension_batch_xml in extension_xml:
-                            if not check_api(extension_batch_xml, self.api):
+                            if not check_api(extension_batch_xml.get("api"), self.api):
                                 continue
                             extension_batch_tag = extract_tag(extension_batch_xml.get("depends"))
                             for extension_unit_xml in extension_batch_xml:
-                                if not check_api(extension_unit_xml, self.api):
+                                if not check_api(extension_unit_xml.get("api"), self.api):
                                     continue
                                 extension_unit_name = extension_unit_xml.get("name", "")
                                 match extension_unit_xml.tag:
@@ -941,6 +976,8 @@ class Registry:
         with cdef_path.open("w") as file:
             file.write("// Auto-generated C definitions\n")
             for obj, label in self.iter_interface_obj_items():
+                obj.write_cdef_incomplete(file, label)
+            for obj, label in self.iter_interface_obj_items():
                 obj.write_cdef(file, label)
 
     def build_ffi(
@@ -948,23 +985,13 @@ class Registry:
         ffi_path: pathlib.Path,
         cdef_path: pathlib.Path
     ) -> None:
-        c_sources = [
-            "vk_video/vulkan_video_codec_h264std.h",
-            "vk_video/vulkan_video_codec_h264std_decode.h",
-            "vk_video/vulkan_video_codec_h264std_encode.h",
-            "vk_video/vulkan_video_codec_h265std.h",
-            "vk_video/vulkan_video_codec_h265std_decode.h",
-            "vk_video/vulkan_video_codec_h265std_encode.h",
-            "vk_video/vulkan_video_codecs_common.h",
-            "vulkan/vulkan.h"
-        ]
         ffi = cffi.FFI()
         ffi.cdef(csource=cdef_path.read_text())
         ffi.set_source(
             module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
             source="".join((
                 *(f"#define {define}\n" for define, enabled in self.defines.items() if enabled),
-                *(f"#include <{filename}>\n" for filename in c_sources)
+                *(f"#include <{filename}>\n" for filename in self.srcs)
             )),
             include_dirs=["extern/vulkan/Include"],
             library_dirs=["extern/vulkan/Lib"],
@@ -1016,12 +1043,13 @@ class Registry:
 
 def main() -> None:
     this_dir = pathlib.Path()
-    registry = Registry(api="vulkan", platform="win32", defines=["VK_ENABLE_BETA_EXTENSIONS"])
-    for xml in (
-        this_dir.joinpath("extern/xml/video.xml"),
-        this_dir.joinpath("extern/xml/vk.xml")
-    ):
-        registry.read_registry_xml(etree.parse(xml).getroot())
+    registry = Registry(
+        api="vulkan",
+        platform="win32",
+        defines=["VK_ENABLE_BETA_EXTENSIONS"],
+        srcs=["vulkan/vulkan.h"]
+    )
+    registry.read_registry_xml(etree.parse("extern/xml/vk.xml").getroot())
 
     generated_dir = this_dir.joinpath("generated")
     generated_dir.mkdir(exist_ok=True)
@@ -1041,7 +1069,7 @@ def main() -> None:
             registry.build_cdef(cdef_path)
 
         case "ffi":
-            registry.build_cdef(cdef_path)
+            #registry.build_cdef(cdef_path)
             registry.build_ffi(ffi_path, cdef_path)
 
         case "pydef":
