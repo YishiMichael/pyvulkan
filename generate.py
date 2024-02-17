@@ -5,6 +5,7 @@ import pathlib
 import re
 import xml.etree.ElementTree as etree
 from typing import (
+    ClassVar,
     Iterator,
     Self,
     TextIO
@@ -264,25 +265,75 @@ class ElementaryType(Obj):
         file.write("\n")
         file.write(f"typedef {self.ctype} {label.name};\n")
 
-    def write_pydef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"{label.name} = {self.pytype}\n")
-
-
-class ExternalType(Obj):
-    __slots__ = ()
-
-    #def write_cdef(
+    #def write_pydef(
     #    self: Self,
     #    file: TextIO,
     #    label: Label
     #) -> None:
     #    file.write("\n")
-    #    file.write(f"typedef struct {label.name}_T *{label.name};\n")
+    #    file.write(f"{label.name} = {self.pytype}\n")
+
+
+class ExternalType(Obj):
+    __slots__ = ("ctype",)
+
+    # https://github.com/ash-rs/ash/blob/master/ash/src/vk/platform_types.rs
+    EXTERNAL_TYPE_CTYPE_DICT: ClassVar[dict[str, str]] = {
+        "Display": "void",
+        "VisualID": "unsigned int",
+        "Window": "unsigned long",
+        "RROutput": "unsigned long",
+        "wl_display": "void",
+        "wl_surface": "void",
+        "HINSTANCE": "void *",
+        "HWND": "void *",
+        "HMONITOR": "void *",
+        "HANDLE": "void *",
+        "SECURITY_ATTRIBUTES": "void",
+        "DWORD": "unsigned long",
+        "LPCWSTR": "const uint16_t *",  # special convension from str required?
+        "xcb_connection_t": "void",
+        "xcb_visualid_t": "uint32_t",
+        "xcb_window_t": "uint32_t",
+        "IDirectFB": "void",
+        "IDirectFBSurface": "void",
+        "zx_handle_t": "uint32_t",
+        "GgpStreamDescriptor": "uint32_t",
+        "GgpFrameToken": "uint64_t",
+        "_screen_context": "void",
+        "_screen_window": "void",
+        "_screen_buffer": "void",
+        "NvSciSyncAttrList": "void *",
+        "NvSciSyncObj": "void",
+        "NvSciSyncFence": "void",
+        "NvSciBufAttrList": "void *",
+        "NvSciBufObj": "void",
+
+        "ANativeWindow": "void",
+        "AHardwareBuffer": "void",
+        "CAMetalLayer": "void",
+        "MTLDevice_id": "void *",
+        "MTLCommandQueue_id": "void *",
+        "MTLBuffer_id": "void *",
+        "MTLTexture_id": "void *",
+        "MTLSharedEvent_id": "void *",
+        "IOSurfaceRef": "void *"
+    }
+
+    def __init__(
+        self: Self,
+        name: str
+    ) -> None:
+        super().__init__()
+        self.ctype: str = type(self).EXTERNAL_TYPE_CTYPE_DICT[name]
+
+    def write_cdef(
+        self: Self,
+        file: TextIO,
+        label: Label
+    ) -> None:
+        file.write("\n")
+        file.write(f"typedef {self.ctype} {label.name};\n")
 
 
 class ExternalInclude(Obj):
@@ -436,6 +487,13 @@ class Constant(Obj):
 class Enum(Obj):
     __slots__ = ()
 
+    #def __init__(
+    #    self: Self,
+    #    enum_value: int
+    #) -> None:
+    #    super().__init__()
+    #    self.enum_value: int = enum_value
+
 
 class Enums(Container[Enum]):
     __slots__ = (
@@ -455,40 +513,24 @@ class Enums(Container[Enum]):
         file: TextIO,
         label: Label
     ) -> None:
-        enum_names = tuple(
-            enum_label.name
-            for _, enum_label in self.iter_filtered_children_items()
-        )
         file.write("\n")
-        if self.long_bitwidth:
-            file.write(f"typedef VkFlags64 {label.name};\n")
-            for enum_name in enum_names:
-                file.write(f"static const {label.name} {enum_name};\n")
-            return
-        if not enum_names:
-            file.write(f"typedef uint32_t {label.name};\n")
-            return
-        file.write(f"typedef enum {label.name} {{\n")
-        for enum_name in enum_names:
-            file.write(f"    {enum_name} = ...,\n")  # TODO: trailing comma
-        file.write(f"}} {label.name};\n")
+        file.write(f"typedef {f"VkFlags64" if self.long_bitwidth else f"enum {label.name} {{ ... }}"} {label.name};\n")
+        for _, enum_label in self.iter_filtered_children_items():
+            file.write(f"static const {label.name} {enum_label.name};\n")
 
     def write_pydef(
         self: Self,
         file: TextIO,
         label: Label
     ) -> None:
-        enum_names = tuple(
-            enum_label.name
-            for _, enum_label in self.iter_filtered_children_items()
-        )
         file.write("\n")
         file.write(f"class {label.name}({"Flag" if self.bitmask else "Enum"}):\n")
-        if not enum_names:
+        if not (enum_items := tuple(self.iter_filtered_children_items())):
             file.write("    pass\n")
             return
-        for enum_name in enum_names:
-            file.write(f"    {enum_name.removeprefix("VK_")} = lib.{enum_name}\n")
+        for _, enum_label in enum_items:
+            # TODO: strip enums name
+            file.write(f"    {enum_label.name.removeprefix("VK_")} = lib.{enum_label.name}\n")
 
 
 class FunctionPointer(Signature):
@@ -531,14 +573,14 @@ class Handle(Obj):
         file.write("\n")
         file.write(f"typedef struct {label.name}_T *{label.name};\n")
 
-    def write_pydef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"class {label.name}(VulkanCData):\n")
-        file.write(f"    __slots__ = ()\n")
+    #def write_pydef(
+    #    self: Self,
+    #    file: TextIO,
+    #    label: Label
+    #) -> None:
+    #    file.write("\n")
+    #    file.write(f"class {label.name}(VulkanCData):\n")
+    #    file.write(f"    __slots__ = ()\n")
 
 
 class Struct(Signature):
@@ -624,7 +666,6 @@ class Registry:
         "api",
         "platform",
         "defines",
-        "srcs",
         "elementary_type_container",
         "external_type_container",
         "external_include_container",
@@ -642,14 +683,12 @@ class Registry:
         self: Self,
         api: str,
         platform: str,
-        defines: list[str],
-        srcs: list[str]
+        defines: list[str]
     ) -> None:
         super().__init__()
         self.api: str = api
         self.platform: str = platform
         self.defines: dict[str, bool] = dict.fromkeys(defines, True)
-        self.srcs: list[str] = srcs.copy()
         self.elementary_type_container: Container[ElementaryType] = Container()
         self.external_type_container: Container[ExternalType] = Container()
         self.external_include_container: Container[ExternalInclude] = Container()
@@ -663,9 +702,14 @@ class Registry:
         self.command_container: Container[Command] = Container()
 
         for name, pytype in (
-            ("void", "type(None)"),
+            ("void", "Never"),
             ("char", "str"),
+            ("short", "int"),
             ("int", "int"),
+            ("long", "int"),
+            ("unsigned short", "int"),
+            ("unsigned int", "int"),
+            ("unsigned long", "int"),
             ("size_t", "int"),
             ("float", "float"),
             ("double", "float"),
@@ -676,8 +720,7 @@ class Registry:
             ("uint8_t", "int"),
             ("uint16_t", "int"),
             ("uint32_t", "int"),
-            ("uint64_t", "int"),
-            ("stdint", "int")
+            ("uint64_t", "int")
         ):
             self.elementary_type_container.add_child(name, ElementaryType(
                 ctype=name,
@@ -698,7 +741,8 @@ class Registry:
             self.function_pointer_container,
             self.handle_container,
             self.struct_container,
-            self.union_container
+            self.union_container,
+            #self.command_container
         ):
             yield from container.iter_filtered_children_items()
 
@@ -716,7 +760,8 @@ class Registry:
             self.function_pointer_container,
             self.handle_container,
             self.struct_container,
-            self.union_container
+            self.union_container,
+            #self.command_container
         ):
             if container.contains(name):
                 return container.get_label(name)
@@ -730,8 +775,11 @@ class Registry:
         assert name
         match type_xml.get("category"):
             case None:
-                if not self.elementary_type_container.contains(name) and not self.external_type_container.contains(name):
-                    self.external_type_container.add_child(name, ExternalType())
+                if not self.elementary_type_container.contains(name) and not self.external_type_container.contains(name) \
+                        and not type_xml.get("requires", "").startswith("vk_video/"):
+                    self.external_type_container.add_child(name, ExternalType(
+                        name=name
+                    ))
                     self.external_type_container.get_label(name).required = True
 
             case "include":
@@ -747,7 +795,9 @@ class Registry:
                 if (alias := type_xml.findtext("type")) is not None and alias.isidentifier():
                     self.elementary_type_container.add_child_alias(name, alias)
                 else:
-                    self.external_type_container.add_child(name, ExternalType())
+                    self.external_type_container.add_child(name, ExternalType(
+                        name=name
+                    ))
 
             case "enum":
                 self.enums_container.add_child(name, Enums())
@@ -991,7 +1041,7 @@ class Registry:
             module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
             source="".join((
                 *(f"#define {define}\n" for define, enabled in self.defines.items() if enabled),
-                *(f"#include <{filename}>\n" for filename in self.srcs)
+                "#include <vulkan/vulkan.h>\n"
             )),
             include_dirs=["extern/vulkan/Include"],
             library_dirs=["extern/vulkan/Lib"],
@@ -1013,11 +1063,14 @@ class Registry:
             file.write("    Enum,\n")
             file.write("    Flag\n")
             file.write(")\n")
-            file.write("from typing import Union\n")
+            file.write("from typing import (\n")
+            file.write("    Never,\n")
+            file.write("    Union\n")
+            file.write(")\n")
             file.write("\n")
             file.write("import cffi\n")
             file.write("\n")
-            file.write(f"from .{ffi_path.relative_to(pydef_path.parent).stem} import (\n")
+            file.write(f"from {ffi_path.relative_to(pydef_path.parent).stem} import (\n")
             file.write("    ffi,\n")
             file.write("    lib\n")
             file.write(")\n")
@@ -1046,10 +1099,13 @@ def main() -> None:
     registry = Registry(
         api="vulkan",
         platform="win32",
-        defines=["VK_ENABLE_BETA_EXTENSIONS"],
-        srcs=["vulkan/vulkan.h"]
+        defines=["VK_ENABLE_BETA_EXTENSIONS"]
     )
-    registry.read_registry_xml(etree.parse("extern/xml/vk.xml").getroot())
+    for xml_path in (
+        "extern/xml/video.xml",
+        "extern/xml/vk.xml"
+    ):
+        registry.read_registry_xml(etree.parse(xml_path).getroot())
 
     generated_dir = this_dir.joinpath("generated")
     generated_dir.mkdir(exist_ok=True)
