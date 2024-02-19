@@ -14,51 +14,265 @@ from typing import (
 import cffi
 
 
-class Label:
+# Refer to https://github.com/ash-rs/ash/blob/master/ash/src/vk/platform_types.rs
+PLATFORM_TYPE_DICT: dict[str, str] = {
+    "Display": "void",
+    "VisualID": "unsigned int",
+    "Window": "unsigned long",
+    "RROutput": "unsigned long",
+    "wl_display": "void",
+    "wl_surface": "void",
+    "HINSTANCE": "void *",
+    "HWND": "void *",
+    "HMONITOR": "void *",
+    "HANDLE": "void *",
+    "SECURITY_ATTRIBUTES": "void",
+    "DWORD": "unsigned long",
+    "LPCWSTR": "uint16_t const *",  # special convension from str required?
+    "xcb_connection_t": "void",
+    "xcb_visualid_t": "uint32_t",
+    "xcb_window_t": "uint32_t",
+    "IDirectFB": "void",
+    "IDirectFBSurface": "void",
+    "zx_handle_t": "uint32_t",
+    "GgpStreamDescriptor": "uint32_t",
+    "GgpFrameToken": "uint64_t",
+    "_screen_context": "void",
+    "_screen_window": "void",
+    "_screen_buffer": "void",
+    "NvSciSyncAttrList": "void *",
+    "NvSciSyncObj": "void",
+    "NvSciSyncFence": "void",
+    "NvSciBufAttrList": "void *",
+    "NvSciBufObj": "void"
+}
+BASETYPE_DICT: dict[str, str] = {
+    "ANativeWindow": "void",
+    "AHardwareBuffer": "void",
+    "CAMetalLayer": "void",
+    "MTLDevice_id": "void *",
+    "MTLCommandQueue_id": "void *",
+    "MTLBuffer_id": "void *",
+    "MTLTexture_id": "void *",
+    "MTLSharedEvent_id": "void *",
+    "IOSurfaceRef": "void *",
+    "VkSampleMask": "uint32_t",
+    "VkBool32": "uint32_t",
+    "VkFlags": "uint32_t",
+    "VkFlags64": "uint64_t",
+    "VkDeviceSize": "uint64_t",
+    "VkDeviceAddress": "uint64_t",
+    "VkRemoteAddressNV": "void *"
+}
+
+
+class CType:
     __slots__ = (
-        "name",
-        "tag",
-        "required",
-        "removed",
-        "hidden"
+        "class_specifier",
+        "base_type_str",
+        "const_specifiers"
     )
 
     def __init__(
         self: Self,
-        name: str
+        c_type_str: str
     ) -> None:
         super().__init__()
+        class_specifier, base_type_str, const_specifiers = type(self).parse_c_type_str(c_type_str)
+        self.class_specifier: str | None = class_specifier
+        self.base_type_str: str = base_type_str
+        self.const_specifiers: tuple[bool, ...] = const_specifiers
+
+    def __str__(
+        self: Self
+    ) -> str:
+        components = [self.base_type_str]
+        for index, const_specifier in enumerate(self.const_specifiers):
+            if index:
+                components.append("*")
+            if const_specifier:
+                components.append("const")
+        return " ".join(components)
+
+    @classmethod
+    def parse_c_type_str(
+        cls: type[Self],
+        c_type_str: str
+        #objs: Container[Obj] | None
+    ) -> tuple[str | None, str, tuple[bool, ...]]:
+        assert (match := re.fullmatch(r"(const\s+)?((struct|union)\s+)?(.+?)(\s+const)?((\s*\*(\s*const)?)*)", c_type_str.strip())) is not None
+        class_specifier = match.group(3)
+        base_type_str = match.group(4)
+        const_specifiers = (
+            match.group(1) is not None or match.group(5) is not None,
+            *(
+                pointer_match.group(1) is not None
+                for pointer_match in re.finditer(r"\*(\s*const)?", match.group(6))
+            )
+        )
+        #if objs is not None:
+        #    base_type_str = objs.get_nonalias_name(base_type_str)
+        return class_specifier, base_type_str, const_specifiers
+        ##array_sizes: tuple[str, ...] = ()
+        #pointer_count: int = 0
+        #is_nonconst_pointer: bool = False
+        #components = re.findall(r"\w+|\S", cdecl)
+        #match components:
+        #    case (base_type_name,):
+        #        pass
+        #    case (base_type_name, "*"):
+        #        pointer_count = 1
+        #        is_nonconst_pointer = True
+        #    case ("struct", base_type_name, "*"):
+        #        pointer_count = 1
+        #        is_nonconst_pointer = True
+        #    case (base_type_name, "*", "*"):
+        #        pointer_count = 2
+        #        is_nonconst_pointer = True
+        #    case ("struct", base_type_name, "*", "*"):
+        #        pointer_count = 2
+        #        is_nonconst_pointer = True
+        #    #case (base_type_name, name, "[", array_size_0, "]"):
+        #    #    array_sizes = (array_size_0,)
+        #    #case (base_type_name, name, "[", array_size_0, "]", "[", array_size_1, "]"):
+        #    #    array_sizes = (array_size_0, array_size_1)
+        #    #case (base_type_name, name, ":", _):
+        #    #    pass
+        #    case ("const", base_type_name, "*"):
+        #        pointer_count = 1
+        #    case ("const", "struct", base_type_name, "*"):
+        #        pointer_count = 1
+        #    case ("const", base_type_name, "*", "const", "*"):
+        #        pointer_count = 2
+        #    #case ("const", base_type_name, name, "[", array_size_0, "]"):
+        #    #    array_sizes = (array_size_0,)
+        #    case _:
+        #        raise ValueError(cdecl)
+        #formatted_cdecl = " ".join(components)
+        #return formatted_cdecl, base_type_name, pointer_count, is_nonconst_pointer
+
+
+class CDeclaration:
+    __slots__ = (
+        "c_type",
+        "name",
+        "array_sizes",
+        "bitwidth"
+    )
+
+    def __init__(
+        self: Self,
+        c_declaration_str: str
+    ) -> None:
+        super().__init__()
+        c_type_str, name, array_sizes, bitwidth = type(self).parse_c_declaration_str(c_declaration_str)
+        self.c_type: CType = CType(c_type_str)
         self.name: str = name
-        self.tag: str | None = None
-        self.required: bool = False
-        self.removed: bool = False
-        self.hidden: bool = False
+        self.array_sizes: tuple[str, ...] = array_sizes
+        self.bitwidth: int | None = bitwidth
+
+    def __str__(
+        self: Self
+    ) -> str:
+        components = [f"{self.c_type}", " ", self.name, *(f"[{array_size}]" for array_size in self.array_sizes)]
+        if self.bitwidth is not None:
+            components.append(f":{self.bitwidth}")
+        return "".join(components)
+
+    @classmethod
+    def parse_c_declaration_str(
+        cls: type[Self],
+        c_declaration_str: str
+    ) -> tuple[str, str, tuple[str, ...], int | None]:
+        assert (match := re.fullmatch(r"(.*?)\s*(\b\w+\b)((\s*\[\w+\])*)(\s*:\s*(\d+))?", c_declaration_str.strip())) is not None
+        c_type_str = match.group(1)
+        name = match.group(2)
+        array_sizes = tuple(
+            array_size_match.group(1)
+            for array_size_match in re.finditer(r"\[(\w+)\]", match.group(3))
+        )
+        bitwidth = int(bitwidth_str) if (bitwidth_str := match.group(6)) is not None else None
+        return c_type_str, name, array_sizes, bitwidth
+
+
+class Label:
+    __slots__ = (
+        "_name",
+        "_alias",
+        "_tag",
+        "_required",
+        "_removed",
+        "_hidden"
+    )
+
+    def __init__(
+        self: Self,
+        name: str,
+        alias: str | None = None
+    ) -> None:
+        super().__init__()
+        self._name: str = name
+        self._alias: str | None = alias
+        self._tag: str | None = None
+        self._required: bool = False
+        self._removed: bool = False
+        self._hidden: bool = False
+
+    @property
+    def name(
+        self: Self
+    ) -> str:
+        return self._name
+
+    @property
+    def alias(
+        self: Self
+    ) -> str | None:
+        return self._alias
+
+    @property
+    def tag(
+        self: Self
+    ) -> str | None:
+        return self._tag
 
     def mark_requirement(
         self: Self,
         batch_tag: str | None,
-        tag: str | None,
-        hidden: bool
+        hidden: bool,
+        tags: set[str]
     ) -> None:
+        tag = match.group() if (match := re.search(r"[A-Z]+$", self._name)) is not None else None
+        if tag is not None and tag not in tags:
+            tag = None
         match batch_tag:
             case "require":
-                if self.required:
-                    assert self.tag == tag
-                    assert self.hidden == hidden
+                if self._required:
+                    assert self._hidden == hidden
+                    assert self._tag == tag
                     return
-                self.required = True
+                self._required = True
             case "remove":
-                self.removed = True
+                self._removed = True
             case _:
                 return
-        self.tag = tag
-        self.hidden = hidden
+        self._hidden = hidden
+        self._tag = tag
 
     def check_requirement(
         self: Self
     ) -> bool:
-        return self.required and not self.removed and not self.hidden
+        return self._required and not self._removed and not self._hidden
 
+    #@classmethod
+    #def filter[T](
+    #    cls: type[Self],
+    #    objs: Iterable[T]
+    #) -> Iterable[T]:
+    #    return filter(
+    #        lambda obj: isinstance(obj, Obj) and obj.check_requirement(),
+    #        objs
+    #    )
 
 class Obj:
     __slots__ = ()
@@ -85,35 +299,48 @@ class Obj:
         pass
 
 
-class Container[ChildT: Obj](Obj):
+class Container[ChildT: Obj]:
     __slots__ = (
         "_child_dict",
-        "_label_dict",
-        "_forwardref_aliases"
+        #"_alias_dict",
+        "_label_dict"
     )
 
     def __init__(
         self: Self
     ) -> None:
         super().__init__()
-        self._child_dict: dict[str, ChildT] = {}
+        self._child_dict: dict[Label, ChildT] = {}
+        #self._inverse_dict: dict[ChildT, set[str]] = {}
+        #self._alias_dict: dict[str, str] = {}
         self._label_dict: dict[str, Label] = {}
-        self._forwardref_aliases: dict[str, list[str]] = {}
+        #self._forwardref_aliases: dict[str, list[str]] = {}
 
-    def iter_filtered_children_items(
+    def iter_filtered_items(
         self: Self
     ) -> Iterator[tuple[ChildT, Label]]:
-        for name, child in self._child_dict.items():
-            label = self._label_dict[name]
+        for label in self._label_dict.values():
             if not label.check_requirement():
                 continue
-            yield child, label
+            yield self.get_child(label.name), label
+
+    #def get_nonalias_name(
+    #    self: Self,
+    #    name: str
+    #) -> str:
+    #    label = self._label_dict[name]
+    #    while label.alias is not None:
+    #        label = self._label_dict[label.alias]
+    #    return label.name
 
     def get_child(
         self: Self,
         name: str
     ) -> ChildT:
-        return self._child_dict[name]
+        label = self._label_dict[name]
+        while label.alias is not None:
+            label = self._label_dict[label.alias]
+        return self._child_dict[label]
 
     def get_label(
         self: Self,
@@ -132,138 +359,125 @@ class Container[ChildT: Obj](Obj):
         name: str,
         child: ChildT
     ) -> None:
-        assert name not in self._child_dict
-        self._child_dict[name] = child
-        if name in self._label_dict:
-            for alias in self._forwardref_aliases.pop(name):
-                self.add_child(alias, child)
-        else:
-            self._label_dict[name] = Label(name)
+        assert not self.contains(name)
+        label = Label(name)
+        self._label_dict[name] = label
+        self._child_dict[label] = child
+        #assert child not in self._inverse_dict
+        #self._inverse_dict[child] = {name}
+        #return child
 
-    def add_child_alias(
+    def add_alias(
         self: Self,
         name: str,
-        aliased_name: str
+        alias: str
     ) -> None:
-        if aliased_name in self._child_dict:
-            self.add_child(name, self.get_child(aliased_name))
-        else:
-            self._label_dict[name] = Label(name)
-            self._forwardref_aliases.setdefault(aliased_name, []).append(name)
+        assert not self.contains(name)
+        label = Label(name, alias=alias)
+        self._label_dict[name] = label
+        #assert name not in self._child_dict
+
+#    def get_label(
+#        self: Self,
+#        name: str
+#    ) -> Label:
+#        return self._label_dict[name]
+
+#    def contains(
+#        self: Self,
+#        name: str
+#    ) -> bool:
+#        return name in self._label_dict
+
+#    def add_child(
+#        self: Self,
+#        name: str,
+#        child: ChildT
+#    ) -> None:
+#        assert name not in self._child_dict
+#        self._child_dict[name] = child
+#        if name in self._label_dict:
+#            for alias in self._forwardref_aliases.pop(name):
+#                self.add_child(alias, child)
+#        else:
+#            self._label_dict[name] = Label(name)
+
+    #def add_child_alias(
+    #    self: Self,
+    #    name: str,
+    #    aliased_name: str
+    #) -> None:
+    #    if aliased_name in self._child_dict:
+    #        self.add_child(name, self.get_child(aliased_name))
+    #    else:
+    #        self._label_dict[name] = Label(name)
+    #        self._forwardref_aliases.setdefault(aliased_name, []).append(name)
 
 
-class Declaration:
-    __slots__ = (
-        "cdecl",
-        "name",
-        "base_type_name",
-        "array_sizes",
-        "pointer_count",
-        "is_nonconst_pointer",
-        "base_type"
-    )
+#class Declaration:
+#    __slots__ = (
+#        "cdecl",
+#        "name",
+#        "base_type_name",
+#        "array_sizes",
+#        "pointer_count",
+#        "is_nonconst_pointer",
+#        "base_type"
+#    )
 
-    def __init__(
-        self: Self,
-        cdecl: str
-    ) -> None:
-        cdecl, name, base_type_name, array_sizes, pointer_count, is_nonconst_pointer = type(self).parse_cdecl(cdecl)
-        super().__init__()
-        self.cdecl: str = cdecl
-        self.name: str = name
-        self.base_type_name: str = base_type_name
-        self.array_sizes: tuple[str, ...] = array_sizes
-        self.pointer_count: int = pointer_count
-        self.is_nonconst_pointer: bool = is_nonconst_pointer
-        self.base_type: Obj = NotImplemented
-
-    @classmethod
-    def parse_cdecl(
-        cls: type[Self],
-        cdecl: str
-    ) -> tuple[str, str, str, tuple[str, ...], int, bool]:
-        array_sizes: tuple[str, ...] = ()
-        pointer_count: int = 0
-        is_nonconst_pointer: bool = False
-        components = re.findall(r"\w+|\S", cdecl)
-        match components:
-            case (base_type_name, name):
-                pass
-            case (base_type_name, "*", name):
-                pointer_count = 1
-                is_nonconst_pointer = True
-            case ("struct", base_type_name, "*", name):
-                pointer_count = 1
-                is_nonconst_pointer = True
-            case (base_type_name, "*", "*", name):
-                pointer_count = 2
-                is_nonconst_pointer = True
-            case ("struct", base_type_name, "*", "*", name):
-                pointer_count = 2
-                is_nonconst_pointer = True
-            case (base_type_name, name, "[", array_size_0, "]"):
-                array_sizes = (array_size_0,)
-            case (base_type_name, name, "[", array_size_0, "]", "[", array_size_1, "]"):
-                array_sizes = (array_size_0, array_size_1)
-            case (base_type_name, name, ":", _):
-                pass
-            case ("const", base_type_name, "*", name):
-                pointer_count = 1
-            case ("const", "struct", base_type_name, "*", name):
-                pointer_count = 1
-            case ("const", base_type_name, "*", "const", "*", name):
-                pointer_count = 2
-            case ("const", base_type_name, name, "[", array_size_0, "]"):
-                array_sizes = (array_size_0,)
-            case _:
-                raise ValueError(cdecl)
-        formatted_cdecl = " ".join(components)
-        return formatted_cdecl, name, base_type_name, array_sizes, pointer_count, is_nonconst_pointer
+#    def __init__(
+#        self: Self,
+#        cdecl: str
+#    ) -> None:
+#        cdecl, name, base_type_name, array_sizes, pointer_count, is_nonconst_pointer = type(self).parse_cdecl(cdecl)
+#        super().__init__()
+#        self.cdecl: str = cdecl
+#        self.name: str = name
+#        self.base_type_name: str = base_type_name
+#        self.array_sizes: tuple[str, ...] = array_sizes
+#        self.pointer_count: int = pointer_count
+#        self.is_nonconst_pointer: bool = is_nonconst_pointer
+#        self.base_type: Obj = NotImplemented
 
 
 class Signature(Obj):
     __slots__ = (
-        "return_declaration",
-        "arg_declarations"
+        "return_c_type",
+        "arg_c_declarations"
     )
 
     def __init__(
         self: Self,
-        return_cdecl: str,
-        arg_cdecls: tuple[str, ...]
+        return_c_type_str: str,
+        arg_c_declaration_strs: tuple[str, ...]
     ) -> None:
         super().__init__()
-        self.return_declaration: Declaration = Declaration(return_cdecl)
-        self.arg_declarations: tuple[Declaration, ...] = tuple(
-            Declaration(arg_cdecl)
-            for arg_cdecl in arg_cdecls
+        self.return_c_type: CType = CType(return_c_type_str)
+        self.arg_c_declarations: tuple[CDeclaration, ...] = tuple(
+            CDeclaration(arg_c_declaration_str)
+            for arg_c_declaration_str in arg_c_declaration_strs
         )
 
 
 class ElementaryType(Obj):
-    __slots__ = (
-        "ctype",
-        "pytype"
-    )
+    __slots__ = ("py_type_str",)
 
     def __init__(
         self: Self,
-        ctype: str,
-        pytype: str
+        name: str,
+        py_type_str: str
     ) -> None:
         super().__init__()
-        self.ctype: str = ctype
-        self.pytype: str = pytype
+        self.py_type_str: str = py_type_str
 
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        if label.name == self.ctype:
-            return
-        file.write("\n")
-        file.write(f"typedef {self.ctype} {label.name};\n")
+    #def write_cdef(
+    #    self: Self,
+    #    file: TextIO
+    #) -> None:
+    #    if self.name == self.ctype:
+    #        return
+    #    file.write("\n")
+    #    file.write(f"typedef {self.ctype} {self.name};\n")
 
     #def write_pydef(
     #    self: Self,
@@ -274,58 +488,36 @@ class ElementaryType(Obj):
     #    file.write(f"{label.name} = {self.pytype}\n")
 
 
-class ExternalType(Obj):
-    __slots__ = ("ctype",)
+#class ElementaryTypedef(Obj):
+#    __slots__ = ("elememtary_type",)
 
-    # https://github.com/ash-rs/ash/blob/master/ash/src/vk/platform_types.rs
-    EXTERNAL_TYPE_CTYPE_DICT: ClassVar[dict[str, str]] = {
-        "Display": "void",
-        "VisualID": "unsigned int",
-        "Window": "unsigned long",
-        "RROutput": "unsigned long",
-        "wl_display": "void",
-        "wl_surface": "void",
-        "HINSTANCE": "void *",
-        "HWND": "void *",
-        "HMONITOR": "void *",
-        "HANDLE": "void *",
-        "SECURITY_ATTRIBUTES": "void",
-        "DWORD": "unsigned long",
-        "LPCWSTR": "const uint16_t *",  # special convension from str required?
-        "xcb_connection_t": "void",
-        "xcb_visualid_t": "uint32_t",
-        "xcb_window_t": "uint32_t",
-        "IDirectFB": "void",
-        "IDirectFBSurface": "void",
-        "zx_handle_t": "uint32_t",
-        "GgpStreamDescriptor": "uint32_t",
-        "GgpFrameToken": "uint64_t",
-        "_screen_context": "void",
-        "_screen_window": "void",
-        "_screen_buffer": "void",
-        "NvSciSyncAttrList": "void *",
-        "NvSciSyncObj": "void",
-        "NvSciSyncFence": "void",
-        "NvSciBufAttrList": "void *",
-        "NvSciBufObj": "void",
+#    def __init__(
+#        self: Self,
+#        name: str,
+#        elememtary_type: ElementaryType
+#    ) -> None:
+#        super().__init__(
+#            name=name
+#        )
+#        self.elememtary_type: ElementaryType = elememtary_type
 
-        "ANativeWindow": "void",
-        "AHardwareBuffer": "void",
-        "CAMetalLayer": "void",
-        "MTLDevice_id": "void *",
-        "MTLCommandQueue_id": "void *",
-        "MTLBuffer_id": "void *",
-        "MTLTexture_id": "void *",
-        "MTLSharedEvent_id": "void *",
-        "IOSurfaceRef": "void *"
-    }
+#    def write_cdef(
+#        self: Self,
+#        file: TextIO
+#    ) -> None:
+#        file.write("\n")
+#        file.write(f"typedef {self.elememtary_type.name} {self.name};\n")
+
+
+class Typedef(Obj):
+    __slots__ = ("c_type",)
 
     def __init__(
         self: Self,
-        name: str
+        c_type_str: str
     ) -> None:
         super().__init__()
-        self.ctype: str = type(self).EXTERNAL_TYPE_CTYPE_DICT[name]
+        self.c_type: CType = CType(c_type_str)
 
     def write_cdef(
         self: Self,
@@ -333,7 +525,7 @@ class ExternalType(Obj):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"typedef {self.ctype} {label.name};\n")
+        file.write(f"typedef {self.c_type} {label.name};\n")
 
 
 class ExternalInclude(Obj):
@@ -341,19 +533,19 @@ class ExternalInclude(Obj):
 
 
 class Macro(Obj):
-    __slots__ = ("pymacro",)
+    __slots__ = ("py_macro",)
 
     def __init__(
         self: Self,
-        cmacro: str
+        c_macro: str
     ) -> None:
         super().__init__()
-        self.pymacro: str | None = type(self).parse_cmacro(cmacro)
+        self.py_macro: str | None = type(self).parse_c_macro(c_macro)
 
     @classmethod
-    def parse_cmacro(
+    def parse_c_macro(
         cls: type[Self],
-        cmacro: str
+        c_macro: str
     ) -> str | None:
 
         def format_line(
@@ -366,12 +558,12 @@ class Macro(Obj):
                 return line.rstrip("\\")
             return line + "\n"
 
-        cmacro = "".join(filter(None, (
+        c_macro = "".join(filter(None, (
             format_line(line)
-            for line in cmacro.splitlines()
+            for line in c_macro.splitlines()
         ))).strip()
 
-        if (macro_match := re.fullmatch(r"#define\s+(\b\w+\b)\s*(.*)", cmacro)) is None:
+        if (macro_match := re.fullmatch(r"#define\s+(\b\w+\b)\s*(.*)", c_macro)) is None:
             return None
 
         name = macro_match.group(1)
@@ -420,48 +612,48 @@ class Macro(Obj):
         file: TextIO,
         label: Label
     ) -> None:
-        if self.pymacro is None:
+        if self.py_macro is None:
             return
         file.write("\n")
-        file.write(f"{self.pymacro}\n")
+        file.write(f"{self.py_macro}\n")
 
 
 class Constant(Obj):
     __slots__ = (
-        "cvalue",
-        "pyvalue",
+        "c_value",
+        "py_value",
         "cdef_included"
     )
 
     def __init__(
         self: Self,
-        cvalue: str
+        c_value: str
     ) -> None:
         super().__init__()
-        pyvalue, cdef_included = type(self).parse_constant(cvalue)
-        self.cvalue: str = cvalue
-        self.pyvalue: str = pyvalue
+        py_value, cdef_included = type(self).parse_constant(c_value)
+        self.c_value: str = c_value
+        self.py_value: str = py_value
         self.cdef_included: bool = cdef_included
 
     @classmethod
     def parse_constant(
         cls: type[Self],
-        cvalue: str
+        c_value: str
     ) -> tuple[str, bool]:
-        if cvalue.isidentifier():
-            return cvalue, False
-        if cvalue.isdigit():
-            return cvalue, True
-        if (match := re.fullmatch(r"0x[\dA-F]+", cvalue)) is not None:
-            return cvalue, True
-        if (match := re.fullmatch(r"\(~(\d+)U\)", cvalue)) is not None:
+        if c_value.isidentifier():
+            return c_value, False
+        if c_value.isdigit():
+            return c_value, True
+        if (match := re.fullmatch(r"0x[\dA-F]+", c_value)) is not None:
+            return c_value, True
+        if (match := re.fullmatch(r"\(~(\d+)U\)", c_value)) is not None:
             return f"0x{(1 << 32) - 1 - int(match.group(1)):X}", False
-        if (match := re.fullmatch(r"\(~(\d+)ULL\)", cvalue)) is not None:
+        if (match := re.fullmatch(r"\(~(\d+)ULL\)", c_value)) is not None:
             return f"0x{(1 << 64) - 1 - int(match.group(1)):X}", False
-        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", cvalue, flags=re.IGNORECASE)) is not None:
+        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", c_value, flags=re.IGNORECASE)) is not None:
             return f"{match.group(1)}", False
-        if (match := re.fullmatch(r"\"\w+\"", cvalue)) is not None:
-            return cvalue, False
+        if (match := re.fullmatch(r"\"\w+\"", c_value)) is not None:
+            return c_value, False
         assert False
 
     def write_cdef(
@@ -473,7 +665,7 @@ class Constant(Obj):
             #file.write(f"{self.name} = None\n")
             return
         file.write("\n")
-        file.write(f"#define {label.name} {self.cvalue}\n")
+        file.write(f"#define {label.name} {self.c_value}\n")
 
     def write_pydef(
         self: Self,
@@ -481,10 +673,10 @@ class Constant(Obj):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"{label.name} = {self.pyvalue}\n")
+        file.write(f"{label.name} = {self.py_value}\n")
 
 
-class Enum(Obj):
+class EnumMember(Obj):
     __slots__ = ()
 
     #def __init__(
@@ -495,10 +687,11 @@ class Enum(Obj):
     #    self.enum_value: int = enum_value
 
 
-class Enums(Container[Enum]):
+class Enum(Obj):
     __slots__ = (
         "bitmask",
-        "long_bitwidth"
+        "long_bitwidth",
+        "members"
     )
 
     def __init__(
@@ -507,6 +700,7 @@ class Enums(Container[Enum]):
         super().__init__()
         self.bitmask: bool = False
         self.long_bitwidth: bool = False
+        self.members: Container[EnumMember] = Container()
 
     def write_cdef(
         self: Self,
@@ -515,22 +709,68 @@ class Enums(Container[Enum]):
     ) -> None:
         file.write("\n")
         file.write(f"typedef {f"VkFlags64" if self.long_bitwidth else f"enum {label.name} {{ ... }}"} {label.name};\n")
-        for _, enum_label in self.iter_filtered_children_items():
-            file.write(f"static const {label.name} {enum_label.name};\n")
+        if label.alias is not None:
+            return
+        for _, member_label in self.members.iter_filtered_items():
+            file.write(f"static const {label.name} {member_label.name};\n")
 
     def write_pydef(
         self: Self,
         file: TextIO,
         label: Label
     ) -> None:
+        bitmask = self.bitmask
+        py_enum_name = label.name
+        assert py_enum_name.startswith("Vk")
+        py_enum_name = py_enum_name.removeprefix("Vk")
+
+        enum_tag = label.tag
+        enum_prefix = label.name
+        if enum_tag is not None:
+            assert enum_prefix.endswith(enum_tag)
+            #if enum_prefix.endswith(enum_tag):
+            enum_prefix = enum_prefix.removesuffix(enum_tag)
+            #else:
+            #    print(label.name, enum_tag)
+        second_version = False
+        if bitmask:
+            assert (match := re.fullmatch(r"(\w+)FlagBits(2)?", enum_prefix)) is not None
+            enum_prefix = match.group(1)
+            second_version = match.group(2) is not None
+        assert re.fullmatch(r"([A-Z][a-z0-9]+)+", enum_prefix)
+        enum_prefix = "".join(f"{segment.group().upper()}_" for segment in re.finditer(r"[A-Z][a-z0-9]+", enum_prefix))
+        if second_version:
+            enum_prefix += "2_"
+        if enum_prefix == "VK_RESULT_":
+            enum_prefix = "VK_"
+
         file.write("\n")
-        file.write(f"class {label.name}({"Flag" if self.bitmask else "Enum"}):\n")
-        if not (enum_items := tuple(self.iter_filtered_children_items())):
+        file.write(f"class {py_enum_name}({"Flag" if bitmask else "Enum"}):\n")
+        needs_pass = True
+        for _, member_label in self.members.iter_filtered_items():
+            #if label.name == "VkSubmitFlagBits":
+            #    print(member_label.name)
+            if member_label.alias is not None:
+                continue
+            member_name = member_label.name
+            assert member_name.startswith(enum_prefix)
+            py_member_name = member_name.removeprefix(enum_prefix)
+            member_tag = None if label.name in ("VkVendorId", "VkDriverId") else member_label.tag
+            if member_tag is not None:
+                #print(label.name, member_label.name, member_tag)
+                assert py_member_name.endswith(f"_{member_tag}")
+                #    print(member_label.alias is not None, py_member_name, member_label_tag)
+                py_member_name = py_member_name.removesuffix(f"_{member_tag}")
+            if bitmask:
+                py_member_name = py_member_name.removesuffix("_BIT")
+            if member_tag is not None and member_tag != enum_tag:
+                py_member_name = f"{py_member_name}_{member_tag}"
+            if py_member_name[0].isdigit():
+                py_member_name = f"_{py_member_name}"
+            file.write(f"    {py_member_name} = lib.{member_name}\n")
+            needs_pass = False
+        if needs_pass:
             file.write("    pass\n")
-            return
-        for _, enum_label in enum_items:
-            # TODO: strip enums name
-            file.write(f"    {enum_label.name.removeprefix("VK_")} = lib.{enum_label.name}\n")
 
 
 class FunctionPointer(Signature):
@@ -538,17 +778,17 @@ class FunctionPointer(Signature):
 
     def __init__(
         self: Self,
-        cdecl: str
+        c_statement_str: str
     ) -> None:
         assert (match := re.fullmatch(
             r"typedef\s+(.*)\s+\(VKAPI_PTR \*\w+\)\((.*)\);",
-            cdecl,
+            c_statement_str,
             flags=re.DOTALL
         )) is not None
         assert (args_cdecl := match.group(2)) is not None
         super().__init__(
-            return_cdecl=f"{match.group(1)} _",
-            arg_cdecls=tuple(args_cdecl.split(",")) if args_cdecl != "void" else ()
+            return_c_type_str=match.group(1),
+            arg_c_declaration_strs=tuple(args_cdecl.split(",")) if args_cdecl != "void" else ()
         )
 
     def write_cdef(
@@ -557,8 +797,8 @@ class FunctionPointer(Signature):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"""typedef {self.return_declaration.cdecl.removesuffix(" _")} (*{label.name})({
-            ", ".join(arg_declaration.cdecl for arg_declaration in self.arg_declarations)
+        file.write(f"""typedef {self.return_c_type} (*{label.name})({
+            ", ".join(f"{arg_declaration}" for arg_declaration in self.arg_c_declarations)
         });\n""")
 
 
@@ -583,16 +823,19 @@ class Handle(Obj):
     #    file.write(f"    __slots__ = ()\n")
 
 
-class Struct(Signature):
-    __slots__ = ()
+class Struct(Obj):
+    __slots__ = ("member_c_declarations",)
+
+    class_specifier: ClassVar[str] = "struct"
 
     def __init__(
         self: Self,
-        arg_cdecls: tuple[str, ...]
+        member_c_declaration_strs: tuple[str, ...]
     ) -> None:
-        super().__init__(
-            return_cdecl="void _",
-            arg_cdecls=arg_cdecls
+        super().__init__()
+        self.member_c_declarations: tuple[CDeclaration, ...] = tuple(
+            CDeclaration(member_c_declaration_str)
+            for member_c_declaration_str in member_c_declaration_strs
         )
 
     def write_cdef_incomplete(
@@ -601,50 +844,54 @@ class Struct(Signature):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"typedef struct {label.name} {label.name};\n")
-    
+        file.write(f"typedef {self.class_specifier} {label.name} {label.name};\n")
+
     def write_cdef(
         self: Self,
         file: TextIO,
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"typedef struct {label.name} {{\n")
-        for arg_declaration in self.arg_declarations:
-            file.write(f"    {arg_declaration.cdecl};\n")
+        file.write(f"typedef {self.class_specifier} {label.name} {{\n")
+        for arg_declaration in self.member_c_declarations:
+            file.write(f"    {arg_declaration};\n")
         file.write(f"}} {label.name};\n")
 
 
-class Union(Signature):
+class Union(Struct):
     __slots__ = ()
 
-    def __init__(
-        self: Self,
-        arg_cdecls: tuple[str, ...]
-    ) -> None:
-        super().__init__(
-            return_cdecl="void _",
-            arg_cdecls=arg_cdecls
-        )
+    class_specifier: ClassVar[str] = "union"
 
-    def write_cdef_incomplete(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"typedef union {label.name} {label.name};\n")
-    
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        file.write("\n")
-        file.write(f"typedef union {label.name} {{\n")
-        for arg_declaration in self.arg_declarations:
-            file.write(f"    {arg_declaration.cdecl};\n")
-        file.write(f"}} {label.name};\n")
+    #def __init__(
+    #    self: Self,
+    #    member_c_declaration_strs: tuple[str, ...],
+    #    objs: Container[Obj]
+    #) -> None:
+    #    super().__init__()
+    #    self.member_c_declarations: tuple[CDeclaration, ...] = tuple(
+    #        CDeclaration(member_c_declaration_str, objs)
+    #        for member_c_declaration_str in member_c_declaration_strs
+    #    )
+
+    #def write_cdef_incomplete(
+    #    self: Self,
+    #    file: TextIO,
+    #    label: Label
+    #) -> None:
+    #    file.write("\n")
+    #    file.write(f"typedef union {label.name} {label.name};\n")
+
+    #def write_cdef(
+    #    self: Self,
+    #    file: TextIO,
+    #    label: Label
+    #) -> None:
+    #    file.write("\n")
+    #    file.write(f"typedef union {label.name} {{\n")
+    #    for arg_declaration in self.member_c_declarations:
+    #        file.write(f"    {arg_declaration};\n")
+    #    file.write(f"}} {label.name};\n")
 
 
 class Command(Signature):
@@ -666,17 +913,20 @@ class Registry:
         "api",
         "platform",
         "defines",
-        "elementary_type_container",
-        "external_type_container",
-        "external_include_container",
-        "macro_container",
-        "constant_container",
-        "enums_container",
-        "function_pointer_container",
-        "handle_container",
-        "struct_container",
-        "union_container",
-        "command_container"
+        "tags",
+        "objs"
+        #"elementary_type_container",
+        #"typedef_container",
+        #"external_type_container",
+        #"external_include_container",
+        #"macro_container",
+        #"constant_container",
+        #"enum_container",
+        #"function_pointer_container",
+        #"handle_container",
+        #"struct_container",
+        #"union_container",
+        #"command_container"
     )
 
     def __init__(
@@ -689,19 +939,9 @@ class Registry:
         self.api: str = api
         self.platform: str = platform
         self.defines: dict[str, bool] = dict.fromkeys(defines, True)
-        self.elementary_type_container: Container[ElementaryType] = Container()
-        self.external_type_container: Container[ExternalType] = Container()
-        self.external_include_container: Container[ExternalInclude] = Container()
-        self.macro_container: Container[Macro] = Container()
-        self.constant_container: Container[Constant] = Container()
-        self.enums_container: Container[Enums] = Container()
-        self.function_pointer_container: Container[FunctionPointer] = Container()
-        self.handle_container: Container[Handle] = Container()
-        self.struct_container: Container[Struct] = Container()
-        self.union_container: Container[Union] = Container()
-        self.command_container: Container[Command] = Container()
-
-        for name, pytype in (
+        self.tags: set[str] = set()
+        self.objs: Container[Obj] = Container()
+        for name, py_type_str in (
             ("void", "Never"),
             ("char", "str"),
             ("short", "int"),
@@ -722,158 +962,223 @@ class Registry:
             ("uint32_t", "int"),
             ("uint64_t", "int")
         ):
-            self.elementary_type_container.add_child(name, ElementaryType(
-                ctype=name,
-                pytype=pytype
+            self.objs.add_child(name, ElementaryType(
+                name=name,
+                py_type_str=py_type_str
             ))
-            self.elementary_type_container.get_label(name).required = True
 
-    def iter_interface_obj_items(
-        self: Self
-    ) -> Iterator[tuple[Obj, Label]]:
-        for container in (
-            self.elementary_type_container,
-            self.external_type_container,
-            self.external_include_container,
-            self.macro_container,
-            self.constant_container,
-            self.enums_container,
-            self.function_pointer_container,
-            self.handle_container,
-            self.struct_container,
-            self.union_container,
-            #self.command_container
-        ):
-            yield from container.iter_filtered_children_items()
+        #self.elementary_type_container: Container[ElementaryType] = Container()
+        #self.typedef_container: Container[Typedef] = Container()
+        #self.external_type_container: Container[ExternalType] = Container()
+        #self.external_include_container: Container[ExternalInclude] = Container()
+        #self.macro_container: Container[Macro] = Container()
+        #self.constant_container: Container[Constant] = Container()
+        #self.enum_container: Container[Enum] = Container()
+        #self.function_pointer_container: Container[FunctionPointer] = Container()
+        #self.handle_container: Container[Handle] = Container()
+        #self.struct_container: Container[Struct] = Container()
+        #self.union_container: Container[Union] = Container()
+        #self.command_container: Container[Command] = Container()
 
-    def get_interface_label(
+        #for name, py_type_str in (
+        #    ("void", "Never"),
+        #    ("char", "str"),
+        #    ("short", "int"),
+        #    ("int", "int"),
+        #    ("long", "int"),
+        #    ("unsigned short", "int"),
+        #    ("unsigned int", "int"),
+        #    ("unsigned long", "int"),
+        #    ("size_t", "int"),
+        #    ("float", "float"),
+        #    ("double", "float"),
+        #    ("int8_t", "int"),
+        #    ("int16_t", "int"),
+        #    ("int32_t", "int"),
+        #    ("int64_t", "int"),
+        #    ("uint8_t", "int"),
+        #    ("uint16_t", "int"),
+        #    ("uint32_t", "int"),
+        #    ("uint64_t", "int")
+        #):
+        #    self.elementary_type_container.add_child(name, ElementaryType(
+        #        name=name,
+        #        py_type_str=py_type_str
+        #    ))
+        #    #self.elementary_type_container.get_label(name).required = True
+
+    #def iter_interface_obj_items(
+    #    self: Self
+    #) -> Iterator[tuple[Obj, Label]]:
+    #    for container in (
+    #        self.elementary_type_container,
+    #        self.external_type_container,
+    #        self.external_include_container,
+    #        self.macro_container,
+    #        self.constant_container,
+    #        self.enum_container,
+    #        self.function_pointer_container,
+    #        self.handle_container,
+    #        self.struct_container,
+    #        self.union_container,
+    #        #self.command_container
+    #    ):
+    #        yield from container.iter_filtered_children_items()
+
+    #def get_interface_label(
+    #    self: Self,
+    #    name: str
+    #) -> Label:
+    #    for container in (
+    #        self.elementary_type_container,
+    #        self.external_type_container,
+    #        self.external_include_container,
+    #        self.macro_container,
+    #        self.constant_container,
+    #        self.enum_container,
+    #        self.function_pointer_container,
+    #        self.handle_container,
+    #        self.struct_container,
+    #        self.union_container,
+    #        #self.command_container
+    #    ):
+    #        if container.contains(name):
+    #            return container.get_label(name)
+    #    raise KeyError(name)
+
+    def read_obj(
         self: Self,
-        name: str
-    ) -> Label:
-        for container in (
-            self.elementary_type_container,
-            self.external_type_container,
-            self.external_include_container,
-            self.macro_container,
-            self.constant_container,
-            self.enums_container,
-            self.function_pointer_container,
-            self.handle_container,
-            self.struct_container,
-            self.union_container,
-            #self.command_container
-        ):
-            if container.contains(name):
-                return container.get_label(name)
-        raise KeyError(name)
-
-    def read_interface_obj(
-        self: Self,
+        name: str,
         type_xml: etree.Element
     ) -> None:
-        name = type_xml.get("name", type_xml.findtext("name", ""))
-        assert name
+        if (alias := type_xml.get("alias")) is not None:
+            self.objs.add_alias(name, alias)
+            return
+
+        required: bool | None = None
         match type_xml.get("category"):
             case None:
-                if not self.elementary_type_container.contains(name) and not self.external_type_container.contains(name) \
-                        and not type_xml.get("requires", "").startswith("vk_video/"):
-                    self.external_type_container.add_child(name, ExternalType(
-                        name=name
-                    ))
-                    self.external_type_container.get_label(name).required = True
+                if self.objs.contains(name):
+                    return
+                obj = Typedef(
+                    c_type_str="void" if type_xml.get("requires", "").startswith("vk_video/") else PLATFORM_TYPE_DICT[name]
+                )
+                required = True
+                #obj.required = True
+                #self.obj_dict[name] = obj
+                #self.external_type_container.get_label(name).required = True
 
             case "include":
-                if not self.external_include_container.contains(name):
-                    self.external_include_container.add_child(name, ExternalInclude())
+                if self.objs.contains(name):
+                    return
+                obj = ExternalInclude()
+                #self.external_include_container.add_child(name, ExternalInclude())
 
             case "define":
-                self.macro_container.add_child(name, Macro(
-                    cmacro="".join(type_xml.itertext())
-                ))
+                obj = Macro(
+                    c_macro="".join(type_xml.itertext())
+                )
+                #self.macro_container.add_child(name, Macro(
+                #    c_macro="".join(type_xml.itertext())
+                #))
 
             case "basetype":
-                if (alias := type_xml.findtext("type")) is not None and alias.isidentifier():
-                    self.elementary_type_container.add_child_alias(name, alias)
-                else:
-                    self.external_type_container.add_child(name, ExternalType(
-                        name=name
-                    ))
+                obj = Typedef(
+                    c_type_str=BASETYPE_DICT[name]
+                )
+                #if (alias := type_xml.findtext("type")) is not None and alias.isidentifier():
+                #    self.elementary_type_container.add_child_alias(name, alias)
+                #else:
+                #    self.external_type_container.add_child(name, ExternalType(
+                #        name=name
+                #    ))
 
             case "enum":
-                self.enums_container.add_child(name, Enums())
+                obj = Enum()
+                #self.enum_container.add_child(name, Enum())
 
             case "bitmask":
-                if (alias := type_xml.get("alias")) is not None:
-                    self.elementary_type_container.add_child_alias(name, alias)
-                else:
-                    self.elementary_type_container.add_child_alias(name, type_xml.findtext("type", ""))
+                obj = Typedef(
+                    c_type_str=type_xml.findtext("type", "")
+                )
+                #if (alias := type_xml.get("alias")) is not None:
+                #    self.elementary_type_container.add_child_alias(name, alias)
+                #else:
+                #    self.elementary_type_container.add_child_alias(name, type_xml.findtext("type", ""))
 
             case "funcpointer":
-                self.function_pointer_container.add_child(name, FunctionPointer(
-                    cdecl="".join(type_xml.itertext())
-                ))
+                obj = FunctionPointer(
+                    c_statement_str="".join(type_xml.itertext())
+                )
 
             case "handle":
-                self.handle_container.add_child(name, Handle())
+                obj = Handle()
 
             case "struct":
-                self.struct_container.add_child(name, Struct(
-                    arg_cdecls=tuple(
+                obj = Struct(
+                    member_c_declaration_strs=tuple(
                         "".join(member_xml.itertext())
                         for member_xml in type_xml.iterfind("member")
                     )
-                ))
+                )
 
             case "union":
-                self.union_container.add_child(name, Union(
-                    arg_cdecls=tuple(
+                obj = Union(
+                    member_c_declaration_strs=tuple(
                         "".join(member_xml.itertext())
                         for member_xml in type_xml.iterfind("member")
                     )
-                ))
+                )
 
             case _ as category:
                 raise ValueError(f"Unexpected category name: {category}")
 
+        self.objs.add_child(name, obj)
+        self.objs.get_label(name).mark_requirement(
+            batch_tag=("require" if required else "remove") if required is not None else None,
+            hidden=False,
+            tags=self.tags
+        )
+
     def read_constant(
         self: Self,
+        name: str,
         enum_xml: etree.Element
     ) -> None:
-        name = enum_xml.get("name", "")
-        if self.constant_container.contains(name):
+        if self.objs.contains(name):
             return
         if (alias := enum_xml.get("alias")) is not None:
-            self.constant_container.add_child_alias(name, alias)
+            self.objs.add_alias(name, alias)
             return
-        self.constant_container.add_child(name, Constant(
-            cvalue=enum_xml.get("value", "")
+        self.objs.add_child(name, Constant(
+            c_value=enum_xml.get("value", "")
         ))
 
-    def read_enum(
+    def read_enum_member(
         self: Self,
-        enums: Enums,
-        enum_xml: etree.Element
+        name: str,
+        enum_xml: etree.Element,
+        enum: Enum
     ) -> None:
-        name = enum_xml.get("name", "")
-        if enums.contains(name):
+        if enum.members.contains(name):
             return
         if (alias := enum_xml.get("alias")) is not None:
-            enums.add_child_alias(name, alias)
+            enum.members.add_alias(name, alias)
             return
-        enums.add_child(name, Enum())
+        enum.members.add_child(name, EnumMember())
 
     def read_command(
         self: Self,
         command_xml: etree.Element
     ) -> None:
         if (alias := command_xml.get("alias")) is not None:
-            self.command_container.add_child_alias(command_xml.get("name", ""), alias)
+            self.objs.add_alias(command_xml.get("name", ""), alias)
             return
         assert (proto_xml := command_xml.find("proto")) is not None
         name = proto_xml.findtext("name", "")
-        self.command_container.add_child(name, Command(
-            return_cdecl="".join(proto_xml.itertext()),
-            arg_cdecls=tuple(
+        self.objs.add_child(name, Command(
+            return_c_type_str="".join(proto_xml.itertext()),
+            arg_c_declaration_strs=tuple(
                 "".join(param_xml.itertext())
                 for param_xml in command_xml.iterfind("param")
             )
@@ -902,16 +1207,16 @@ class Registry:
         ) -> bool:
             return platform is None or platform == target_platform
 
-        def extract_tag(
-            extension_name: str | None
-        ) -> str | None:
-            if extension_name is None:
-                return None
-            if (match := re.match(r"^VK_([A-Z]+)_", extension_name)) is None:
-                return None
-            if (tag := match.group(1)) == "VERSION":
-                return None
-            return tag
+        #def extract_tag(
+        #    extension_name: str | None
+        #) -> str | None:
+        #    if extension_name is None:
+        #        return None
+        #    if (match := re.match(r"^VK_([A-Z]+)_", extension_name)) is None:
+        #        return None
+        #    if (tag := match.group(1)) == "VERSION":
+        #        return None
+        #    return tag
 
         for xml in list(registry_xml.iter()):
             xml[:] = filter(
@@ -922,26 +1227,39 @@ class Registry:
         for xml in registry_xml:
             match xml.tag:
                 case "platforms":
-                    for platform_xml in xml.iterfind("platform"):
-                        self.defines[platform_xml.get("protect", "")] = platform_xml.get("name", "") == self.platform
+                    self.defines.update(
+                        (platform_xml.get("protect", ""), platform_xml.get("name", "") == self.platform)
+                        for platform_xml in xml.iterfind("platform")
+                    )
+
+                case "tags":
+                    self.tags.update(
+                        tag_xml.get("name", "")
+                        for tag_xml in xml.iterfind("tag")
+                    )
 
                 case "types":
                     for type_xml in xml.iterfind("type"):
                         if not check_api(type_xml.get("api"), self.api):
                             continue
-                        self.read_interface_obj(type_xml)
+                        self.read_obj(type_xml.get("name", type_xml.findtext("name", "")), type_xml)
 
                 case "enums":
-                    if (enums_name := xml.get("name", "")) == "API Constants":
+                    if (enum_name := xml.get("name", "")) == "API Constants":
                         for enum_xml in xml.iterfind("enum"):
-                            self.read_constant(enum_xml)
+                            self.read_constant(enum_xml.get("name", ""), enum_xml)
                     else:
-                        enums = self.enums_container.get_child(enums_name)
-                        enums.bitmask = xml.get("type") == "bitmask"
-                        enums.long_bitwidth = xml.get("bitwidth") == "64"
+                        assert isinstance((enum := self.objs.get_child(enum_name)), Enum)
+                        enum.bitmask = xml.get("type") == "bitmask"
+                        enum.long_bitwidth = xml.get("bitwidth") == "64"
                         for enum_xml in xml.iterfind("enum"):
-                            self.read_enum(enums, enum_xml)
-                            enums.get_label(enum_xml.get("name", "")).required = True
+                            member_name = enum_xml.get("name", "")
+                            self.read_enum_member(member_name, enum_xml, enum)
+                            enum.members.get_label(member_name).mark_requirement(
+                                batch_tag="require",
+                                hidden=False,
+                                tags=self.tags
+                            )
 
                 case "commands":
                     for command_xml in xml.iterfind("command"):
@@ -956,26 +1274,27 @@ class Registry:
                         for feature_unit_xml in feature_batch_xml:
                             if not check_api(feature_unit_xml.get("api"), self.api):
                                 continue
-                            feature_unit_name = feature_unit_xml.get("name", "")
+                            name = feature_unit_xml.get("name", "")
                             match feature_unit_xml.tag:
                                 case "type":
-                                    label = self.get_interface_label(feature_unit_name)
+                                    label = self.objs.get_label(name)
                                 case "enum":
                                     if (extends := feature_unit_xml.get("extends")) is not None:
-                                        self.read_enum(self.enums_container.get_child(extends), feature_unit_xml)
-                                        label = self.enums_container.get_child(extends).get_label(feature_unit_name)
+                                        assert isinstance((enum := self.objs.get_child(extends)), Enum)
+                                        self.read_enum_member(name, feature_unit_xml, enum)
+                                        label = enum.members.get_label(name)
                                     else:
-                                        self.read_constant(feature_unit_xml)
-                                        label = self.constant_container.get_label(feature_unit_name)
+                                        self.read_constant(name, feature_unit_xml)
+                                        label = self.objs.get_label(name)
                                 case "command":
-                                    label = self.command_container.get_label(feature_unit_name)
+                                    label = self.objs.get_label(name)
                                 case _:
                                     continue
                             protect = feature_unit_xml.get("protect")
                             label.mark_requirement(
                                 batch_tag=feature_batch_xml.tag,
                                 hidden=protect is not None and not self.defines.get(protect, False),
-                                tag=None
+                                tags=self.tags
                             )
 
                 case "extensions":
@@ -983,40 +1302,34 @@ class Registry:
                         if not check_api(extension_xml.get("api"), self.api) or not check_supported(extension_xml.get("supported"), self.api) \
                                 or not check_platform(extension_xml.get("platform"), self.platform):
                             continue
-                        extension_tag = extract_tag(extension_xml.get("name"))
                         for extension_batch_xml in extension_xml:
                             if not check_api(extension_batch_xml.get("api"), self.api):
                                 continue
-                            extension_batch_tag = extract_tag(extension_batch_xml.get("depends"))
                             for extension_unit_xml in extension_batch_xml:
                                 if not check_api(extension_unit_xml.get("api"), self.api):
                                     continue
-                                extension_unit_name = extension_unit_xml.get("name", "")
+                                name = extension_unit_xml.get("name", "")
                                 match extension_unit_xml.tag:
                                     case "type":
-                                        label = self.get_interface_label(extension_unit_name)
-                                        tag = extension_batch_tag or extension_tag
-                                        if extension_unit_name == "VkFlags64":
-                                            tag = None
+                                        label = self.objs.get_label(name)
                                     case "enum":
                                         if (extends := extension_unit_xml.get("extends")) is not None:
-                                            self.read_enum(self.enums_container.get_child(extends), extension_unit_xml)
-                                            label = self.enums_container.get_child(extends).get_label(extension_unit_name)
-                                            tag = None
+                                            assert isinstance((enum := self.objs.get_child(extends)), Enum)
+                                            self.read_enum_member(name, extension_unit_xml, enum)
+                                            label = enum.members.get_label(name)
                                         else:
-                                            self.read_constant(extension_unit_xml)
-                                            label = self.constant_container.get_label(extension_unit_name)
-                                            tag = extension_batch_tag or extension_tag
+                                            self.read_constant(name, extension_unit_xml)
+                                            label = self.objs.get_label(name)
                                     case "command":
-                                        label = self.command_container.get_label(extension_unit_name)
-                                        tag = extension_tag
+                                        label = self.objs.get_label(name)
                                     case _:
                                         continue
+                                #print(name, tag)
                                 protect = extension_unit_xml.get("protect")
                                 label.mark_requirement(
                                     batch_tag=extension_batch_xml.tag,
                                     hidden=protect is not None and not self.defines.get(protect, False),
-                                    tag=tag
+                                    tags=self.tags
                                 )
 
     def build_cdef(
@@ -1025,9 +1338,9 @@ class Registry:
     ) -> None:
         with cdef_path.open("w") as file:
             file.write("// Auto-generated C definitions\n")
-            for obj, label in self.iter_interface_obj_items():
+            for obj, label in self.objs.iter_filtered_items():
                 obj.write_cdef_incomplete(file, label)
-            for obj, label in self.iter_interface_obj_items():
+            for obj, label in self.objs.iter_filtered_items():
                 obj.write_cdef(file, label)
 
     def build_ffi(
@@ -1075,7 +1388,7 @@ class Registry:
             file.write("    lib\n")
             file.write(")\n")
             file.write("\n\n")
-            for obj, label in self.iter_interface_obj_items():
+            for obj, label in self.objs.iter_filtered_items():
                 obj.write_pydef(file, label)
 
             #file.write("\n")
@@ -1101,11 +1414,11 @@ def main() -> None:
         platform="win32",
         defines=["VK_ENABLE_BETA_EXTENSIONS"]
     )
-    for xml_path in (
-        "extern/xml/video.xml",
-        "extern/xml/vk.xml"
-    ):
-        registry.read_registry_xml(etree.parse(xml_path).getroot())
+    #for xml_path in (
+    #    "extern/xml/video.xml",
+    #    "extern/xml/vk.xml"
+    #):
+    registry.read_registry_xml(etree.parse("extern/xml/vk.xml").getroot())
 
     generated_dir = this_dir.joinpath("generated")
     generated_dir.mkdir(exist_ok=True)
