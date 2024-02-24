@@ -6,6 +6,7 @@ import re
 import xml.etree.ElementTree as etree
 from typing import (
     ClassVar,
+    Iterable,
     Iterator,
     Self,
     TextIO
@@ -66,136 +67,239 @@ BASETYPE_DICT: dict[str, str] = {
 }
 
 
-class CType:
+#class CType:
+#    __slots__ = (
+#        "class_specifier",
+#        "base_type_str",
+#        "const_specifiers"
+#    )
+
+#    def __init__(
+#        self: Self,
+#        c_type_str: str
+#    ) -> None:
+#        super().__init__()
+#        class_specifier, base_type_str, const_specifiers = type(self).parse_c_type_str(c_type_str)
+#        self.class_specifier: str | None = class_specifier
+#        self.base_type_str: str = base_type_str
+#        self.const_specifiers: tuple[bool, ...] = const_specifiers
+
+#    def __format__(
+#        self: Self,
+#        format_spec: str | None
+#    ) -> str:
+#        components = [self.base_type_str]
+#        for index, const_specifier in enumerate(self.const_specifiers):
+#            if index:
+#                components.append("*")
+#            #if const_specifier:
+#            if format_spec != "v":
+#                components.append("const")
+#        return " ".join(components)
+
+#    @classmethod
+#    def parse_c_type_str(
+#        cls: type[Self],
+#        c_type_str: str
+#        #objs: Container[Obj] | None
+#    ) -> tuple[str | None, str, tuple[bool, ...]]:
+#        assert (match := re.fullmatch(r"(const\s+)?((struct|union)\s+)?(.+?)(\s+const)?((\s*\*(\s*const)?)*)", c_type_str.strip())) is not None
+#        class_specifier = match.group(3)
+#        base_type_str = match.group(4)
+#        const_specifiers = (
+#            match.group(1) is not None or match.group(5) is not None,
+#            *(
+#                pointer_match.group(1) is not None
+#                for pointer_match in re.finditer(r"\*(\s*const)?", match.group(6))
+#            )
+#        )
+#        #if objs is not None:
+#        #    base_type_str = objs.get_nonalias_name(base_type_str)
+#        return class_specifier, base_type_str, const_specifiers
+#        ##array_sizes: tuple[str, ...] = ()
+#        #pointer_count: int = 0
+#        #is_nonconst_pointer: bool = False
+#        #components = re.findall(r"\w+|\S", cdecl)
+#        #match components:
+#        #    case (base_type_name,):
+#        #        pass
+#        #    case (base_type_name, "*"):
+#        #        pointer_count = 1
+#        #        is_nonconst_pointer = True
+#        #    case ("struct", base_type_name, "*"):
+#        #        pointer_count = 1
+#        #        is_nonconst_pointer = True
+#        #    case (base_type_name, "*", "*"):
+#        #        pointer_count = 2
+#        #        is_nonconst_pointer = True
+#        #    case ("struct", base_type_name, "*", "*"):
+#        #        pointer_count = 2
+#        #        is_nonconst_pointer = True
+#        #    #case (base_type_name, name, "[", array_size_0, "]"):
+#        #    #    array_sizes = (array_size_0,)
+#        #    #case (base_type_name, name, "[", array_size_0, "]", "[", array_size_1, "]"):
+#        #    #    array_sizes = (array_size_0, array_size_1)
+#        #    #case (base_type_name, name, ":", _):
+#        #    #    pass
+#        #    case ("const", base_type_name, "*"):
+#        #        pointer_count = 1
+#        #    case ("const", "struct", base_type_name, "*"):
+#        #        pointer_count = 1
+#        #    case ("const", base_type_name, "*", "const", "*"):
+#        #        pointer_count = 2
+#        #    #case ("const", base_type_name, name, "[", array_size_0, "]"):
+#        #    #    array_sizes = (array_size_0,)
+#        #    case _:
+#        #        raise ValueError(cdecl)
+#        #formatted_cdecl = " ".join(components)
+#        #return formatted_cdecl, base_type_name, pointer_count, is_nonconst_pointer
+
+
+#class CDeclaration:
+#    __slots__ = (
+#        "c_type",
+#        "name",
+#        "array_sizes",
+#        "bitwidth"
+#    )
+
+#    def __init__(
+#        self: Self,
+#        c_decl_str: str
+#    ) -> None:
+#        super().__init__()
+#        c_type_str, name, array_sizes, bitwidth = type(self).parse_c_decl_str(c_decl_str)
+#        self.c_type: CType = CType(c_type_str)
+#        self.name: str = name
+#        self.array_sizes: tuple[str, ...] = array_sizes
+#        self.bitwidth: int | None = bitwidth
+
+#    def __format__(
+#        self: Self,
+#        format_spec: str | None
+#    ) -> str:
+#        components = [f"{self.c_type:format_spec}", " ", self.name, *(f"[{array_size}]" for array_size in self.array_sizes)]
+#        if self.bitwidth is not None:
+#            components.append(f":{self.bitwidth}")
+#        return "".join(components)
+
+#    @classmethod
+#    def parse_c_decl_str(
+#        cls: type[Self],
+#        c_decl_str: str
+#    ) -> tuple[str, str, tuple[str, ...], int | None]:
+#        assert (match := re.fullmatch(r"(.*?)\s*(\b\w+\b)((\s*\[\w*\])*)(\s*:\s*(\d+))?", c_decl_str.strip())) is not None
+#        c_type_str = match.group(1)
+#        name = match.group(2)
+#        array_sizes = tuple(
+#            array_size_match.group(1)
+#            for array_size_match in re.finditer(r"\[(\w*)\]", match.group(3))
+#        )
+#        bitwidth = int(bitwidth_str) if (bitwidth_str := match.group(6)) is not None else None
+#        return c_type_str, name, array_sizes, bitwidth
+
+
+class CDecl:
     __slots__ = (
-        "class_specifier",
-        "base_type_str",
-        "const_specifiers"
-    )
-
-    def __init__(
-        self: Self,
-        c_type_str: str
-    ) -> None:
-        super().__init__()
-        class_specifier, base_type_str, const_specifiers = type(self).parse_c_type_str(c_type_str)
-        self.class_specifier: str | None = class_specifier
-        self.base_type_str: str = base_type_str
-        self.const_specifiers: tuple[bool, ...] = const_specifiers
-
-    def __format__(
-        self: Self,
-        format_spec: str | None
-    ) -> str:
-        components = [self.base_type_str]
-        for index, const_specifier in enumerate(self.const_specifiers):
-            if index:
-                components.append("*")
-            #if const_specifier:
-            if format_spec != "v":
-                components.append("const")
-        return " ".join(components)
-
-    @classmethod
-    def parse_c_type_str(
-        cls: type[Self],
-        c_type_str: str
-        #objs: Container[Obj] | None
-    ) -> tuple[str | None, str, tuple[bool, ...]]:
-        assert (match := re.fullmatch(r"(const\s+)?((struct|union)\s+)?(.+?)(\s+const)?((\s*\*(\s*const)?)*)", c_type_str.strip())) is not None
-        class_specifier = match.group(3)
-        base_type_str = match.group(4)
-        const_specifiers = (
-            match.group(1) is not None or match.group(5) is not None,
-            *(
-                pointer_match.group(1) is not None
-                for pointer_match in re.finditer(r"\*(\s*const)?", match.group(6))
-            )
-        )
-        #if objs is not None:
-        #    base_type_str = objs.get_nonalias_name(base_type_str)
-        return class_specifier, base_type_str, const_specifiers
-        ##array_sizes: tuple[str, ...] = ()
-        #pointer_count: int = 0
-        #is_nonconst_pointer: bool = False
-        #components = re.findall(r"\w+|\S", cdecl)
-        #match components:
-        #    case (base_type_name,):
-        #        pass
-        #    case (base_type_name, "*"):
-        #        pointer_count = 1
-        #        is_nonconst_pointer = True
-        #    case ("struct", base_type_name, "*"):
-        #        pointer_count = 1
-        #        is_nonconst_pointer = True
-        #    case (base_type_name, "*", "*"):
-        #        pointer_count = 2
-        #        is_nonconst_pointer = True
-        #    case ("struct", base_type_name, "*", "*"):
-        #        pointer_count = 2
-        #        is_nonconst_pointer = True
-        #    #case (base_type_name, name, "[", array_size_0, "]"):
-        #    #    array_sizes = (array_size_0,)
-        #    #case (base_type_name, name, "[", array_size_0, "]", "[", array_size_1, "]"):
-        #    #    array_sizes = (array_size_0, array_size_1)
-        #    #case (base_type_name, name, ":", _):
-        #    #    pass
-        #    case ("const", base_type_name, "*"):
-        #        pointer_count = 1
-        #    case ("const", "struct", base_type_name, "*"):
-        #        pointer_count = 1
-        #    case ("const", base_type_name, "*", "const", "*"):
-        #        pointer_count = 2
-        #    #case ("const", base_type_name, name, "[", array_size_0, "]"):
-        #    #    array_sizes = (array_size_0,)
-        #    case _:
-        #        raise ValueError(cdecl)
-        #formatted_cdecl = " ".join(components)
-        #return formatted_cdecl, base_type_name, pointer_count, is_nonconst_pointer
-
-
-class CDeclaration:
-    __slots__ = (
-        "c_type",
         "name",
-        "array_sizes",
-        "bitwidth"
+        "_c_decl_str_segments"
     )
 
     def __init__(
         self: Self,
-        c_declaration_str: str
+        # Must contain a name; may contain `const/struct/union/*/[...]`, but not bitwidth.
+        c_decl_str: str,
+        name: str
     ) -> None:
         super().__init__()
-        c_type_str, name, array_sizes, bitwidth = type(self).parse_c_declaration_str(c_declaration_str)
-        self.c_type: CType = CType(c_type_str)
         self.name: str = name
-        self.array_sizes: tuple[str, ...] = array_sizes
-        self.bitwidth: int | None = bitwidth
-
-    def __format__(
-        self: Self,
-        format_spec: str | None
-    ) -> str:
-        components = [f"{self.c_type:format_spec}", " ", self.name, *(f"[{array_size}]" for array_size in self.array_sizes)]
-        if self.bitwidth is not None:
-            components.append(f":{self.bitwidth}")
-        return "".join(components)
+        self._c_decl_str_segments: tuple[str, ...] = tuple(
+            segment if (segment := match.group()) != name else "$"
+            for match in re.finditer(r"\w+|\S", c_decl_str)
+        )
+        assert list(self._c_decl_str_segments).count("$") == 1
 
     @classmethod
-    def parse_c_declaration_str(
+    def _generate_segments(
         cls: type[Self],
-        c_declaration_str: str
-    ) -> tuple[str, str, tuple[str, ...], int | None]:
-        assert (match := re.fullmatch(r"(.*?)\s*(\b\w+\b)((\s*\[\w*\])*)(\s*:\s*(\d+))?", c_declaration_str.strip())) is not None
-        c_type_str = match.group(1)
-        name = match.group(2)
-        array_sizes = tuple(
-            array_size_match.group(1)
-            for array_size_match in re.finditer(r"\[(\w*)\]", match.group(3))
+        segments: Iterable[str],
+        name: str
+    ) -> Iterator[str]:
+        prev_segment = ""
+        for segment in segments:
+            if segment == "$":
+                if not name:
+                    continue
+                segment = name
+            if (prev_segment.isidentifier() or prev_segment in ("*", ",")) and (segment.isidentifier() or segment == "*"):
+                yield " "
+            yield segment
+            prev_segment = segment
+
+    def format(
+        self: Self,
+        name: str | None = None,
+        #omit_const: bool = False
+    ) -> str:
+        if name is None:
+            name = self.name
+        return "".join(type(self)._generate_segments(self._c_decl_str_segments, name))
+        #return "".join(type(self)._generate_segments(filter(
+        #    lambda segment: not omit_const or segment != "const",
+        #    self._c_decl_str_segments
+        #), name))
+
+    #def get_cffi_type_str(
+    #    self: Self,
+    #    name_replacement: str | None = None
+    #) -> str:
+    #    #components = list(filter(lambda component: component != "const", self._c_decl_str_components))
+    #    #name_index = 3 if components[0] in ("struct", "union") else 2
+    #    #if components[name_index].isidentifier():
+    #    #    components.pop(name_index)
+    #    #return " ".join(components)
+
+
+class TypeCDecl(CDecl):
+    __slots__ = ()
+
+    def __init__(
+        self: Self,
+        c_type_str: str
+    ) -> None:
+        super().__init__(
+            c_decl_str=f"{c_type_str} _",
+            name="_"
         )
-        bitwidth = int(bitwidth_str) if (bitwidth_str := match.group(6)) is not None else None
-        return c_type_str, name, array_sizes, bitwidth
+
+
+class CallableCDecl(CDecl):
+    __slots__ = (
+        "return_c_decl",
+        "arg_c_decls"
+    )
+
+    def __init__(
+        self: Self,
+        #c_decl_str: str,
+        return_c_decl: TypeCDecl,
+        arg_c_decls: tuple[CDecl, ...],
+        name: str
+        #return_c_type_str: str,
+        #arg_c_decl_strs: tuple[str, ...]
+    ) -> None:
+        super().__init__(c_decl_str=f"{return_c_decl.format(name="")} (* {name})({", ".join(
+            arg_c_decl.format() for arg_c_decl in arg_c_decls
+        )})", name=name)
+        #assert (match := re.fullmatch(
+        #    fr"(.*?)\(\s*\*\s*{name}\s*\)\s*\((.*)\)",
+        #    c_decl_str,
+        #    flags=re.DOTALL
+        #)) is not None
+        #return_c_decl_str = f"{match.group(1)} _"
+        #args_c_decl_str = match.group(2)
+        self.return_c_decl: TypeCDecl = return_c_decl
+        self.arg_c_decls: tuple[CDecl, ...] = arg_c_decls
 
 
 class Label:
@@ -446,25 +550,6 @@ class Container[ChildT: Obj]:
 #        self.base_type: Obj = NotImplemented
 
 
-class Signature(Obj):
-    __slots__ = (
-        "return_c_type",
-        "arg_c_declarations"
-    )
-
-    def __init__(
-        self: Self,
-        return_c_type_str: str,
-        arg_c_declaration_strs: tuple[str, ...]
-    ) -> None:
-        super().__init__()
-        self.return_c_type: CType = CType(return_c_type_str)
-        self.arg_c_declarations: tuple[CDeclaration, ...] = tuple(
-            CDeclaration(arg_c_declaration_str)
-            for arg_c_declaration_str in arg_c_declaration_strs
-        )
-
-
 class ElementaryType(Obj):
     __slots__ = ("py_type_str",)
 
@@ -516,14 +601,17 @@ class ElementaryType(Obj):
 
 
 class Typedef(Obj):
-    __slots__ = ("c_type",)
+    __slots__ = ("c_decl",)
 
     def __init__(
         self: Self,
         c_type_str: str
     ) -> None:
         super().__init__()
-        self.c_type: CType = CType(c_type_str)
+        self.c_decl: CDecl = CDecl(
+            name="_",
+            c_decl_str=f"{c_type_str} _"
+        )
 
     def write_cdef(
         self: Self,
@@ -531,7 +619,7 @@ class Typedef(Obj):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"typedef {self.c_type} {label.name};\n")
+        file.write(f"typedef {self.c_decl.format(name="")} {label.name};\n")
 
 
 class ExternalInclude(Obj):
@@ -627,7 +715,7 @@ class Macro(Obj):
 
 class Constant(Obj):
     __slots__ = (
-        "c_type",
+        "c_decl",
         "c_value"
         #"write_macro"
     )
@@ -639,22 +727,12 @@ class Constant(Obj):
     ) -> None:
         super().__init__()
         #c_type_str, write_macro = type(self).parse_constant(c_value)
-        if c_type_str is None:
-            c_type_str = type(self).analyze_c_type(c_value)
-        self.c_type: CType = CType(c_type_str)
-        self.c_value: str = c_value
-        #self.py_value: str = py_value
-        #self.write_macro: bool = write_macro
-
-    @classmethod
-    def analyze_c_type(
-        cls: type[Self],
-        c_value: str
-    ) -> str:
-        if c_value.isidentifier():
-            return "uint64_t"
-        if re.fullmatch(r"0|[1-9][0-9]*|0x[\dA-F]+", c_value) is not None:
-            return "uint64_t"
+        if c_type_str is not None:
+            c_decl = TypeCDecl(c_type_str=c_type_str)
+        elif c_value.isidentifier():
+            c_decl = TypeCDecl(c_type_str="uint64_t")
+        elif re.fullmatch(r"0|[1-9][0-9]*|0x[\dA-F]+", c_value) is not None:
+            c_decl = TypeCDecl(c_type_str="uint64_t")
         #if (match := re.fullmatch(r"0x[\dA-F]+", c_value)) is not None:
         #    return c_value, True
         #if (match := re.fullmatch(r"\(~(\d+)U\)", c_value)) is not None:
@@ -663,9 +741,14 @@ class Constant(Obj):
         #    return f"0x{(1 << 64) - 1 - int(match.group(1)):X}", False
         #if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", c_value, flags=re.IGNORECASE)) is not None:
         #    return f"{match.group(1)}", False
-        if re.fullmatch(r"\"\w+\"", c_value) is not None:
-            return "char *"
-        assert False
+        elif re.fullmatch(r"\"\w+\"", c_value) is not None:
+            c_decl = CDecl(c_decl_str="char _[]", name="_")
+        else:
+            assert False
+        self.c_decl: CDecl = c_decl
+        self.c_value: str | None = c_value if c_value.isdecimal() else None
+        #self.py_value: str = py_value
+        #self.write_macro: bool = write_macro
 
     def write_cdef(
         self: Self,
@@ -673,14 +756,11 @@ class Constant(Obj):
         label: Label
     ) -> None:
         file.write("\n")
-        if self.c_value.isdecimal():
+        if self.c_value is not None:
             #file.write(f"{self.name} = None\n")
             file.write(f"#define {label.name} {self.c_value}\n")
         else:
-            if str(self.c_type) == "char *":
-                file.write(f"static const char {label.name}[];\n")
-            else:
-                file.write(f"static const {self.c_type} {label.name};\n")
+            file.write(f"static const {self.c_decl.format(name=label.name)};\n")
 
     def write_pydef(
         self: Self,
@@ -771,22 +851,30 @@ class Enum(Obj):
             file.write("    pass\n")
 
 
-class FunctionPointer(Signature):
-    __slots__ = ("cdecl",)
+class FunctionPointer(Obj):
+    __slots__ = ("c_decl",)
 
     def __init__(
         self: Self,
-        c_statement_str: str
+        c_statement_str: str,
+        name: str
     ) -> None:
+        super().__init__()
         assert (match := re.fullmatch(
-            r"typedef\s+(.*)\s+\(VKAPI_PTR \*\w+\)\((.*)\);",
+            r"typedef\s+(.*?)\s*\(VKAPI_PTR\s*\*\w+\)\((.*)\);",
             c_statement_str,
             flags=re.DOTALL
         )) is not None
-        assert (args_cdecl := match.group(2)) is not None
-        super().__init__(
-            return_c_type_str=match.group(1),
-            arg_c_declaration_strs=tuple(args_cdecl.split(",")) if args_cdecl != "void" else ()
+        return_c_type_str = match.group(1)
+        args_c_decl_str = match.group(2)
+        arg_c_decl_strs = args_c_decl_str.split(",") if args_c_decl_str.strip() != "void" else []
+        self.c_decl: CallableCDecl = CallableCDecl(
+            return_c_decl=TypeCDecl(c_type_str=return_c_type_str),
+            arg_c_decls=tuple(
+                CDecl(c_decl_str=arg_c_decl_str, name=arg_c_decl_str.rsplit(" ", 1)[-1])
+                for arg_c_decl_str in arg_c_decl_strs
+            ),
+            name=name
         )
 
     def write_cdef(
@@ -795,9 +883,10 @@ class FunctionPointer(Signature):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"""typedef {self.return_c_type:v} (*{label.name})({
-            ", ".join(f"{arg_declaration}" for arg_declaration in self.arg_c_declarations)
-        });\n""")
+        #file.write(f"""typedef {self.return_c_type.get_c_decl_str()} (*{label.name})({
+        #    ", ".join(f"{arg_decl.get_c_decl_str()}" for arg_decl in self.arg_c_decls)
+        #});\n""")
+        file.write(f"""typedef {self.c_decl.format(name=label.name)};\n""")
 
 
 class Handle(Obj):
@@ -822,18 +911,23 @@ class Handle(Obj):
 
 
 class Struct(Obj):
-    __slots__ = ("member_c_declarations",)
+    __slots__ = ("member_c_decls",)
 
     class_specifier: ClassVar[str] = "struct"
 
     def __init__(
         self: Self,
-        member_c_declaration_strs: tuple[str, ...]
+        member_c_decl_str_name_pairs: tuple[tuple[str, str], ...]
+        #member_c_decl_strs: tuple[str, ...],
+        #member_names: tuple[str, ...]
     ) -> None:
         super().__init__()
-        self.member_c_declarations: tuple[CDeclaration, ...] = tuple(
-            CDeclaration(member_c_declaration_str)
-            for member_c_declaration_str in member_c_declaration_strs
+        self.member_c_decls: tuple[CDecl, ...] = tuple(
+            CDecl(
+                c_decl_str=member_c_decl_str,
+                name=member_name
+            )
+            for member_c_decl_str, member_name in member_c_decl_str_name_pairs
         )
 
     def write_cdef_incomplete(
@@ -851,8 +945,8 @@ class Struct(Obj):
     ) -> None:
         file.write("\n")
         file.write(f"typedef {self.class_specifier} {label.name} {{\n")
-        for arg_declaration in self.member_c_declarations:
-            file.write(f"    {arg_declaration};\n")
+        for c_decl in self.member_c_decls:
+            file.write(f"    {c_decl.format()};\n")  # TODO: bitwidth
         file.write(f"}} {label.name};\n")
 
 
@@ -863,13 +957,13 @@ class Union(Struct):
 
     #def __init__(
     #    self: Self,
-    #    member_c_declaration_strs: tuple[str, ...],
+    #    member_c_decl_strs: tuple[str, ...],
     #    objs: Container[Obj]
     #) -> None:
     #    super().__init__()
-    #    self.member_c_declarations: tuple[CDeclaration, ...] = tuple(
-    #        CDeclaration(member_c_declaration_str, objs)
-    #        for member_c_declaration_str in member_c_declaration_strs
+    #    self.member_c_decls: tuple[CDeclaration, ...] = tuple(
+    #        CDeclaration(member_c_decl_str, objs)
+    #        for member_c_decl_str in member_c_decl_strs
     #    )
 
     #def write_cdef_incomplete(
@@ -887,13 +981,32 @@ class Union(Struct):
     #) -> None:
     #    file.write("\n")
     #    file.write(f"typedef union {label.name} {{\n")
-    #    for arg_declaration in self.member_c_declarations:
-    #        file.write(f"    {arg_declaration};\n")
+    #    for arg_decl in self.member_c_decls:
+    #        file.write(f"    {arg_decl};\n")
     #    file.write(f"}} {label.name};\n")
 
 
-class Command(Signature):
-    __slots__ = ()
+class Command(Obj):
+    __slots__ = ("c_decl",)
+
+    def __init__(
+        self: Self,
+        return_c_type_str: str,
+        arg_c_decl_str_name_pairs: tuple[tuple[str, str], ...],
+        name: str
+    ) -> None:
+        super().__init__()
+        self.c_decl: CallableCDecl = CallableCDecl(
+            return_c_decl=TypeCDecl(c_type_str=return_c_type_str),
+            arg_c_decls=tuple(
+                CDecl(
+                    c_decl_str=c_decl_str,
+                    name=name
+                )
+                for c_decl_str, name in arg_c_decl_str_name_pairs
+            ),
+            name=name
+        )
 
     #def write_cdef(
     #    self: Self,
@@ -901,8 +1014,8 @@ class Command(Signature):
     #    label: Label
     #) -> None:
     #    file.write("\n")
-    #    file.write(f"""{self.return_declaration.cdecl}({
-    #        ", ".join(arg_declaration.cdecl for arg_declaration in self.arg_declarations)
+    #    file.write(f"""{self.return_decl.cdecl}({
+    #        ", ".join(arg_decl.cdecl for arg_decl in self.arg_decls)
     #    });\n""")
 
 
@@ -1106,7 +1219,8 @@ class Registry:
 
             case "funcpointer":
                 obj = FunctionPointer(
-                    c_statement_str="".join(type_xml.itertext())
+                    c_statement_str="".join(type_xml.itertext()),
+                    name=name
                 )
 
             case "handle":
@@ -1114,17 +1228,17 @@ class Registry:
 
             case "struct":
                 obj = Struct(
-                    member_c_declaration_strs=tuple(
-                        "".join(member_xml.itertext())
-                        for member_xml in type_xml.iterfind("member")
+                    member_c_decl_str_name_pairs=tuple(
+                        ("".join(member_xml.itertext()), member_xml.findtext("name", ""))
+                        for member_xml in tuple(type_xml.iterfind("member"))
                     )
                 )
 
             case "union":
                 obj = Union(
-                    member_c_declaration_strs=tuple(
-                        "".join(member_xml.itertext())
-                        for member_xml in type_xml.iterfind("member")
+                    member_c_decl_str_name_pairs=tuple(
+                        ("".join(member_xml.itertext()), member_xml.findtext("name", ""))
+                        for member_xml in tuple(type_xml.iterfind("member"))
                     )
                 )
 
@@ -1176,11 +1290,12 @@ class Registry:
         assert (proto_xml := command_xml.find("proto")) is not None
         name = proto_xml.findtext("name", "")
         self.objs.add_child(name, Command(
-            return_c_type_str="".join(proto_xml.itertext()),
-            arg_c_declaration_strs=tuple(
-                "".join(param_xml.itertext())
+            return_c_type_str=proto_xml.findtext("type", ""),
+            arg_c_decl_str_name_pairs=tuple(
+                ("".join(param_xml.itertext()), param_xml.findtext("name", ""))
                 for param_xml in command_xml.iterfind("param")
-            )
+            ),
+            name=name
         ))
 
     def read_registry_xml(
