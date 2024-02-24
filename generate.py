@@ -83,14 +83,16 @@ class CType:
         self.base_type_str: str = base_type_str
         self.const_specifiers: tuple[bool, ...] = const_specifiers
 
-    def __str__(
-        self: Self
+    def __format__(
+        self: Self,
+        format_spec: str | None
     ) -> str:
         components = [self.base_type_str]
         for index, const_specifier in enumerate(self.const_specifiers):
             if index:
                 components.append("*")
-            if const_specifier:
+            #if const_specifier:
+            if format_spec != "v":
                 components.append("const")
         return " ".join(components)
 
@@ -171,10 +173,11 @@ class CDeclaration:
         self.array_sizes: tuple[str, ...] = array_sizes
         self.bitwidth: int | None = bitwidth
 
-    def __str__(
-        self: Self
+    def __format__(
+        self: Self,
+        format_spec: str | None
     ) -> str:
-        components = [f"{self.c_type}", " ", self.name, *(f"[{array_size}]" for array_size in self.array_sizes)]
+        components = [f"{self.c_type:format_spec}", " ", self.name, *(f"[{array_size}]" for array_size in self.array_sizes)]
         if self.bitwidth is not None:
             components.append(f":{self.bitwidth}")
         return "".join(components)
@@ -184,12 +187,12 @@ class CDeclaration:
         cls: type[Self],
         c_declaration_str: str
     ) -> tuple[str, str, tuple[str, ...], int | None]:
-        assert (match := re.fullmatch(r"(.*?)\s*(\b\w+\b)((\s*\[\w+\])*)(\s*:\s*(\d+))?", c_declaration_str.strip())) is not None
+        assert (match := re.fullmatch(r"(.*?)\s*(\b\w+\b)((\s*\[\w*\])*)(\s*:\s*(\d+))?", c_declaration_str.strip())) is not None
         c_type_str = match.group(1)
         name = match.group(2)
         array_sizes = tuple(
             array_size_match.group(1)
-            for array_size_match in re.finditer(r"\[(\w+)\]", match.group(3))
+            for array_size_match in re.finditer(r"\[(\w*)\]", match.group(3))
         )
         bitwidth = int(bitwidth_str) if (bitwidth_str := match.group(6)) is not None else None
         return c_type_str, name, array_sizes, bitwidth
@@ -242,8 +245,11 @@ class Label:
         hidden: bool,
         tags: set[str]
     ) -> None:
-        tag = match.group() if (match := re.search(r"[A-Z]+$", self._name)) is not None else None
-        if tag is not None and tag not in tags:
+        if (match := re.search(r"[A-Z]+$", self._name)) is not None:
+            tag = match.group()
+            if tag not in tags:
+                tag = None
+        else:
             tag = None
         match batch_tag:
             case "require":
@@ -464,7 +470,7 @@ class ElementaryType(Obj):
 
     def __init__(
         self: Self,
-        name: str,
+        #name: str,
         py_type_str: str
     ) -> None:
         super().__init__()
@@ -532,6 +538,7 @@ class ExternalInclude(Obj):
     __slots__ = ()
 
 
+# TODO: expose macros through c script (under #include <vulkan/vulkan.h>)
 class Macro(Obj):
     __slots__ = ("py_macro",)
 
@@ -570,7 +577,7 @@ class Macro(Obj):
         value = macro_match.group(2)
 
         # A number literal.
-        if value.isdigit():
+        if value.isdecimal():
             return f"{name} = {value}"
 
         # A number from a macro function call.
@@ -620,40 +627,44 @@ class Macro(Obj):
 
 class Constant(Obj):
     __slots__ = (
-        "c_value",
-        "py_value",
-        "cdef_included"
+        "c_type",
+        "c_value"
+        #"write_macro"
     )
 
     def __init__(
         self: Self,
-        c_value: str
+        c_value: str,
+        c_type_str: str | None
     ) -> None:
         super().__init__()
-        py_value, cdef_included = type(self).parse_constant(c_value)
+        #c_type_str, write_macro = type(self).parse_constant(c_value)
+        if c_type_str is None:
+            c_type_str = type(self).analyze_c_type(c_value)
+        self.c_type: CType = CType(c_type_str)
         self.c_value: str = c_value
-        self.py_value: str = py_value
-        self.cdef_included: bool = cdef_included
+        #self.py_value: str = py_value
+        #self.write_macro: bool = write_macro
 
     @classmethod
-    def parse_constant(
+    def analyze_c_type(
         cls: type[Self],
         c_value: str
-    ) -> tuple[str, bool]:
+    ) -> str:
         if c_value.isidentifier():
-            return c_value, False
-        if c_value.isdigit():
-            return c_value, True
-        if (match := re.fullmatch(r"0x[\dA-F]+", c_value)) is not None:
-            return c_value, True
-        if (match := re.fullmatch(r"\(~(\d+)U\)", c_value)) is not None:
-            return f"0x{(1 << 32) - 1 - int(match.group(1)):X}", False
-        if (match := re.fullmatch(r"\(~(\d+)ULL\)", c_value)) is not None:
-            return f"0x{(1 << 64) - 1 - int(match.group(1)):X}", False
-        if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", c_value, flags=re.IGNORECASE)) is not None:
-            return f"{match.group(1)}", False
-        if (match := re.fullmatch(r"\"\w+\"", c_value)) is not None:
-            return c_value, False
+            return "uint64_t"
+        if re.fullmatch(r"0|[1-9][0-9]*|0x[\dA-F]+", c_value) is not None:
+            return "uint64_t"
+        #if (match := re.fullmatch(r"0x[\dA-F]+", c_value)) is not None:
+        #    return c_value, True
+        #if (match := re.fullmatch(r"\(~(\d+)U\)", c_value)) is not None:
+        #    return f"0x{(1 << 32) - 1 - int(match.group(1)):X}", False
+        #if (match := re.fullmatch(r"\(~(\d+)ULL\)", c_value)) is not None:
+        #    return f"0x{(1 << 64) - 1 - int(match.group(1)):X}", False
+        #if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", c_value, flags=re.IGNORECASE)) is not None:
+        #    return f"{match.group(1)}", False
+        if re.fullmatch(r"\"\w+\"", c_value) is not None:
+            return "char *"
         assert False
 
     def write_cdef(
@@ -661,11 +672,15 @@ class Constant(Obj):
         file: TextIO,
         label: Label
     ) -> None:
-        if not self.cdef_included:
-            #file.write(f"{self.name} = None\n")
-            return
         file.write("\n")
-        file.write(f"#define {label.name} {self.c_value}\n")
+        if self.c_value.isdecimal():
+            #file.write(f"{self.name} = None\n")
+            file.write(f"#define {label.name} {self.c_value}\n")
+        else:
+            if str(self.c_type) == "char *":
+                file.write(f"static const char {label.name}[];\n")
+            else:
+                file.write(f"static const {self.c_type} {label.name};\n")
 
     def write_pydef(
         self: Self,
@@ -673,7 +688,7 @@ class Constant(Obj):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"{label.name} = {self.py_value}\n")
+        file.write(f"{label.name} = lib.{label.name}\n")
 
 
 class EnumMember(Obj):
@@ -712,7 +727,7 @@ class Enum(Obj):
         if label.alias is not None:
             return
         for _, member_label in self.members.iter_filtered_items():
-            file.write(f"static const {label.name} {member_label.name};\n")
+            file.write(f"static const uint64_t {member_label.name};\n")
 
     def write_pydef(
         self: Self,
@@ -720,56 +735,39 @@ class Enum(Obj):
         label: Label
     ) -> None:
         bitmask = self.bitmask
-        py_enum_name = label.name
-        assert py_enum_name.startswith("Vk")
-        py_enum_name = py_enum_name.removeprefix("Vk")
+        #assert label.name.startswith("Vk"), label.name
+        py_enum_name = label.name.removeprefix("Vk")
 
         enum_tag = label.tag
-        enum_prefix = label.name
-        if enum_tag is not None:
-            assert enum_prefix.endswith(enum_tag)
-            #if enum_prefix.endswith(enum_tag):
-            enum_prefix = enum_prefix.removesuffix(enum_tag)
-            #else:
-            #    print(label.name, enum_tag)
-        second_version = False
-        if bitmask:
-            assert (match := re.fullmatch(r"(\w+)FlagBits(2)?", enum_prefix)) is not None
-            enum_prefix = match.group(1)
-            second_version = match.group(2) is not None
-        assert re.fullmatch(r"([A-Z][a-z0-9]+)+", enum_prefix)
-        enum_prefix = "".join(f"{segment.group().upper()}_" for segment in re.finditer(r"[A-Z][a-z0-9]+", enum_prefix))
-        if second_version:
-            enum_prefix += "2_"
-        if enum_prefix == "VK_RESULT_":
-            enum_prefix = "VK_"
+        assert (match := re.fullmatch(r"(([A-Z][a-z0-9]+)+?)(FlagBits(2)?)?([A-Z]+)?", label.name)) is not None
+        assert enum_tag == match.group(5)
+        assert bitmask == (match.group(3) is not None)
+        member_prefixes = [segment.group().upper() for segment in re.finditer(r"[A-Z][a-z0-9]+", match.group(1))]
+        if member_prefixes == ["VK", "RESULT"]:
+            member_prefixes.pop()
+        if match.group(4) is not None:
+            member_prefixes.append("2")
 
         file.write("\n")
         file.write(f"class {py_enum_name}({"Flag" if bitmask else "Enum"}):\n")
-        needs_pass = True
+        class_body_empty = True
         for _, member_label in self.members.iter_filtered_items():
-            #if label.name == "VkSubmitFlagBits":
-            #    print(member_label.name)
+            member_segments = member_label.name.split("_")
             if member_label.alias is not None:
                 continue
-            member_name = member_label.name
-            assert member_name.startswith(enum_prefix)
-            py_member_name = member_name.removeprefix(enum_prefix)
-            member_tag = None if label.name in ("VkVendorId", "VkDriverId") else member_label.tag
-            if member_tag is not None:
-                #print(label.name, member_label.name, member_tag)
-                assert py_member_name.endswith(f"_{member_tag}")
-                #    print(member_label.alias is not None, py_member_name, member_label_tag)
-                py_member_name = py_member_name.removesuffix(f"_{member_tag}")
-            if bitmask:
-                py_member_name = py_member_name.removesuffix("_BIT")
+            member_segments = member_segments[len(member_prefixes):]
+            if (member_tag := member_label.tag) is not None:
+                assert member_segments.pop() == member_tag
+            if bitmask and member_segments[-1] == "BIT":
+                member_segments.pop()
             if member_tag is not None and member_tag != enum_tag:
-                py_member_name = f"{py_member_name}_{member_tag}"
-            if py_member_name[0].isdigit():
-                py_member_name = f"_{py_member_name}"
-            file.write(f"    {py_member_name} = lib.{member_name}\n")
-            needs_pass = False
-        if needs_pass:
+                member_segments.append(member_tag)
+            py_membr_name = "_".join(member_segments)
+            if not py_membr_name.isidentifier():
+                py_membr_name = f"_{py_membr_name}"
+            file.write(f"    {py_membr_name} = lib.{member_label.name}\n")
+            class_body_empty = False
+        if class_body_empty:
             file.write("    pass\n")
 
 
@@ -797,7 +795,7 @@ class FunctionPointer(Signature):
         label: Label
     ) -> None:
         file.write("\n")
-        file.write(f"""typedef {self.return_c_type} (*{label.name})({
+        file.write(f"""typedef {self.return_c_type:v} (*{label.name})({
             ", ".join(f"{arg_declaration}" for arg_declaration in self.arg_c_declarations)
         });\n""")
 
@@ -963,7 +961,7 @@ class Registry:
             ("uint64_t", "int")
         ):
             self.objs.add_child(name, ElementaryType(
-                name=name,
+                #name=name,
                 py_type_str=py_type_str
             ))
 
@@ -1151,7 +1149,8 @@ class Registry:
             self.objs.add_alias(name, alias)
             return
         self.objs.add_child(name, Constant(
-            c_value=enum_xml.get("value", "")
+            c_value=enum_xml.get("value", ""),
+            c_type_str=enum_xml.get("type")
         ))
 
     def read_enum_member(
@@ -1414,15 +1413,15 @@ def main() -> None:
         platform="win32",
         defines=["VK_ENABLE_BETA_EXTENSIONS"]
     )
-    #for xml_path in (
-    #    "extern/xml/video.xml",
-    #    "extern/xml/vk.xml"
-    #):
-    registry.read_registry_xml(etree.parse("extern/xml/vk.xml").getroot())
+    for xml_path in (
+        "extern/xml/video.xml",
+        "extern/xml/vk.xml"
+    ):
+        registry.read_registry_xml(etree.parse(xml_path).getroot())
 
     generated_dir = this_dir.joinpath("generated")
     generated_dir.mkdir(exist_ok=True)
-    cdef_path = generated_dir.joinpath("_vulkan.h")
+    cdef_path = generated_dir.joinpath("_vulkan_cdef.h")
     pydef_path = generated_dir.joinpath("_vulkan.py")
     ffi_path = generated_dir.joinpath("_vulkan_ffi.py")
 

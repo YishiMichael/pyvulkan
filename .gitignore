@@ -3,7 +3,7 @@ __pycache__/
 
 /extern/
 /generated/*
-!/generated/_vulkan.h
+!/generated/_vulkan_cdef.h
 !/generated/_vulkan.py
 /playground/
 /Release/
