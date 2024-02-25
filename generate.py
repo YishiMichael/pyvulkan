@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import pathlib
 import re
 import xml.etree.ElementTree as etree
@@ -302,77 +301,71 @@ class CallableCDecl(CDecl):
         self.arg_c_decls: tuple[CDecl, ...] = arg_c_decls
 
 
-class Label:
+class Obj:
     __slots__ = (
-        "_name",
-        "_alias",
-        "_tag",
-        "_required",
-        "_removed",
-        "_hidden"
+        "name",
+        "alias",
+        "category",
+        "xml",
+        #"_tag",
+        "required",
+        "removed",
+        "enabled"
     )
 
     def __init__(
         self: Self,
         name: str,
-        alias: str | None = None
+        alias: str | None,
+        category: str,
+        xml: etree.Element
     ) -> None:
         super().__init__()
-        self._name: str = name
-        self._alias: str | None = alias
-        self._tag: str | None = None
-        self._required: bool = False
-        self._removed: bool = False
-        self._hidden: bool = False
+        self.name: str = name
+        self.alias: str | None = alias
+        self.category: str = category
+        self.xml: etree.Element = xml
+        #self.alias: str | None = alias
+        #self._tag: str | None = None
+        self.required: bool = False
+        self.removed: bool = False
+        self.enabled: bool = False
 
-    @property
-    def name(
-        self: Self
-    ) -> str:
-        return self._name
-
-    @property
-    def alias(
-        self: Self
-    ) -> str | None:
-        return self._alias
-
-    @property
-    def tag(
-        self: Self
-    ) -> str | None:
-        return self._tag
+    #@property
+    #def tag(
+    #    self: Self
+    #) -> str | None:
+    #    return self._tag
 
     def mark_requirement(
         self: Self,
-        batch_tag: str | None,
-        hidden: bool,
-        tags: set[str]
+        requirement_batch_tag: str | None,
+        enabled: bool
     ) -> None:
-        if (match := re.search(r"[A-Z]+$", self._name)) is not None:
-            tag = match.group()
-            if tag not in tags:
-                tag = None
-        else:
-            tag = None
-        match batch_tag:
+        #if (match := re.search(r"[A-Z]+$", self._name)) is not None:
+        #    tag = match.group()
+        #    if tag not in tags:
+        #        tag = None
+        #else:
+        #    tag = None
+        match requirement_batch_tag:
             case "require":
-                if self._required:
-                    assert self._hidden == hidden
-                    assert self._tag == tag
+                if self.required:
+                    assert self.enabled == enabled
+                    #assert self._tag == tag
                     return
-                self._required = True
+                self.required = True
             case "remove":
-                self._removed = True
+                self.removed = True
             case _:
                 return
-        self._hidden = hidden
-        self._tag = tag
+        self.enabled = enabled
+       # self._tag = tag
 
     def check_requirement(
         self: Self
     ) -> bool:
-        return self._required and not self._removed and not self._hidden
+        return self.required and not self.removed and self.enabled
 
     #@classmethod
     #def filter[T](
@@ -384,108 +377,73 @@ class Label:
     #        objs
     #    )
 
-class Obj:
-    __slots__ = ()
+#class Obj:
+#    __slots__ = ()
 
-    def write_cdef_incomplete(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        pass
+#    def write_cdef_incomplete(
+#        self: Self,
+#        file: TextIO,
+#        label: Label
+#    ) -> None:
+#        pass
 
-    def write_cdef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        pass
+#    def write_cdef(
+#        self: Self,
+#        file: TextIO,
+#        label: Label
+#    ) -> None:
+#        pass
 
-    def write_pydef(
-        self: Self,
-        file: TextIO,
-        label: Label
-    ) -> None:
-        pass
+#    def write_pydef(
+#        self: Self,
+#        file: TextIO,
+#        label: Label
+#    ) -> None:
+#        pass
 
 
-class Container[ChildT: Obj]:
-    __slots__ = (
-        "_child_dict",
-        #"_alias_dict",
-        "_label_dict"
-    )
+#class Container[ChildT: Obj]:
+#    __slots__ = (
+#        "_child_dict",
+#        #"_alias_dict",
+#        "_label_dict"
+#    )
 
-    def __init__(
-        self: Self
-    ) -> None:
-        super().__init__()
-        self._child_dict: dict[Label, ChildT] = {}
-        #self._inverse_dict: dict[ChildT, set[str]] = {}
-        #self._alias_dict: dict[str, str] = {}
-        self._label_dict: dict[str, Label] = {}
-        #self._forwardref_aliases: dict[str, list[str]] = {}
+#    def __init__(
+#        self: Self
+#    ) -> None:
+#        super().__init__()
+#        self._child_dict: dict[Label, ChildT] = {}
+#        #self._inverse_dict: dict[ChildT, set[str]] = {}
+#        #self._alias_dict: dict[str, str] = {}
+#        self._label_dict: dict[str, Label] = {}
+#        #self._forwardref_aliases: dict[str, list[str]] = {}
 
-    def iter_filtered_items(
-        self: Self
-    ) -> Iterator[tuple[ChildT, Label]]:
-        for label in self._label_dict.values():
-            if not label.check_requirement():
-                continue
-            yield self.get_child(label.name), label
+#    def iter_filtered_items(
+#        self: Self
+#    ) -> Iterator[tuple[ChildT, Label]]:
+#        for label in self._label_dict.values():
+#            if not label.check_requirement():
+#                continue
+#            yield self.get_child(label.name), label
 
-    #def get_nonalias_name(
-    #    self: Self,
-    #    name: str
-    #) -> str:
-    #    label = self._label_dict[name]
-    #    while label.alias is not None:
-    #        label = self._label_dict[label.alias]
-    #    return label.name
+#    #def get_nonalias_name(
+#    #    self: Self,
+#    #    name: str
+#    #) -> str:
+#    #    label = self._label_dict[name]
+#    #    while label.alias is not None:
+#    #        label = self._label_dict[label.alias]
+#    #    return label.name
 
-    def get_child(
-        self: Self,
-        name: str
-    ) -> ChildT:
-        label = self._label_dict[name]
-        while label.alias is not None:
-            label = self._label_dict[label.alias]
-        return self._child_dict[label]
-
-    def get_label(
-        self: Self,
-        name: str
-    ) -> Label:
-        return self._label_dict[name]
-
-    def contains(
-        self: Self,
-        name: str
-    ) -> bool:
-        return name in self._label_dict
-
-    def add_child(
-        self: Self,
-        name: str,
-        child: ChildT
-    ) -> None:
-        assert not self.contains(name)
-        label = Label(name)
-        self._label_dict[name] = label
-        self._child_dict[label] = child
-        #assert child not in self._inverse_dict
-        #self._inverse_dict[child] = {name}
-        #return child
-
-    def add_alias(
-        self: Self,
-        name: str,
-        alias: str
-    ) -> None:
-        assert not self.contains(name)
-        label = Label(name, alias=alias)
-        self._label_dict[name] = label
-        #assert name not in self._child_dict
+#    def get_child(
+#        self: Self,
+#        name: str
+#    ) -> ChildT:
+#        label = self._label_dict[name]
+#        while label.alias is not None:
+#            label = self._label_dict[label.alias]
+#        return self._child_dict[label]
 
 #    def get_label(
 #        self: Self,
@@ -504,24 +462,59 @@ class Container[ChildT: Obj]:
 #        name: str,
 #        child: ChildT
 #    ) -> None:
-#        assert name not in self._child_dict
-#        self._child_dict[name] = child
-#        if name in self._label_dict:
-#            for alias in self._forwardref_aliases.pop(name):
-#                self.add_child(alias, child)
-#        else:
-#            self._label_dict[name] = Label(name)
+#        assert not self.contains(name)
+#        label = Label(name)
+#        self._label_dict[name] = label
+#        self._child_dict[label] = child
+#        #assert child not in self._inverse_dict
+#        #self._inverse_dict[child] = {name}
+#        #return child
 
-    #def add_child_alias(
-    #    self: Self,
-    #    name: str,
-    #    aliased_name: str
-    #) -> None:
-    #    if aliased_name in self._child_dict:
-    #        self.add_child(name, self.get_child(aliased_name))
-    #    else:
-    #        self._label_dict[name] = Label(name)
-    #        self._forwardref_aliases.setdefault(aliased_name, []).append(name)
+#    def add_alias(
+#        self: Self,
+#        name: str,
+#        alias: str
+#    ) -> None:
+#        assert not self.contains(name)
+#        label = Label(name, alias=alias)
+#        self._label_dict[name] = label
+#        #assert name not in self._child_dict
+
+##    def get_label(
+##        self: Self,
+##        name: str
+##    ) -> Label:
+##        return self._label_dict[name]
+
+##    def contains(
+##        self: Self,
+##        name: str
+##    ) -> bool:
+##        return name in self._label_dict
+
+##    def add_child(
+##        self: Self,
+##        name: str,
+##        child: ChildT
+##    ) -> None:
+##        assert name not in self._child_dict
+##        self._child_dict[name] = child
+##        if name in self._label_dict:
+##            for alias in self._forwardref_aliases.pop(name):
+##                self.add_child(alias, child)
+##        else:
+##            self._label_dict[name] = Label(name)
+
+#    #def add_child_alias(
+#    #    self: Self,
+#    #    name: str,
+#    #    aliased_name: str
+#    #) -> None:
+#    #    if aliased_name in self._child_dict:
+#    #        self.add_child(name, self.get_child(aliased_name))
+#    #    else:
+#    #        self._label_dict[name] = Label(name)
+#    #        self._forwardref_aliases.setdefault(aliased_name, []).append(name)
 
 
 #class Declaration:
@@ -1298,154 +1291,6 @@ class Registry:
             name=name
         ))
 
-    def read_registry_xml(
-        self: Self,
-        registry_xml: etree.Element
-    ) -> None:
-
-        def check_api(
-            api: str | None,
-            target_api: str
-        ) -> bool:
-            return api is None or target_api in api.split(",")
-
-        def check_supported(
-            supported: str | None,
-            target_api: str
-        ) -> bool:
-            return check_api(supported, target_api) and supported != "disabled"
-
-        def check_platform(
-            platform: str | None,
-            target_platform: str
-        ) -> bool:
-            return platform is None or platform == target_platform
-
-        #def extract_tag(
-        #    extension_name: str | None
-        #) -> str | None:
-        #    if extension_name is None:
-        #        return None
-        #    if (match := re.match(r"^VK_([A-Z]+)_", extension_name)) is None:
-        #        return None
-        #    if (tag := match.group(1)) == "VERSION":
-        #        return None
-        #    return tag
-
-        for xml in list(registry_xml.iter()):
-            xml[:] = filter(
-                lambda child_xml: child_xml.tag != "comment",
-                xml
-            )
-
-        for xml in registry_xml:
-            match xml.tag:
-                case "platforms":
-                    self.defines.update(
-                        (platform_xml.get("protect", ""), platform_xml.get("name", "") == self.platform)
-                        for platform_xml in xml.iterfind("platform")
-                    )
-
-                case "tags":
-                    self.tags.update(
-                        tag_xml.get("name", "")
-                        for tag_xml in xml.iterfind("tag")
-                    )
-
-                case "types":
-                    for type_xml in xml.iterfind("type"):
-                        if not check_api(type_xml.get("api"), self.api):
-                            continue
-                        self.read_obj(type_xml.get("name", type_xml.findtext("name", "")), type_xml)
-
-                case "enums":
-                    if (enum_name := xml.get("name", "")) == "API Constants":
-                        for enum_xml in xml.iterfind("enum"):
-                            self.read_constant(enum_xml.get("name", ""), enum_xml)
-                    else:
-                        assert isinstance((enum := self.objs.get_child(enum_name)), Enum)
-                        enum.bitmask = xml.get("type") == "bitmask"
-                        enum.long_bitwidth = xml.get("bitwidth") == "64"
-                        for enum_xml in xml.iterfind("enum"):
-                            member_name = enum_xml.get("name", "")
-                            self.read_enum_member(member_name, enum_xml, enum)
-                            enum.members.get_label(member_name).mark_requirement(
-                                batch_tag="require",
-                                hidden=False,
-                                tags=self.tags
-                            )
-
-                case "commands":
-                    for command_xml in xml.iterfind("command"):
-                        if not check_api(command_xml.get("api"), self.api):
-                            continue
-                        self.read_command(command_xml)
-
-                case "feature":
-                    if not check_api(xml.get("api"), self.api):
-                        continue
-                    for feature_batch_xml in xml:
-                        for feature_unit_xml in feature_batch_xml:
-                            if not check_api(feature_unit_xml.get("api"), self.api):
-                                continue
-                            name = feature_unit_xml.get("name", "")
-                            match feature_unit_xml.tag:
-                                case "type":
-                                    label = self.objs.get_label(name)
-                                case "enum":
-                                    if (extends := feature_unit_xml.get("extends")) is not None:
-                                        assert isinstance((enum := self.objs.get_child(extends)), Enum)
-                                        self.read_enum_member(name, feature_unit_xml, enum)
-                                        label = enum.members.get_label(name)
-                                    else:
-                                        self.read_constant(name, feature_unit_xml)
-                                        label = self.objs.get_label(name)
-                                case "command":
-                                    label = self.objs.get_label(name)
-                                case _:
-                                    continue
-                            protect = feature_unit_xml.get("protect")
-                            label.mark_requirement(
-                                batch_tag=feature_batch_xml.tag,
-                                hidden=protect is not None and not self.defines.get(protect, False),
-                                tags=self.tags
-                            )
-
-                case "extensions":
-                    for extension_xml in xml.iterfind("extension"):
-                        if not check_api(extension_xml.get("api"), self.api) or not check_supported(extension_xml.get("supported"), self.api) \
-                                or not check_platform(extension_xml.get("platform"), self.platform):
-                            continue
-                        for extension_batch_xml in extension_xml:
-                            if not check_api(extension_batch_xml.get("api"), self.api):
-                                continue
-                            for extension_unit_xml in extension_batch_xml:
-                                if not check_api(extension_unit_xml.get("api"), self.api):
-                                    continue
-                                name = extension_unit_xml.get("name", "")
-                                match extension_unit_xml.tag:
-                                    case "type":
-                                        label = self.objs.get_label(name)
-                                    case "enum":
-                                        if (extends := extension_unit_xml.get("extends")) is not None:
-                                            assert isinstance((enum := self.objs.get_child(extends)), Enum)
-                                            self.read_enum_member(name, extension_unit_xml, enum)
-                                            label = enum.members.get_label(name)
-                                        else:
-                                            self.read_constant(name, extension_unit_xml)
-                                            label = self.objs.get_label(name)
-                                    case "command":
-                                        label = self.objs.get_label(name)
-                                    case _:
-                                        continue
-                                #print(name, tag)
-                                protect = extension_unit_xml.get("protect")
-                                label.mark_requirement(
-                                    batch_tag=extension_batch_xml.tag,
-                                    hidden=protect is not None and not self.defines.get(protect, False),
-                                    tags=self.tags
-                                )
-
     def build_cdef(
         self: Self,
         cdef_path: pathlib.Path
@@ -1521,43 +1366,579 @@ class Registry:
             #file.write(")\n")
 
 
-def main() -> None:
-    this_dir = pathlib.Path()
-    registry = Registry(
-        api="vulkan",
-        platform="win32",
-        defines=["VK_ENABLE_BETA_EXTENSIONS"]
+#def main() -> None:
+#    registry = Registry(
+#        api="vulkan",
+#        platform="win32",
+#        defines=["VK_ENABLE_BETA_EXTENSIONS"]
+#    )
+#    for xml_path in (
+#        "extern/xml/video.xml",
+#        "extern/xml/vk.xml"
+#    ):
+#        registry.read_registry_xml(etree.parse(xml_path).getroot())
+
+
+#    match parser.parse_args().mode:
+#        case "all":
+#            registry.build_cdef(cdef_path)
+#            registry.build_ffi(ffi_path, cdef_path)
+#            registry.build_pydef(pydef_path, ffi_path)
+
+#        case "cdef":
+#            registry.build_cdef(cdef_path)
+
+#        case "ffi":
+#            #registry.build_cdef(cdef_path)
+#            registry.build_ffi(ffi_path, cdef_path)
+
+#        case "pydef":
+#            registry.build_pydef(pydef_path, ffi_path)
+
+
+def main(
+    api: str,
+    platform: str,
+    defines: list[str],
+    registry_xml_paths: list[pathlib.Path],
+    cdef_path: pathlib.Path,
+    pydef_path: pathlib.Path,
+    ffi_path: pathlib.Path
+) -> None:
+
+    defines_dict: dict[str, bool] = dict.fromkeys(defines, True)
+    tags_set: set[str] = set()
+    interface_obj_dict: dict[str, Obj] = {
+        name: Obj(
+            name=name,
+            alias=None,
+            category="elememtary_type",
+            xml=etree.Element("type", {
+                "py_type_str": py_type_str
+            })
+        )
+        for name, py_type_str in (
+            ("void", "Never"),
+            ("char", "str"),
+            ("short", "int"),
+            ("int", "int"),
+            ("long", "int"),
+            ("unsigned short", "int"),
+            ("unsigned int", "int"),
+            ("unsigned long", "int"),
+            ("size_t", "int"),
+            ("float", "float"),
+            ("double", "float"),
+            ("int8_t", "int"),
+            ("int16_t", "int"),
+            ("int32_t", "int"),
+            ("int64_t", "int"),
+            ("uint8_t", "int"),
+            ("uint16_t", "int"),
+            ("uint32_t", "int"),
+            ("uint64_t", "int")
+        )
+    }
+    enum_children_dict: dict[str, dict[str, Obj]] = {}
+
+    def check_api(
+        xml: etree.Element
+        #api: str | None,
+        #target_api: str
+    ) -> bool:
+        api_attr = xml.get("api")
+        return api_attr is None or api in api_attr.split(",")
+
+    def check_supported(
+        xml: etree.Element
+        #supported: str | None,
+        #target_api: str
+    ) -> bool:
+        supported_attr = xml.get("supported")
+        return supported_attr is None or api in supported_attr.split(",") and supported_attr != "disabled"
+
+    def check_platform(
+        xml: etree.Element
+        #platform: str | None,
+        #target_platform: str
+    ) -> bool:
+        platform_attr = xml.get("platform")
+        return platform_attr is None or platform_attr == platform
+
+    def add_obj(
+        obj_dict: dict[str, Obj],
+        obj: Obj
+    ) -> None:
+        if obj.name not in obj_dict:
+            obj_dict[obj.name] = obj
+
+    def read_requirement_batch_xml(
+        requirement_batch_xml: etree.Element
+    ) -> None:
+        for requirement_unit_xml in requirement_batch_xml:
+            if not check_api(requirement_unit_xml):
+                continue
+            #protect = requirement_unit_xml.get("protect")
+            if requirement_unit_xml.tag == "enum":
+                enum_name = requirement_unit_xml.get("extends")
+                obj = Obj(
+                    name=requirement_unit_xml.get("name", ""),
+                    alias=requirement_unit_xml.get("alias"),
+                    category="enum_member_extrinsic" if enum_name is not None else "constant_extrinsic",
+                    xml=requirement_unit_xml
+                )
+                add_obj(interface_obj_dict, obj)
+                if enum_name is not None:
+                    add_obj(enum_children_dict.setdefault(enum_name, {}), obj)
+
+            obj = interface_obj_dict[requirement_unit_xml.get("name", "")]
+            requirement_batch_tag = requirement_batch_xml.tag
+            enabled = (protect := requirement_unit_xml.get("protect")) is None or defines_dict.get(protect, False)
+            obj.mark_requirement(requirement_batch_tag, enabled)
+            if obj.category == "enum":
+                for enum_member in enum_children_dict.get(obj.name, {}).values():
+                    if enum_member.category == "enum_member_intrinsic":
+                        enum_member.mark_requirement(requirement_batch_tag, enabled)
+
+    def read_registry(
+        registry_xml: etree.Element
+    ) -> None:
+        for xml in list(registry_xml.iter()):
+            xml[:] = filter(
+                lambda child_xml: child_xml.tag != "comment",
+                xml
+            )
+
+        for xml in registry_xml:
+            match xml.tag:
+                case "platforms":
+                    defines_dict.update(
+                        (platform_xml.get("protect", ""), platform_xml.get("name", "") == platform)
+                        for platform_xml in xml.iterfind("platform")
+                    )
+
+                case "tags":
+                    tags_set.update(
+                        tag_xml.get("name", "")
+                        for tag_xml in xml.iterfind("tag")
+                    )
+
+                case "types":
+                    for type_xml in xml.iterfind("type"):
+                        if not check_api(type_xml):
+                            continue
+                        add_obj(interface_obj_dict, Obj(
+                            name=type_xml.get("name", type_xml.findtext("name", "")),
+                            alias=type_xml.get("alias"),
+                            category=type_xml.get("category", ""),
+                            xml=type_xml
+                        ))
+
+                case "enums":
+                    #enum_dict = (
+                    #    enum_children_dict.setdefault(enum_name, {})
+                    #    if (enum_name := xml.get("name", "")) != "API Constants"
+                    #    else None
+                    #)
+                    enum_name = xml.get("name", "")
+                    if enum_name == "API Constants":
+                        enum_name = None
+                    for enum_xml in xml.iterfind("enum"):
+                        obj = Obj(
+                            name=enum_xml.get("name", ""),
+                            alias=enum_xml.get("alias"),
+                            category="enum_member_intrinsic" if enum_name is not None else "constant_intrinsic",
+                            xml=enum_xml
+                        )
+                        add_obj(interface_obj_dict, obj)
+                        if enum_name is not None:
+                            add_obj(enum_children_dict.setdefault(enum_name, {}), obj)
+                    #    for enum_xml in xml.iterfind("enum"):
+                    #        add_obj(obj_dict, Obj(
+                    #            name=enum_xml.get("name", ""),
+                    #            category="constant",
+                    #            xml=enum_xml
+                    #        ))
+                    #else:
+                    #    #assert isinstance((enum := objs.get_child(enum_name)), Enum)
+                    #    #enum.bitmask = xml.get("type") == "bitmask"
+                    #    #enum.long_bitwidth = xml.get("bitwidth") == "64"
+                    #    for enum_xml in xml.iterfind("enum"):
+                    #        add_obj(obj_dict, add_obj(enum_children_dict[enum_name], Obj(
+                    #            name=enum_xml.get("name", ""),
+                    #            category="enum_member",
+                    #            xml=enum_xml
+                    #        )))
+                    #        #member_name = enum_xml.get("name", "")
+                    #        #read_enum_member(member_name, enum_xml, enum)
+                    #        #enum.members.get_label(member_name).mark_requirement(
+                    #        #    batch_tag="require",
+                    #        #    hidden=False
+                    #        #    #tags=tags_set
+                    #        #)
+
+                case "commands":
+                    for command_xml in xml.iterfind("command"):
+                        if not check_api(command_xml):
+                            continue
+                        add_obj(interface_obj_dict, Obj(
+                            name=(
+                                proto_xml.findtext("name", "")
+                                if (proto_xml := command_xml.find("proto")) is not None
+                                else command_xml.get("name", "")
+                            ),
+                            alias=command_xml.get("alias"),
+                            category="command",
+                            xml=command_xml
+                        ))
+                        #read_command(command_xml)
+
+                case "feature":
+                    if not check_api(xml):
+                        continue
+                    for requirement_batch_xml in xml:
+                        read_requirement_batch_xml(requirement_batch_xml)
+                            #name = feature_unit_xml.get("name", "")
+                            #match feature_unit_xml.tag:
+                            #    case "type":
+                            #        obj = obj_dict[name]
+                            #    case "enum":
+                            #        obj = add_enum_member(
+                            #            obj_dict=obj_dict,
+                            #            enum_dict=(
+                            #                enum_children_dict[extends]
+                            #                if (extends := feature_unit_xml.get("extends")) is not None
+                            #                else None
+                            #            ),
+                            #            enum_xml=feature_unit_xml
+                            #        )
+                            #        #if (extends := feature_unit_xml.get("extends")) is not None:
+                            #        #    #assert isinstance((enum := objs.get_child(extends)), Enum)
+                            #        #    obj = add_obj(obj_dict, add_obj(enum_children_dict[extends], Obj(
+                            #        #        name=name,
+                            #        #        category="enum_member",
+                            #        #        xml=feature_unit_xml
+                            #        #    )))
+                            #        #    #read_enum_member(name, feature_unit_xml, enum)
+                            #        #    #label = enum.members.get_label(name)
+                            #        #else:
+                            #        #    obj = add_obj(obj_dict, Obj(
+                            #        #        name=name,
+                            #        #        category="constant",
+                            #        #        xml=feature_unit_xml
+                            #        #    ))
+                            #        #    #read_constant(name, feature_unit_xml)
+                            #        #    #label = objs.get_label(name)
+                            #    case "command":
+                            #        obj = obj_dict[name]
+                            #        #label = objs.get_label(name)
+                            #    case _:
+                            #        continue
+                            #obj
+
+                case "extensions":
+                    for extension_xml in xml.iterfind("extension"):
+                        if not check_api(extension_xml) or not check_supported(extension_xml) or not check_platform(extension_xml):
+                            continue
+                        for requirement_batch_xml in extension_xml:
+                            if not check_api(requirement_batch_xml):
+                                continue
+                            read_requirement_batch_xml(requirement_batch_xml)
+                            #for requirement_unit_xml in requirement_batch_xml:
+                            #    if not check_api(requirement_unit_xml.get("api"), api):
+                            #        continue
+                            #    if requirement_unit_xml.tag == "enum":
+                            #        add_enum_member(
+                            #            obj_dict=obj_dict,
+                            #            enum_dict=(
+                            #                enum_children_dict[extends]
+                            #                if (extends := requirement_unit_xml.get("extends")) is not None
+                            #                else None
+                            #            ),
+                            #            enum_xml=requirement_unit_xml
+                            #        )
+                            #    obj_dict[requirement_unit_xml.get("name", "")].mark_requirement(
+                            #        batch_tag=requirement_batch_xml.tag,
+                            #        enabled=defines_dict.get(requirement_unit_xml.get("protect", ""), False)
+                            #        #hidden=(protect := requirement_unit_xml.get("protect")) is not None and not defines_dict.get(protect, False)
+                            #        #tags=tags_set
+                            #    )
+                            #    #name = extension_unit_xml.get("name", "")
+                            #    #match extension_unit_xml.tag:
+                            #    #    case "type":
+                            #    #        obj = obj_dict[name]
+                            #    #    case "enum":
+                            #    #        if (extends := extension_unit_xml.get("extends")) is not None:
+                            #    #            #assert isinstance((enum := objs.get_child(extends)), Enum)
+                            #    #            obj = add_obj(obj_dict, add_obj(enum_children_dict[extends], Obj(
+                            #    #                name=name,
+                            #    #                category="enum_member",
+                            #    #                xml=extension_unit_xml
+                            #    #            )))
+                            #    #            #read_enum_member(name, extension_unit_xml, enum)
+                            #    #            #label = enum.members.get_label(name)
+                            #    #        else:
+                            #    #            obj = add_obj(obj_dict, Obj(
+                            #    #                name=name,
+                            #    #                category="constant",
+                            #    #                xml=extension_unit_xml
+                            #    #            ))
+                            #    #            #read_constant(name, extension_unit_xml)
+                            #    #            #label = objs.get_label(name)
+                            #    #    case "command":
+                            #    #        obj = obj_dict[name]
+                            #    #        #label = objs.get_label(name)
+                            #    #    case _:
+                            #    #        continue
+                            #    ##print(name, tag)
+                            #    #protect = extension_unit_xml.get("protect")
+                            #    #obj.mark_requirement(
+                            #    #    batch_tag=extension_batch_xml.tag,
+                            #    #    hidden=protect is not None and not defines_dict.get(protect, False)
+                            #    #    #tags=tags
+                            #    #)
+
+    #def extract_tag(
+    #    extension_name: str | None
+    #) -> str | None:
+    #    if extension_name is None:
+    #        return None
+    #    if (match := re.match(r"^VK_([A-Z]+)_", extension_name)) is None:
+    #        return None
+    #    if (tag := match.group(1)) == "VERSION":
+    #        return None
+    #    return tag
+
+    for registry_xml_path in registry_xml_paths:
+        registry_xml = etree.parse(registry_xml_path).getroot()
+        read_registry(registry_xml)
+
+    ##
+
+    ffi = cffi.FFI()
+    cdef_file = cdef_path.open("w")
+    pydef_file = pydef_path.open("w")
+
+    def write_cdef(
+        *cdef_strs: str
+    ) -> None:
+        cdef_str = "\n".join(cdef_strs)
+        ffi.cdef(cdef_str)
+        cdef_file.write(f"\n{cdef_str}\n")
+
+    def write_pydef(
+        *pydef_strs: str
+    ) -> None:
+        pydef_str = "\n".join(pydef_strs)
+        pydef_file.write(f"\n{pydef_str}\n")
+
+    def write_preamble(
+        name: str,
+        obj: Obj
+    ) -> None:
+        match obj.category:
+            case "":
+                c_type = ffi.typeof(PLATFORM_TYPE_DICT[name])
+                #c_type_str = ffi.getctype("void" if obj.xml.get("requires", "").startswith("vk_video/") else PLATFORM_TYPE_DICT[name])
+                write_cdef(f"typedef {c_type.cname} {name};")
+
+            case "include":
+                pass
+
+            case "define":
+                c_macro_str = "".join(obj.xml.itertext())
+                if (match := re.match(fr"#define {name}(\(.*?\))?", c_macro_str)) is None:
+                    return
+                if (args_match := match.group(1)) is not None:
+                    args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", args_match))
+                    write_cdef(f"uint32_t {name}({", ".join("uint32_t" for _ in args)});")
+                    write_pydef(
+                        f"def {name}({", ".join(f"{arg}: int" for arg in args)}) -> int:",
+                        f"    return lib.{name}({", ".join(args)})"
+                    )
+                else:
+                    write_cdef(f"static const uint32_t {name};")
+                    write_pydef(f"{name}: int = lib.{name}")
+
+            case "basetype":
+                c_type = ffi.typeof(BASETYPE_DICT[name])
+                write_cdef(f"typedef {c_type.cname} {name};")
+
+            case "enum":
+                write_cdef(f"typedef {f"VkFlags64" if obj.xml.get("bitwidth") == "64" else f"enum {name} {{ ... }}"} {name};")
+
+            case "bitmask":
+                c_type = ffi.typeof(obj.xml.findtext("type", ""))
+                write_cdef(f"typedef {c_type.cname} {name};")
+
+            case "funcpointer":
+                c_statement_str = "".join(obj.xml.itertext())
+                assert (match := re.fullmatch(fr"typedef (.*?)\(VKAPI_PTR \*{name}\)(.*);", c_statement_str, flags=re.DOTALL)) is not None
+                c_type = ffi.typeof(f"{match.group(1)}(*){match.group(2)}")
+                write_cdef(f"{ffi.getctype(c_type, name)};")
+
+            case "handle":
+                write_cdef(f"typedef struct {name}_T *{name};")
+
+            case "struct":
+                write_cdef(f"typedef struct {name} {name};")
+
+            case "union":
+                write_cdef(f"typedef union {name} {name};")
+
+            case "constant_intrinsic":
+                c_value = obj.xml.get("value", "")
+                if c_value.isdecimal():
+                    write_cdef(f"#define {name} {c_value}")
+                else:
+                    c_type = ffi.typeof(obj.xml.get("type", ""))
+                    write_cdef(f"static const {ffi.getctype(c_type, name)};")
+
+            case "constant_extrinsic":
+                c_value = obj.xml.get("value", "")
+                if c_value.isdecimal():
+                    write_cdef(f"#define {name} {c_value}")
+                else:
+                    if c_value.isidentifier():
+                        c_type = ffi.typeof("uint32_t")
+                    elif re.fullmatch(r"0x[\dA-F]+", c_value) is not None:
+                        c_type = ffi.typeof("uint32_t")
+                    elif re.fullmatch(r"\"\w+\"", c_value) is not None:
+                        c_type = ffi.typeof("char []")
+                    else:
+                        assert False
+                    write_cdef(f"static const {ffi.getctype(c_type, name)};")
+
+            case "enum_member_intrinsic":
+                write_cdef(f"static const uint64_t {name};")
+
+            case "enum_member_extrinsic":
+                write_cdef(f"static const uint64_t {name};")
+
+            case "command":
+                pass
+
+            case _:
+                assert False
+
+    def write_document(
+        name: str,
+        obj: Obj
+    ) -> None:
+        match obj.category:
+            case "":
+                pass  # TODO
+
+            case "include":
+                pass
+
+            case "define":
+                pass
+
+            case "basetype":
+                pass  # TODO
+
+            case "enum":
+                pass  # TODO
+
+            case "bitmask":
+                pass  # TODO
+
+            case "funcpointer":
+                pass  # TODO
+
+            case "handle":
+                write_pydef(
+                    f"class {name}(VulkanCData):",
+                    f"    __slots__ = ()"
+                )
+
+            case "struct":
+                pass  # TODO
+
+            case "union":
+                pass  # TODO
+
+            case "constant_intrinsic":
+                pass
+
+            case "constant_extrinsic":
+                pass
+
+            case "enum_member_intrinsic":
+                pass
+
+            case "enum_member_extrinsic":
+                pass
+
+            case "command":
+                pass  # TODO
+
+            case _:
+                assert False
+
+    write_cdef("// Auto-generated C definitions")
+    write_pydef(
+        "from __future__ import annotations",
+        "",
+        "# Auto-generated python interface",
+        "",
+        "from enum import (",
+        "    Enum,",
+        "    Flag",
+        ")",
+        "from typing import (",
+        "    Never,",
+        "    Union",
+        ")",
+        "",
+        "import cffi",
+        "",
+        f"from {ffi_path.relative_to(pydef_path.parent).stem} import (",
+        "    ffi,",
+        "    lib",
+        ")",
+        ""
     )
-    for xml_path in (
-        "extern/xml/video.xml",
-        "extern/xml/vk.xml"
-    ):
-        registry.read_registry_xml(etree.parse(xml_path).getroot())
 
-    generated_dir = this_dir.joinpath("generated")
-    generated_dir.mkdir(exist_ok=True)
-    cdef_path = generated_dir.joinpath("_vulkan_cdef.h")
-    pydef_path = generated_dir.joinpath("_vulkan.py")
-    ffi_path = generated_dir.joinpath("_vulkan_ffi.py")
+    for name, obj in interface_obj_dict.items():
+        while obj.alias is not None:
+            obj = interface_obj_dict[obj.alias]
+        if obj.check_requirement():
+            write_preamble(name, obj)
+    for name, obj in interface_obj_dict.items():
+        while obj.alias is not None:
+            obj = interface_obj_dict[obj.alias]
+        if obj.check_requirement():
+            write_document(name, obj)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("all", "cdef", "ffi", "pydef"))
-    match parser.parse_args().mode:
-        case "all":
-            registry.build_cdef(cdef_path)
-            registry.build_ffi(ffi_path, cdef_path)
-            registry.build_pydef(pydef_path, ffi_path)
-
-        case "cdef":
-            registry.build_cdef(cdef_path)
-
-        case "ffi":
-            #registry.build_cdef(cdef_path)
-            registry.build_ffi(ffi_path, cdef_path)
-
-        case "pydef":
-            registry.build_pydef(pydef_path, ffi_path)
+    ffi.set_source(
+        module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
+        source="".join((
+            *(f"#define {define}\n" for define, enabled in defines_dict.items() if enabled),
+            "#include <vulkan/vulkan.h>\n"
+        )),
+        include_dirs=["extern/vulkan/Include"],
+        library_dirs=["extern/vulkan/Lib"],
+        libraries=["vulkan-1"]
+    )
+    ffi.compile()
 
 
 if __name__ == "__main__":
-    main()
+    generated_dir = pathlib.Path().joinpath("generated")
+    generated_dir.mkdir(exist_ok=True)
+    main(
+        api="vulkan",
+        platform="win32",
+        defines=[
+            "VK_ENABLE_BETA_EXTENSIONS"
+        ],
+        registry_xml_paths=[
+            pathlib.Path("extern/xml/video.xml"),
+            pathlib.Path("extern/xml/vk.xml")
+        ],
+        cdef_path=generated_dir.joinpath("_vulkan_cdef.h"),
+        pydef_path=generated_dir.joinpath("_vulkan.py"),
+        ffi_path=generated_dir.joinpath("_vulkan_ffi.py")
+    )
