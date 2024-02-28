@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 # Auto-generated python interface
@@ -18,4 +17,3 @@ from _vulkan_ffi import (
     ffi,
     lib
 )
-

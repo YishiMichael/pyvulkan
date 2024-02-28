@@ -7,12 +7,13 @@ import re
 import xml.etree.ElementTree as etree
 from typing import (
     Callable,
+    ClassVar,
     Final,
     Iterator,
+    Mapping,
     Self,
     TextIO,
-    Union,
-    overload
+    Union
 )
 
 import attrs
@@ -117,6 +118,8 @@ class CType:
         "_array_sizes"
     )
 
+    _unresolved_c_types: ClassVar[list[CType]] = []
+
     def __init__(
         self: Self,
         c_type_str: str
@@ -127,7 +130,12 @@ class CType:
         self._const_specifier: bool = const_specifier
         self._pointer_const_specifiers: tuple[bool, ...] = pointer_const_specifiers
         self._array_size_strs: tuple[str, ...] = array_size_strs
-        self._array_sizes: tuple[int, ...] = NotImplemented
+        if any(
+            array_size_str.isidentifier()
+            for array_size_str in array_size_strs
+        ):
+            cls = type(self)
+            cls._unresolved_c_types.append(self)
 
     def format(
         self: Self,
@@ -150,12 +158,25 @@ class CType:
         #return " ".join(components)
 
     @classmethod
+    def resolve_array_sizes(
+        cls: type[Self],
+        array_size_values: dict[str, str]
+    ) -> None:
+        while cls._unresolved_c_types:
+            c_type = cls._unresolved_c_types.pop()
+            c_type._array_size_strs = tuple(
+                array_size_values[array_size_str] if array_size_str.isidentifier() else array_size_str
+                for array_size_str in c_type._array_size_strs
+            )
+
+    @classmethod
     def _parse_c_type_str(
         cls: type[Self],
         c_type_str: str
         #objs: Container[Obj] | None
     ) -> tuple[str, bool, tuple[bool, ...], tuple[str, ...]]:
         #class_specifier: str | None = None
+        class_strs: list[str] = []
         const_specifier: bool = False
         pointer_const_specifiers: list[bool] = []
         array_size_strs: list[str] = []
@@ -165,9 +186,8 @@ class CType:
         if next_token == "const":
             const_specifier = True
             next_token = next(tokens)
-        class_str = next_token
         while next_token.isidentifier() and next_token != "const":
-            class_str = f"{class_str} next_token"
+            class_strs.append(next_token)
             next_token = next(tokens, "")
         if next_token == "const":
             const_specifier = True
@@ -220,7 +240,7 @@ class CType:
         #)
         #if objs is not None:
         #    base_type_str = objs.get_nonalias_name(base_type_str)
-        return class_str, const_specifier, tuple(pointer_const_specifiers), tuple(array_size_strs)
+        return " ".join(class_strs), const_specifier, tuple(pointer_const_specifiers), tuple(array_size_strs)
         ##array_size_strs: tuple[str, ...] = ()
         #pointer_count: int = 0
         #is_nonconst_pointer: bool = False
@@ -495,15 +515,8 @@ class Record:
 
 
 @attrs.define(kw_only=True)
-class IncludeRecord(Record):
+class UnusedRecord(Record):
     pass
-    #text: str
-
-
-@attrs.define(kw_only=True)
-class DefineRecord(Record):
-    c_type: CType
-    argument_c_types: dict[str, CType] | None
     #text: str
 
 
@@ -530,6 +543,7 @@ class TypedefRecord(Record):
 
 @attrs.define(kw_only=True)
 class BitmaskRecord(Record):
+    attr_type: str
     attr_requires: str | None
 
 
@@ -537,12 +551,6 @@ class BitmaskRecord(Record):
 class EnumRecord(Record):
     attr_type: str  # "enum" | "bitmask"
     attr_bitwidth: str | None
-
-
-@attrs.define(kw_only=True)
-class FunctionPointerRecord(Record):
-    return_c_type: CType
-    argument_c_types: dict[str, CType]
 
 
 @attrs.define(kw_only=True)
@@ -563,6 +571,24 @@ class UnionRecord(Record):
 
 
 @attrs.define(kw_only=True)
+class FunctionPointerRecord(Record):
+    return_c_type: CType
+    argument_c_types: dict[str, CType]
+
+
+@attrs.define(kw_only=True)
+class MacroRecord(Record):
+    c_type: CType
+
+
+@attrs.define(kw_only=True)
+class FunctionMacroRecord(Record):
+    return_c_type: CType
+    argument_c_types: dict[str, CType]
+    #text: str
+
+
+@attrs.define(kw_only=True)
 class ConstantRecord(Record):
     c_type: CType
     attr_value: str
@@ -576,7 +602,7 @@ class ConstantRecord(Record):
 @attrs.define(kw_only=True)
 class EnumMemberRecord(Record):
     enum_name: str
-    attr_protect: str | None
+    #attr_protect: str | None
 
 
 #@attrs.define(kw_only=True)
@@ -587,7 +613,9 @@ class EnumMemberRecord(Record):
 @attrs.define(kw_only=True)
 class CommandRecord(Record):
     handle_name: str | None
+    return_c_type: CType
     arguments: dict[str, Argument]
+    attr_type: str | None  # "instance" | "device" | None
 
 
 #class Obj:
@@ -1765,34 +1793,20 @@ class RecordCollection[T: Record, **P]:
     #        requirement = requirement and name in self._required_set and name not in self._removed_set
     #    return self._record_dict[name], requirement
 
-    def alias_resolved(
-        self: Self
-    ) -> bool:
-        return not self._alias_forwardref_dict
-
-    @overload
-    def get(
+    def __getitem__(
         self: Self,
         __name: str
-    ) -> T: ...
+    ) -> T:
+        return self._record_dict[__name]
 
-    @overload
     def get[DefaultT](
         self: Self,
         __name: str,
         __default: DefaultT
-    ) -> T | DefaultT: ...
-
-    def get[DefaultT](
-        self: Self,
-        __name: str,
-        __default: DefaultT = Ellipsis
     ) -> T | DefaultT:
         try:
-            return self._record_dict[__name]
+            return self[__name]
         except KeyError:
-            if __default is Ellipsis:
-                raise KeyError(__name) from None
             return __default
 
         #return self._record_dict[name]
@@ -1808,6 +1822,18 @@ class RecordCollection[T: Record, **P]:
         except KeyError:
             raise KeyError(__name) from None
 
+    def finalize(
+        self: Self,
+        filter: Callable[[T], bool] | None = None
+    ) -> dict[str, T]:
+        assert not self._alias_forwardref_dict
+        return {
+            name: record
+            for name, record in self._record_dict.items()
+            if self._requirement_dict[name].check_requirement()
+            and (filter is None or filter(record))
+        }
+
     #def get(
     #    self: Self,
     #    name: str
@@ -1817,15 +1843,40 @@ class RecordCollection[T: Record, **P]:
     #    except KeyError:
     #        return None
 
-    def items(
-        self: Self
-    ) -> Iterator[tuple[str, T]]:
-        for name, record in self._record_dict.items():
-            if self._requirement_dict[name].check_requirement():
-                yield name, record
-            #record, requirement = self._get_record_and_requirement(name)
-            #if requirement:
-            #    yield name, record
+    #def get(
+    #    self: Self,
+    #    __name: str
+    #) -> T:
+    #    return self._finalized_record_dict[__name]
+
+    #def items(
+    #    self: Self
+    #) -> Iterator[tuple[str, T]]:
+    #    yield from self._finalized_record_dict.items()
+    #    #for name, record in self._record_dict.items():
+    #    #    if self._requirement_dict[name].check_requirement():
+    #    #        yield name, record
+    #    #    #record, requirement = self._get_record_and_requirement(name)
+    #    #    #if requirement:
+    #    #    #    yield name, record
+
+
+type RecordUnionType = Union[
+    UnusedRecord,
+    BuiltinTypeRecord,
+    TypedefRecord,
+    BitmaskRecord,
+    EnumRecord,
+    HandleRecord,
+    StructRecord,
+    UnionRecord,
+    FunctionPointerRecord,
+    MacroRecord,
+    FunctionMacroRecord,
+    ConstantRecord,
+    EnumMemberRecord,
+    CommandRecord
+]
 
 
 class Registry:
@@ -1833,38 +1884,133 @@ class Registry:
         "define_list",
         "include_list",
         "tag_list",
-        #"obj_cls_dict",
-        #"alias_obj_dict",
-        "include_records",
-        "define_records",
+        "unused_records",
         "builtin_type_records",
+        "macro_records",
+        "function_macro_records",
         "typedef_records",
         "bitmask_records",
         "enum_records",
-        "function_pointer_records",
         "handle_records",
         "struct_records",
         "union_records",
+        "function_pointer_records",
         "constant_records",
         "enum_member_records",
-        "command_records"
+        "command_records",
+        "_records_tuple"
     )
 
-    type RecordUnionType = Union[
-        IncludeRecord,
-        DefineRecord,
-        BuiltinTypeRecord,
-        TypedefRecord,
-        BitmaskRecord,
-        EnumRecord,
-        FunctionPointerRecord,
-        HandleRecord,
-        StructRecord,
-        UnionRecord,
-        ConstantRecord,
-        EnumMemberRecord,
-        CommandRecord
-    ]
+    def __init__(
+        self: Self,
+        define_list: list[str],
+        include_list: list[str],
+        tag_list: list[str],
+        unused_records: dict[str, UnusedRecord],
+        builtin_type_records: dict[str, BuiltinTypeRecord],
+        macro_records: dict[str, MacroRecord],
+        function_macro_records: dict[str, FunctionMacroRecord],
+        typedef_records: dict[str, TypedefRecord],
+        bitmask_records: dict[str, BitmaskRecord],
+        enum_records: dict[str, EnumRecord],
+        handle_records: dict[str, HandleRecord],
+        struct_records: dict[str, StructRecord],
+        union_records: dict[str, UnionRecord],
+        function_pointer_records: dict[str, FunctionPointerRecord],
+        constant_records: dict[str, ConstantRecord],
+        enum_member_records: dict[str, EnumMemberRecord],
+        command_records: dict[str, CommandRecord]
+    ) -> None:
+        super().__init__()
+        self.define_list: Final[list[str]] = define_list
+        self.include_list: Final[list[str]] = include_list
+        self.tag_list: Final[list[str]] = tag_list
+
+        self.unused_records: Final[dict[str, UnusedRecord]] = unused_records
+        self.builtin_type_records: Final[dict[str, BuiltinTypeRecord]] = builtin_type_records
+        self.macro_records: Final[dict[str, MacroRecord]] = macro_records
+        self.function_macro_records: Final[dict[str, FunctionMacroRecord]] = function_macro_records
+        self.typedef_records: Final[dict[str, TypedefRecord]] = typedef_records
+        self.bitmask_records: Final[dict[str, BitmaskRecord]] = bitmask_records
+        self.enum_records: Final[dict[str, EnumRecord]] = enum_records
+        self.handle_records: Final[dict[str, HandleRecord]] = handle_records
+        self.struct_records: Final[dict[str, StructRecord]] = struct_records
+        self.union_records: Final[dict[str, UnionRecord]] = union_records
+        self.function_pointer_records: Final[dict[str, FunctionPointerRecord]] = function_pointer_records
+        self.constant_records: Final[dict[str, ConstantRecord]] = constant_records
+        self.enum_member_records: Final[dict[str, EnumMemberRecord]] = enum_member_records
+        self.command_records: Final[dict[str, CommandRecord]] = command_records
+
+        self._records_tuple: Final[tuple] = (
+            self.builtin_type_records,
+            self.unused_records,
+            self.typedef_records,
+            self.bitmask_records,
+            self.enum_records,
+            self.handle_records,
+            self.struct_records,
+            self.union_records,
+            self.function_pointer_records,
+            self.macro_records,
+            self.function_macro_records,
+            self.constant_records,
+            self.enum_member_records,
+            self.command_records
+        )
+
+    #def alias_resolved(
+    #    self: Self
+    #) -> bool:
+    #    return all(records.alias_resolved() for records in self._records_tuple)
+
+    def __getitem__(
+        self: Self,
+        __name: str
+    ) -> RecordUnionType:
+        for records in self._records_tuple:
+            try:
+                return records[__name]
+            except KeyError:
+                continue
+        raise KeyError(__name)
+
+    def get[DefaultT](
+        self: Self,
+        __name: str,
+        __default: DefaultT
+    ) -> RecordUnionType | DefaultT:
+        for records in self._records_tuple:
+            try:
+                return records[__name]
+            except KeyError:
+                continue
+        return __default
+        #if __default is Ellipsis:
+        #    raise KeyError(__name)
+        #return __default
+
+
+class MutableRegistry:
+    __slots__ = (
+        "define_list",
+        "include_list",
+        "tag_list",
+        "unused_records",
+        "builtin_type_records",
+        "macro_records",
+        "function_macro_records",
+        "typedef_records",
+        "bitmask_records",
+        "enum_records",
+        "handle_records",
+        "struct_records",
+        "union_records",
+        "function_pointer_records",
+        "constant_records",
+        "enum_member_records",
+        "command_records",
+        "_records_tuple"
+    )
 
     def __init__(
         self: Self
@@ -1873,83 +2019,114 @@ class Registry:
         self.define_list: Final[list[str]] = []
         self.include_list: Final[list[str]] = []
         self.tag_list: Final[list[str]] = []
+
         #self.obj_cls_dict: dict[str, type[Obj]] = {}
         #self.alias_obj_dict: dict[str, AliasObj] = {}
-        self.include_records: Final = RecordCollection(IncludeRecord)
-        self.define_records: Final = RecordCollection(DefineRecord)
+        self.unused_records: Final = RecordCollection(UnusedRecord)
         self.builtin_type_records: Final = RecordCollection(BuiltinTypeRecord)
         self.typedef_records: Final = RecordCollection(TypedefRecord)
         self.bitmask_records: Final = RecordCollection(BitmaskRecord)
         self.enum_records: Final = RecordCollection(EnumRecord)
-        self.function_pointer_records: Final = RecordCollection(FunctionPointerRecord)
         self.handle_records: Final = RecordCollection(HandleRecord)
         self.struct_records: Final = RecordCollection(StructRecord)
         self.union_records: Final = RecordCollection(UnionRecord)
+        self.function_pointer_records: Final = RecordCollection(FunctionPointerRecord)
+        self.macro_records: Final = RecordCollection(MacroRecord)
+        self.function_macro_records: Final = RecordCollection(FunctionMacroRecord)
         self.constant_records: Final = RecordCollection(ConstantRecord)
         self.enum_member_records: Final = RecordCollection(EnumMemberRecord)
         self.command_records: Final = RecordCollection(CommandRecord)
 
-    def _get_records_tuple(
-        self: Self
-    ) -> tuple[RecordCollection, ...]:
-        return (
-            self.include_records,
-            self.define_records,
+        self._records_tuple: Final[tuple] = (
             self.builtin_type_records,
+            self.unused_records,
             self.typedef_records,
             self.bitmask_records,
             self.enum_records,
-            self.function_pointer_records,
             self.handle_records,
             self.struct_records,
             self.union_records,
+            self.function_pointer_records,
+            self.macro_records,
+            self.function_macro_records,
             self.constant_records,
             self.enum_member_records,
             self.command_records
         )
 
-    def alias_resolved(
-        self: Self
-    ) -> bool:
-        return all(records.alias_resolved() for records in self._get_records_tuple())
+    #def alias_resolved(
+    #    self: Self
+    #) -> bool:
+    #    return all(records.alias_resolved() for records in self._records_tuple)
 
-    @overload
-    def get(
+    def __getitem__(
         self: Self,
         __name: str
-    ) -> RecordUnionType: ...
-
-    @overload
-    def get[DefaultT](
-        self: Self,
-        __name: str,
-        __default: DefaultT
-    ) -> RecordUnionType | DefaultT: ...
-
-    def get[DefaultT](
-        self: Self,
-        __name: str,
-        __default: DefaultT = Ellipsis
-    ) -> RecordUnionType | DefaultT:
-        for records in self._get_records_tuple():
+    ) -> RecordUnionType:
+        for records in self._records_tuple:
             try:
                 return records.get(__name)
             except KeyError:
                 continue
-        if __default is Ellipsis:
-            raise KeyError(__name)
+        raise KeyError(__name)
+
+    def get[DefaultT](
+        self: Self,
+        __name: str,
+        __default: DefaultT
+    ) -> RecordUnionType | DefaultT:
+        for records in self._records_tuple:
+            try:
+                return records[__name]
+            except KeyError:
+                continue
         return __default
 
     def get_requirement(
         self: Self,
         __name: str
     ) -> Requirement:
-        for records in self._get_records_tuple():
+        for records in self._records_tuple:
             try:
                 return records.get_requirement(__name)
             except KeyError:
                 continue
         raise KeyError(__name)
+
+    def finalize(
+        self: Self
+    ) -> Registry:
+        registry = Registry(
+            define_list=self.define_list,
+            include_list=self.include_list,
+            tag_list=self.tag_list,
+            unused_records=self.unused_records.finalize(),
+            builtin_type_records=self.builtin_type_records.finalize(),
+            macro_records=self.macro_records.finalize(),
+            function_macro_records=self.function_macro_records.finalize(),
+            typedef_records=self.typedef_records.finalize(),
+            bitmask_records=self.bitmask_records.finalize(),
+            enum_records=self.enum_records.finalize(),
+            handle_records=self.handle_records.finalize(),
+            struct_records=self.struct_records.finalize(),
+            union_records=self.union_records.finalize(),
+            function_pointer_records=self.function_pointer_records.finalize(),
+            constant_records=self.constant_records.finalize(),
+            enum_member_records=self.enum_member_records.finalize(
+                filter=lambda enum_member:
+                    self.enum_records.get_requirement(enum_member.enum_name).check_requirement()
+            ),
+            command_records=self.command_records.finalize(
+                filter=lambda command:
+                    command.handle_name is None or self.handle_records.get_requirement(command.handle_name).check_requirement()
+            ),
+        )
+        CType.resolve_array_sizes({
+            name: value
+            for name, constant in registry.constant_records.items()
+            if (value := constant.attr_value).isdecimal()
+        })
+        return registry
 
     #def get(
     #    self: Self,
@@ -2101,23 +2278,23 @@ class Program:
         #target_api: str
     ) -> bool:
         supported = xml.get("supported")
-        return supported is None or target_api in supported.split(",") and supported != "disabled"
+        return supported is None or supported != "disabled" and target_api in supported.split(",")
 
     @classmethod
     def _check_platform(
         cls: type[Self],
         xml: etree.Element,
-        target_platform: str
+        target_platforms: list[str]
         #platform: str | None,
         #target_platform: str
     ) -> bool:
         platform = xml.get("platform")
-        return platform is None or platform == target_platform
+        return platform is None or platform in target_platforms
 
     @classmethod
     def _read_type_xml(
         cls: type[Self],
-        registry: Registry,
+        registry: MutableRegistry,
         type_xml: etree.Element,
     ) -> None:
         #if (alias := type_xml.get("alias")) is not None:
@@ -2131,29 +2308,8 @@ class Program:
                 name = type_xml.get("name", "")
                 if registry.get(name, None) is not None:
                     return
-                registry.include_records.new(
+                registry.unused_records.new(
                     name=name
-                )
-
-            case "define":
-                c_type = CType("void")
-                argument_c_types = None
-                if len(define_contents := tuple(
-                    match.group(1)
-                    for line in cls._join_xml_text(type_xml).replace("\\\n", "").splitlines()
-                    if (match := re.fullmatch(fr"#define {name}\b(.*)", line.lstrip())) is not None
-                )) == 1:
-                    (define_content,) = define_contents
-                    c_type = CType("uint32_t")
-                    if (arguments_match := re.match(r"\((.*?)\)", define_content)) is not None:
-                        argument_c_types = {
-                            argument_name: CType("uint32_t")
-                            for argument_name in arguments_match.group(1).split(", ")
-                        }
-                registry.define_records.new(
-                    name=name,
-                    c_type=c_type,
-                    argument_c_types=argument_c_types
                 )
 
             case "basetype":
@@ -2171,6 +2327,7 @@ class Program:
                     name=name,
                     c_type=CType(PLATFORM_TYPE_DICT.get(name, "void"))
                 )
+                registry.typedef_records.get_requirement(name).mark_required()
 
             case "bitmask":
                 if (alias := type_xml.get("alias")) is not None:
@@ -2178,6 +2335,7 @@ class Program:
                     return
                 registry.bitmask_records.new(
                     name=name,
+                    attr_type=type_xml.findtext("type", ""),
                     attr_requires=type_xml.get("requires")
                 )
 
@@ -2189,23 +2347,6 @@ class Program:
                     name=name,
                     attr_type="enum",  # Fill later
                     attr_bitwidth=None  # Fill later
-                )
-
-            case "funcpointer":
-                assert (match := re.fullmatch(
-                    fr"typedef (.*?) \(VKAPI_PTR \*{name}\)\((.*)\);",
-                    cls._join_xml_text(type_xml).replace("\n", "")
-                )) is not None
-                registry.function_pointer_records.new(
-                    name=name,
-                    return_c_type=CType(match.group(1)),
-                    argument_c_types={
-                        argument_name: CType(c_type_str)
-                        for c_type_str, _, argument_name in (
-                            argument_declaration.rpartition(" ")
-                            for argument_declaration in arguments_str.split(",")
-                        )
-                    } if (arguments_str := match.group(2)) != "void" else {}
                 )
 
             case "handle":
@@ -2267,13 +2408,56 @@ class Program:
                     }
                 )
 
+            case "funcpointer":
+                assert (match := re.fullmatch(
+                    fr"typedef (.*?) \(VKAPI_PTR \*{name}\)\((.*)\);",
+                    cls._join_xml_text(type_xml).replace("\n", "")
+                )) is not None
+                registry.function_pointer_records.new(
+                    name=name,
+                    return_c_type=CType(match.group(1)),
+                    argument_c_types={
+                        argument_name: CType(c_type_str)
+                        for c_type_str, _, argument_name in (
+                            argument_declaration.rpartition(" ")
+                            for argument_declaration in arguments_str.split(",")
+                        )
+                    } if (arguments_str := match.group(2)) != "void" else {}
+                )
+
+            case "define":
+                # Tricky judgement on deciding whether to export this macro...
+                if len(define_contents := tuple(
+                    match.group(1)
+                    for line in cls._join_xml_text(type_xml).replace("\\\n", "").splitlines()
+                    if (match := re.fullmatch(fr"#define {name}\b(.*)", line.lstrip())) is not None
+                )) != 1 or "##" in (define_content := define_contents[0]):
+                    registry.unused_records.new(
+                        name=name
+                    )
+                    return
+                if (arguments_match := re.match(r"\((.*?)\)", define_content)) is not None:
+                    registry.function_macro_records.new(
+                        name=name,
+                        return_c_type=CType("const uint32_t"),
+                        argument_c_types={
+                            argument_name: CType("const uint32_t")
+                            for argument_name in arguments_match.group(1).split(", ")
+                        }
+                    )
+                else:
+                    registry.macro_records.new(
+                        name=name,
+                        c_type=CType("const uint32_t")
+                    )
+
             case _:
                 assert False
 
     @classmethod
     def _read_enum_xml(
         cls: type[Self],
-        registry: Registry,
+        registry: MutableRegistry,
         enum_xml: etree.Element,
         enum_name: str | None
     ) -> None:
@@ -2289,13 +2473,13 @@ class Program:
             #    return
             attr_value = enum_xml.get("value", "")
             if (c_type_str := enum_xml.get("type")) is not None:
-                c_type = CType(c_type_str)
+                c_type = CType(f"const {c_type_str}")
             elif attr_value.isidentifier():
-                c_type = CType("uint32_t")
+                c_type = CType("const uint32_t")
             elif re.fullmatch(r"\d+|0x[\dA-F]+", attr_value):
-                c_type = CType("uint32_t")
+                c_type = CType("const uint32_t")
             elif re.fullmatch(r"\"\w+\"", attr_value) is not None:
-                c_type = CType("char []")
+                c_type = CType("const char []")
             else:
                 assert False
             registry.constant_records.new(
@@ -2307,16 +2491,18 @@ class Program:
             if (alias := enum_xml.get("alias")) is not None:
                 registry.enum_member_records.new_alias(name, alias)
                 return
+            if (protect := enum_xml.get("protect")) is not None and protect not in registry.define_list:
+                return
             registry.enum_member_records.new(
                 name=name,
-                enum_name=enum_name,
-                attr_protect=enum_xml.get("protect")
+                enum_name=enum_name
+                #attr_protect=enum_xml.get("protect")
             )
 
     @classmethod
     def _read_command_xml(
         cls: type[Self],
-        registry: Registry,
+        registry: MutableRegistry,
         command_xml: etree.Element
     ) -> None:
         name = command_xml.get("name", command_xml.findtext("proto/name", ""))
@@ -2324,7 +2510,7 @@ class Program:
             registry.command_records.new_alias(name, alias)
             return
 
-        #assert (proto_xml := command_xml.find("proto")) is not None
+        assert (proto_xml := command_xml.find("proto")) is not None
         #name = proto_xml.findtext("name", "")
         handle_name = (
             first_param_type_str
@@ -2336,6 +2522,7 @@ class Program:
         registry.command_records.new(
             name=name,
             handle_name=handle_name,
+            return_c_type=CType(cls._join_xml_text(proto_xml, ignored_tags=["comment", "name"])),
             arguments={
                 param_xml.findtext("name", ""): Argument(
                     c_type=CType(cls._join_xml_text(param_xml, ignored_tags=["comment", "name"])),
@@ -2345,7 +2532,8 @@ class Program:
                     attr_selector=param_xml.get("selector"),
                 )
                 for param_xml in command_xml.iterfind("param")
-            }
+            },
+            attr_type=None
         )
 
         #self._add_obj(self.obj_dict, Obj(
@@ -2428,17 +2616,17 @@ class Program:
     @classmethod
     def _read_registry_xml(
         cls: type[Self],
-        registry: Registry,
+        registry: MutableRegistry,
         registry_xml: etree.Element,
         api: str,
-        platform: str
+        platforms: list[str]
         #registry_xml_path: pathlib.Path
     ) -> None:
         for xml in registry_xml:
             match xml.tag:
                 case "platforms":
                     for platform_xml in xml.iterfind("platform"):
-                        if platform_xml.get("name", "") == platform:
+                        if platform_xml.get("name", "") in platforms:
                             registry.define_list.append(platform_xml.get("protect", ""))
 
                 case "tags":
@@ -2467,7 +2655,7 @@ class Program:
                     if (enum_name := xml.get("name", "")) == "API Constants":
                         enum_name = None
                     else:
-                        enum = registry.enum_records.get(enum_name)
+                        enum = registry.enum_records[enum_name]
                         enum.attr_type = xml.get("type", "enum")
                         enum.attr_bitwidth = xml.get("bitwidth")
                     for enum_xml in xml.iterfind("enum"):
@@ -2615,8 +2803,9 @@ class Program:
                 case "extensions":
                     for extension_xml in xml.iterfind("extension"):
                         if not cls._check_api(extension_xml, api) or not cls._check_supported(extension_xml, api) \
-                                or not cls._check_platform(extension_xml, platform):
+                                or not cls._check_platform(extension_xml, platforms):
                             continue
+                        extension_type = extension_xml.get("type")
                         for requirement_batch_xml in extension_xml:
                             if not cls._check_api(requirement_batch_xml, api):
                                 continue
@@ -2641,6 +2830,8 @@ class Program:
                                         enum_xml=requirement_unit_xml,
                                         enum_name=requirement_unit_xml.get("extends")
                                     )
+                                if requirement_unit_xml.tag == "command":
+                                    registry.command_records[name].attr_type = extension_type
                                 registry.get_requirement(name).mark_required()
                             #    if requirement_unit_xml.tag == "enum":
                             #        add_enum_member(
@@ -2696,13 +2887,19 @@ class Program:
     @classmethod
     def read(
         cls: type[Self],
-        registry: Registry,
+        registry: MutableRegistry,
         registry_xml_paths: list[pathlib.Path],
         api: str,
-        platform: str,
-        defines: list[str]
+        platform: str | None,
+        beta_extensions: bool
     ) -> None:
-        registry.define_list.extend(defines)
+        platforms: list[str] = []
+        if platform is not None:
+            platforms.append(platform)
+        if beta_extensions:
+            platforms.append("provisional")
+
+        #registry.define_list.extend(defines)
         for name, py_type_str in BUILTIN_TYPE_DICT.items():
             registry.builtin_type_records.new(
                 name=name,
@@ -2735,10 +2932,8 @@ class Program:
                 registry=registry,
                 registry_xml=etree.parse(registry_xml_path).getroot(),
                 api=api,
-                platform=platform
+                platforms=platforms
             )
-
-        assert registry.alias_resolved()
 
     #def _check_obj_requirement(
     #    self: Self,
@@ -2955,38 +3150,109 @@ class Program:
 
         assert False
 
-    @classmethod
-    def _write_str(
-        cls: type[Self],
-        file: TextIO,
-        content: str
-    ) -> None:
-        lines = content.splitlines()
-        assert lines.pop(0) == ""
-        spaces = lines.pop(-1) + "    "
-        assert not spaces.strip(" ")
-        file.write("\n")
-        for line in lines:
-            if line:
-                assert line.startswith(spaces)
-                line = line.removeprefix(spaces)
-            file.write(f"{line}\n")
+    #@classmethod
+    #def _write_str(
+    #    cls: type[Self],
+    #    file: TextIO,
+    #    content: str
+    #) -> None:
+    #    lines = content.splitlines()
+    #    assert lines.pop(0) == ""
+    #    spaces = lines.pop(-1) + "    "
+    #    assert not spaces.strip(" ")
+    #    file.write("\n")
+    #    for line in lines:
+    #        if line:
+    #            assert line.startswith(spaces)
+    #            line = line.removeprefix(spaces)
+    #        file.write(f"{line}\n")
 
     @classmethod
-    def _write_cdef(
+    def _iter_cdef_strs(
         cls: type[Self],
-        registry: Registry,
-        cdef_file: TextIO
-    ) -> None:
-        pass
+        registry: Registry
+    ) -> Iterator[str]:
+        #include_records
+        #builtin_type_records
+
+        #typedef_records
+        #bitmask_records
+        #enum_records
+        #handle_records
+        #struct_records
+        #union_records
+        #function_pointer_records
+
+        #macro_records
+        #function_macro_records
+        #constant_records
+        #enum_member_records
+        #command_records
+        for name, typedef in registry.typedef_records.items():
+            yield f"""typedef {typedef.c_type.format()} {name};"""
+
+        for name, bitmask in registry.bitmask_records.items():
+            yield f"""typedef {bitmask.attr_type} {name};"""
+
+        for name, enum in registry.enum_records.items():
+            yield f"""typedef {f"VkFlags64" if enum.attr_bitwidth == "64" else f"enum {name} {{ ... }}"} {name};"""
+
+        for name, _ in registry.handle_records.items():
+            yield f"""typedef struct {name}_T *{name};"""
+
+        for name, _ in registry.struct_records.items():
+            yield f"""typedef struct {name} {name};"""
+
+        for name, _ in registry.union_records.items():
+            yield f"""typedef union {name} {name};"""
+
+        for name, function_pointer in registry.function_pointer_records.items():
+            yield f"""typedef {function_pointer.return_c_type.format()} (* {name})(\n{",\n".join(
+                f"    {argument_c_type.format(argument_name)}"
+                for argument_name, argument_c_type in function_pointer.argument_c_types.items()
+            ) if function_pointer.argument_c_types else "    void"}\n);"""
+
+        for name, macro in registry.macro_records.items():
+            yield f"""static {macro.c_type.format(name)};"""
+
+        for name, function_macro in registry.function_macro_records.items():
+            yield f"""static {function_macro.return_c_type.format()} {name}(\n{",\n".join(
+                f"    {argument_c_type.format(argument_name)}"
+                for argument_name, argument_c_type in function_macro.argument_c_types.items()
+            ) if function_macro.argument_c_types else "    void"}\n);"""
+
+        for name, constant in registry.constant_records.items():
+            yield f"""static {constant.c_type.format(name)};"""
+
+        for name, enum_member in registry.enum_member_records.items():
+            yield f"""static const {enum_member.enum_name} {name};"""
+
+        for name, command in registry.command_records.items():
+            if command.attr_type is not None:
+                continue
+            yield f"""static {command.return_c_type.format()} {name}(\n{",\n".join(
+                f"    {argument.c_type.format(argument_name)}"
+                for argument_name, argument in command.arguments.items()
+            ) if command.arguments else "    void"}\n);"""
+
+        for name, struct in registry.struct_records.items():
+            yield f"""struct {name} {{\n{"\n".join(
+                f"    {field.c_type.format(field_name)}{f":{field.bitwidth}" if field.bitwidth is not None else ""};"
+                for field_name, field in struct.fields.items()
+            )}\n}};"""
+
+        for name, union in registry.union_records.items():
+            yield f"""union {name} {{\n{"\n".join(
+                f"    {field.c_type.format(field_name)}{f":{field.bitwidth}" if field.bitwidth is not None else ""};"
+                for field_name, field in union.fields.items()
+            )}\n}};"""
 
     @classmethod
-    def _write_pydef(
+    def _iter_pydef_strs(
         cls: type[Self],
-        registry: Registry,
-        pydef_file: TextIO
-    ) -> None:
-        pass
+        registry: Registry
+    ) -> Iterator[str]:
+        yield from ()
 
     @classmethod
     def write(
@@ -3001,13 +3267,9 @@ class Program:
     ) -> None:
         if build_cdef:
             with cdef_path.open("w") as cdef_file:
-                cls._write_str(cdef_file, f"""
-                    // Auto-generated C definitions
-                """)
-                cls._write_cdef(
-                    registry=registry,
-                    cdef_file=cdef_file
-                )
+                cdef_file.write("// Auto-generated C definitions\n")
+                for cdef_str in cls._iter_cdef_strs(registry):
+                    cdef_file.write(f"\n{cdef_str}\n")
                 #for section in ("cdef_preamble", "cdef_document"):
                 #    for category, name, xml in obj_triplets:
                 #        self._write_str(cdef_file, self._get_obj_def(
@@ -3023,32 +3285,29 @@ class Program:
             #    obj_items_grouped=obj_items_grouped
             #)
             with pydef_path.open("w") as pydef_file:
-                cls._write_str(pydef_file, f"""
-                    from __future__ import annotations
+                pydef_file.write(f"""
+from __future__ import annotations
 
-                    # Auto-generated python interface
+# Auto-generated python interface
 
-                    from enum import (
-                        Enum,
-                        Flag
-                    )
-                    from typing import (
-                        Never,
-                        Union
-                    )
+from enum import (
+    Enum,
+    Flag
+)
+from typing import (
+    Never,
+    Union
+)
 
-                    import cffi
+import cffi
 
-                    from {ffi_path.relative_to(pydef_path.parent).stem} import (
-                        ffi,
-                        lib
-                    )
-
-                """)
-                cls._write_pydef(
-                    registry=registry,
-                    pydef_file=pydef_file
-                )
+from {ffi_path.relative_to(pydef_path.parent).stem} import (
+    ffi,
+    lib
+)
+                """.strip())
+                for pydef_str in cls._iter_pydef_strs(registry):
+                    pydef_file.write(f"\n{pydef_str}\n")
                 #for section in ("pydef_preamble", "pydef_document"):
                 #    for category, name, xml in obj_triplets:
                 #        self._write_str(pydef_file, self._get_obj_def(
@@ -3206,19 +3465,18 @@ if __name__ == "__main__":
     generated_dir = pathlib.Path("generated")
     generated_dir.mkdir(exist_ok=True)
 
-    registry = Registry()
+    mutable_registry = MutableRegistry()
     Program.read(
-        registry=registry,
+        registry=mutable_registry,
         registry_xml_paths=[
             pathlib.Path("extern/xml/video.xml"),
             pathlib.Path("extern/xml/vk.xml")
         ],
         api="vulkan",
         platform="win32",
-        defines=[
-            "VK_ENABLE_BETA_EXTENSIONS"
-        ]
+        beta_extensions=True
     )
+    registry = mutable_registry.finalize()
     Program.write(
         registry=registry,
         cdef_path=generated_dir.joinpath("_vulkan_cdef.h"),
