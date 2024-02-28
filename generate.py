@@ -6,9 +6,13 @@ import pathlib
 import re
 import xml.etree.ElementTree as etree
 from typing import (
+    Callable,
+    Final,
     Iterator,
     Self,
-    TextIO
+    TextIO,
+    Union,
+    overload
 )
 
 import attrs
@@ -109,7 +113,8 @@ class CType:
         "_class_str",
         "_const_specifier",
         "_pointer_const_specifiers",
-        "_array_size_strs"
+        "_array_size_strs",
+        "_array_sizes"
     )
 
     def __init__(
@@ -122,6 +127,7 @@ class CType:
         self._const_specifier: bool = const_specifier
         self._pointer_const_specifiers: tuple[bool, ...] = pointer_const_specifiers
         self._array_size_strs: tuple[str, ...] = array_size_strs
+        self._array_sizes: tuple[int, ...] = NotImplemented
 
     def format(
         self: Self,
@@ -471,114 +477,116 @@ class Argument:
 
 
 @attrs.define(kw_only=True)
-class Obj:
+class Record:
+    pass
     #name: str
     # Possible scoping:
     # Enum |> EnumMember
     # Handle |> Command
-    scope: str | None = None
-    required: bool = False
-    removed: bool = False
+    #scope: str | None = None
+    #required: bool = False
+    #removed: bool = False
     #attr_platform: str | None = None
-    attr_protect: str | None = None
+
+
+#@attrs.define(kw_only=True)
+#class AliasObj(Obj):
+#    alias: str
 
 
 @attrs.define(kw_only=True)
-class AliasObj(Obj):
-    alias: str
-
-
-@attrs.define(kw_only=True)
-class Include(Obj):
+class IncludeRecord(Record):
     pass
     #text: str
 
 
 @attrs.define(kw_only=True)
-class Define(Obj):
+class DefineRecord(Record):
     c_type: CType
     argument_c_types: dict[str, CType] | None
     #text: str
 
 
 @attrs.define(kw_only=True)
-class BuiltinType(Obj):
+class BuiltinTypeRecord(Record):
     c_type: CType
     py_type_str: str
 
 
 #@attrs.define(kw_only=True)
-#class BaseType(Obj):
+#class BaseTypeRecord(Record):
 #    c_type: CType
 
 
 #@attrs.define(kw_only=True)
-#class ExternalType(Obj):
+#class ExternalTypeRecord(Record):
 #    c_type: CType
 
 
 @attrs.define(kw_only=True)
-class Typedef(Obj):
+class TypedefRecord(Record):
     c_type: CType
 
 
 @attrs.define(kw_only=True)
-class Bitmask(Obj):
+class BitmaskRecord(Record):
     attr_requires: str | None
 
 
 @attrs.define(kw_only=True)
-class Enum(Obj):
+class EnumRecord(Record):
     attr_type: str  # "enum" | "bitmask"
     attr_bitwidth: str | None
 
 
 @attrs.define(kw_only=True)
-class FunctionPointer(Obj):
+class FunctionPointerRecord(Record):
     return_c_type: CType
     argument_c_types: dict[str, CType]
 
 
 @attrs.define(kw_only=True)
-class Handle(Obj):
+class HandleRecord(Record):
     attr_parent: str | None
 
 
 @attrs.define(kw_only=True)
-class Struct(Obj):
+class StructRecord(Record):
     fields: dict[str, Field]
     attr_structextends: str | None
     attr_allowduplicate: str | None
 
 
 @attrs.define(kw_only=True)
-class Union(Obj):
+class UnionRecord(Record):
     fields: dict[str, Field]
 
 
 @attrs.define(kw_only=True)
-class Constant(Obj):
+class ConstantRecord(Record):
     c_type: CType
     attr_value: str
 
 
 #@attrs.define(kw_only=True)
-#class ConstantExtrinsic(Obj):
+#class ConstantExtrinsicRecord(Record):
 #    pass
 
 
 @attrs.define(kw_only=True)
-class EnumMember(Obj):
-    pass
+class EnumMemberRecord(Record):
+    enum_name: str
+    attr_protect: str | None
 
 
 #@attrs.define(kw_only=True)
-#class EnumMemberExtrinsic(Obj):
+#class EnumMemberExtrinsicRecord(Record):
 #    pass
 
 
 @attrs.define(kw_only=True)
-class Command(Obj):
+class CommandRecord(Record):
+    handle_name: str | None
     arguments: dict[str, Argument]
 
 
@@ -794,16 +802,16 @@ class Command(Obj):
 #        self.base_type: Obj = NotImplemented
 
 
-class ElementaryType(Obj):
-    __slots__ = ("py_type_str",)
-
-    def __init__(
-        self: Self,
-        #name: str,
-        py_type_str: str
-    ) -> None:
-        super().__init__()
-        self.py_type_str: str = py_type_str
+#class ElementaryType(Obj):
+#    __slots__ = ("py_type_str",)
+#
+#    def __init__(
+#        self: Self,
+#        #name: str,
+#        py_type_str: str
+#    ) -> None:
+#        super().__init__()
+#        self.py_type_str: str = py_type_str
 
     #def write_cdef(
     #    self: Self,
@@ -1647,36 +1655,409 @@ class ElementaryType(Obj):
 #            registry.build_pydef(pydef_path, ffi_path)
 
 
-class Registry:
+class Requirement:
     __slots__ = (
-        #"api",
-        #"platform",
-        "_define_list",
-        "_include_list",
-        "_tag_list",
-        "_obj_dict"
-        #"_requirement_dict"
-        #"enum_children_dict"
+        "_required",
+        "_removed"
     )
 
     def __init__(
         self: Self
-        #api: str,
-        #platform: str,
-        #defines: list[str]
-        #registry_xml_paths: list[pathlib.Path],
-        #cdef_path: pathlib.Path,
-        #pydef_path: pathlib.Path,
-        #ffi_path: pathlib.Path
     ) -> None:
-        #self.api: str = api
-        #self.platform: str = platform
-        self._define_list: list[str] = []
-        self._include_list: list[str] = []
-        self._tag_list: list[str] = []
-        self._obj_dict: dict[str, Obj] = {}
-        #self._requirement_dict: dict[str, RequirementRecord] = {}
-        #self.enum_children_dict: dict[str, dict[str, Obj]] = {}
+        super().__init__()
+        self._required: bool = False
+        self._removed: bool = False
+
+    def mark_required(
+        self: Self
+    ) -> None:
+        self._required = True
+
+    def mark_removed(
+        self: Self
+    ) -> None:
+        self._removed = True
+
+    def check_requirement(
+        self: Self
+    ) -> bool:
+        return self._required and not self._removed
+
+
+class RecordCollection[T: Record, **P]:
+    __slots__ = (
+        "_record_constructor",
+        "_record_dict",
+        "_alias_forwardref_dict",
+        "_requirement_dict"
+        #"_required_set",
+        #"_removed_set"
+    )
+
+    def __init__(
+        self: Self,
+        record_constructor: Callable[P, T]
+    ) -> None:
+        super().__init__()
+        self._record_constructor: Callable[P, T] = record_constructor
+        self._record_dict: dict[str, T] = {}
+        self._alias_forwardref_dict: dict[str, list[str]] = {}
+        self._requirement_dict: dict[str, Requirement] = {}
+        #self._required_set: set[str] = set()
+        #self._removed_set: set[str] = set()
+
+    #def _resolve_alias_forwardref(
+    #    self: Self,
+    #    alias: str
+    #) -> None:
+    #    for name in self._alias_forwardref_dict.pop(alias, []):
+    #        self._record_dict[name] = self._record_dict[alias]
+    #        self._resolve_alias_forwardref(name)
+
+    #def contains(
+    #    self: Self,
+    #    name: str
+    #) -> bool:
+    #    return name in self._record_dict or any(
+    #        name in names
+    #        for names in self._alias_forwardref_dict.values()
+    #    )
+
+    def new(
+        self: Self,
+        name: str,
+        *args: P.args,
+        **kwargs: P.kwargs
+    ) -> None:
+        assert name not in self._requirement_dict
+        self._requirement_dict[name] = Requirement()
+        self._record_dict[name] = self._record_constructor(*args, **kwargs)
+
+        resolvable_aliases = [name]
+        while resolvable_aliases:
+            alias = resolvable_aliases.pop(0)
+            for name in self._alias_forwardref_dict.pop(alias, []):
+                #assert name not in self._requirement_dict
+                #self._requirement_dict[name] = Requirement()
+                self._record_dict[name] = self._record_dict[alias]
+                resolvable_aliases.append(name)
+
+    def new_alias(
+        self: Self,
+        name: str,
+        alias: str
+    ) -> None:
+        assert name not in self._requirement_dict
+        self._requirement_dict[name] = Requirement()
+        if alias in self._record_dict:
+            self._record_dict[name] = self._record_dict[alias]
+        else:
+            self._alias_forwardref_dict.setdefault(alias, []).append(name)
+        #self._alias_dict[name] = alias
+
+    #def _get_record_and_requirement(
+    #    self: Self,
+    #    name: str
+    #) -> tuple[T, bool]:
+    #    requirement = name in self._required_set and name not in self._removed_set
+    #    while name in self._alias_dict:
+    #        name = self._alias_dict[name]
+    #        requirement = requirement and name in self._required_set and name not in self._removed_set
+    #    return self._record_dict[name], requirement
+
+    def alias_resolved(
+        self: Self
+    ) -> bool:
+        return not self._alias_forwardref_dict
+
+    @overload
+    def get(
+        self: Self,
+        __name: str
+    ) -> T: ...
+
+    @overload
+    def get[DefaultT](
+        self: Self,
+        __name: str,
+        __default: DefaultT
+    ) -> T | DefaultT: ...
+
+    def get[DefaultT](
+        self: Self,
+        __name: str,
+        __default: DefaultT = Ellipsis
+    ) -> T | DefaultT:
+        try:
+            return self._record_dict[__name]
+        except KeyError:
+            if __default is Ellipsis:
+                raise KeyError(__name) from None
+            return __default
+
+        #return self._record_dict[name]
+        #record, _ = self._get_record_and_requirement(name)
+        #return record
+
+    def get_requirement(
+        self: Self,
+        __name: str
+    ) -> Requirement:
+        try:
+            return self._requirement_dict[__name]
+        except KeyError:
+            raise KeyError(__name) from None
+
+    #def get(
+    #    self: Self,
+    #    name: str
+    #) -> T | None:
+    #    try:
+    #        return self.fetch(name)
+    #    except KeyError:
+    #        return None
+
+    def items(
+        self: Self
+    ) -> Iterator[tuple[str, T]]:
+        for name, record in self._record_dict.items():
+            if self._requirement_dict[name].check_requirement():
+                yield name, record
+            #record, requirement = self._get_record_and_requirement(name)
+            #if requirement:
+            #    yield name, record
+
+
+class Registry:
+    __slots__ = (
+        "define_list",
+        "include_list",
+        "tag_list",
+        #"obj_cls_dict",
+        #"alias_obj_dict",
+        "include_records",
+        "define_records",
+        "builtin_type_records",
+        "typedef_records",
+        "bitmask_records",
+        "enum_records",
+        "function_pointer_records",
+        "handle_records",
+        "struct_records",
+        "union_records",
+        "constant_records",
+        "enum_member_records",
+        "command_records"
+    )
+
+    type RecordUnionType = Union[
+        IncludeRecord,
+        DefineRecord,
+        BuiltinTypeRecord,
+        TypedefRecord,
+        BitmaskRecord,
+        EnumRecord,
+        FunctionPointerRecord,
+        HandleRecord,
+        StructRecord,
+        UnionRecord,
+        ConstantRecord,
+        EnumMemberRecord,
+        CommandRecord
+    ]
+
+    def __init__(
+        self: Self
+    ) -> None:
+        super().__init__()
+        self.define_list: Final[list[str]] = []
+        self.include_list: Final[list[str]] = []
+        self.tag_list: Final[list[str]] = []
+        #self.obj_cls_dict: dict[str, type[Obj]] = {}
+        #self.alias_obj_dict: dict[str, AliasObj] = {}
+        self.include_records: Final = RecordCollection(IncludeRecord)
+        self.define_records: Final = RecordCollection(DefineRecord)
+        self.builtin_type_records: Final = RecordCollection(BuiltinTypeRecord)
+        self.typedef_records: Final = RecordCollection(TypedefRecord)
+        self.bitmask_records: Final = RecordCollection(BitmaskRecord)
+        self.enum_records: Final = RecordCollection(EnumRecord)
+        self.function_pointer_records: Final = RecordCollection(FunctionPointerRecord)
+        self.handle_records: Final = RecordCollection(HandleRecord)
+        self.struct_records: Final = RecordCollection(StructRecord)
+        self.union_records: Final = RecordCollection(UnionRecord)
+        self.constant_records: Final = RecordCollection(ConstantRecord)
+        self.enum_member_records: Final = RecordCollection(EnumMemberRecord)
+        self.command_records: Final = RecordCollection(CommandRecord)
+
+    def _get_records_tuple(
+        self: Self
+    ) -> tuple[RecordCollection, ...]:
+        return (
+            self.include_records,
+            self.define_records,
+            self.builtin_type_records,
+            self.typedef_records,
+            self.bitmask_records,
+            self.enum_records,
+            self.function_pointer_records,
+            self.handle_records,
+            self.struct_records,
+            self.union_records,
+            self.constant_records,
+            self.enum_member_records,
+            self.command_records
+        )
+
+    def alias_resolved(
+        self: Self
+    ) -> bool:
+        return all(records.alias_resolved() for records in self._get_records_tuple())
+
+    @overload
+    def get(
+        self: Self,
+        __name: str
+    ) -> RecordUnionType: ...
+
+    @overload
+    def get[DefaultT](
+        self: Self,
+        __name: str,
+        __default: DefaultT
+    ) -> RecordUnionType | DefaultT: ...
+
+    def get[DefaultT](
+        self: Self,
+        __name: str,
+        __default: DefaultT = Ellipsis
+    ) -> RecordUnionType | DefaultT:
+        for records in self._get_records_tuple():
+            try:
+                return records.get(__name)
+            except KeyError:
+                continue
+        if __default is Ellipsis:
+            raise KeyError(__name)
+        return __default
+
+    def get_requirement(
+        self: Self,
+        __name: str
+    ) -> Requirement:
+        for records in self._get_records_tuple():
+            try:
+                return records.get_requirement(__name)
+            except KeyError:
+                continue
+        raise KeyError(__name)
+
+    #def get(
+    #    self: Self,
+    #    name: str
+    #) -> Union[
+    #    IncludeRecord,
+    #    DefineRecord,
+    #    BuiltinTypeRecord,
+    #    TypedefRecord,
+    #    BitmaskRecord,
+    #    EnumRecord,
+    #    FunctionPointerRecord,
+    #    HandleRecord,
+    #    StructRecord,
+    #    UnionRecord,
+    #    ConstantRecord,
+    #    EnumMemberRecord,
+    #    CommandRecord,
+    #    None
+    #]:
+    #    try:
+    #        return self.fetch(name)
+    #    except KeyError:
+    #        return None
+
+
+    #def enum_tag_get(
+    #    self: Self,
+    #    name: str
+    #) -> Union[
+    #    ConstantRecord,
+    #    EnumMemberRecord,
+    #    None
+    #]:
+    #    for records in (
+    #        self.constant_records,
+    #        self.enum_member_records
+    #    ):
+    #        if (record := records.get(name)) is not None:
+    #            return record
+    #    return None
+
+    #def command_tag_get(
+    #    self: Self,
+    #    name: str
+    #) -> Union[
+    #    CommandRecord,
+    #    None
+    #]:
+    #    for records in (
+    #        self.command_records,
+    #    ):
+    #        if (record := records.get(name)) is not None:
+    #            return record
+    #    return None
+
+    #def _has_obj(
+    #    self: Self,
+    #    name: str
+    #) -> bool:
+    #    return name in self._obj_cls_dict
+
+    #def _get_obj(
+    #    self: Self,
+    #    name: str
+    #) -> Obj:
+    #    return self._obj_dict[name]
+
+    #def _add_obj(
+    #    self: Self,
+    #    name: str,
+    #    obj: Obj
+    #) -> None:
+    #    assert name not in self._obj_dict
+    #    self._obj_dict[name] = obj
+    #        #self._requirement_dict[name] = RequirementRecord()
+
+
+class Program:
+    __slots__ = (
+        #"api",
+        #"platform",
+        #"_define_list",
+        #"_include_list",
+        #"_tag_list",
+        #"_obj_dict"
+        #"_requirement_dict"
+        #"enum_children_dict"
+    )
+
+    #def __init__(
+    #    self: Self
+    #    #api: str,
+    #    #platform: str,
+    #    #defines: list[str]
+    #    #registry_xml_paths: list[pathlib.Path],
+    #    #cdef_path: pathlib.Path,
+    #    #pydef_path: pathlib.Path,
+    #    #ffi_path: pathlib.Path
+    #) -> None:
+    #    #self.api: str = api
+    #    #self.platform: str = platform
+    #    self._define_list: list[str] = []
+    #    self._include_list: list[str] = []
+    #    self._tag_list: list[str] = []
+    #    self._obj_dict: dict[str, Obj] = {}
+    #    #self._requirement_dict: dict[str, RequirementRecord] = {}
+    #    #self.enum_children_dict: dict[str, dict[str, Obj]] = {}
 
     @classmethod
     def _join_xml_text(
@@ -1733,86 +2114,79 @@ class Registry:
         platform = xml.get("platform")
         return platform is None or platform == target_platform
 
-    def _has_obj(
-        self: Self,
-        name: str
-    ) -> bool:
-        return name in self._obj_dict
-
-    def _get_obj(
-        self: Self,
-        name: str
-    ) -> Obj:
-        return self._obj_dict[name]
-
-    def _add_obj(
-        self: Self,
-        name: str,
-        obj: Obj
-    ) -> None:
-        assert name not in self._obj_dict
-        self._obj_dict[name] = obj
-            #self._requirement_dict[name] = RequirementRecord()
-
+    @classmethod
     def _read_type_xml(
-        self: Self,
+        cls: type[Self],
+        registry: Registry,
         type_xml: etree.Element,
     ) -> None:
+        #if (alias := type_xml.get("alias")) is not None:
+        #    self._add_obj(name, AliasObj(
+        #        alias=alias
+        #    ))
+        #    return
         name = type_xml.get("name", type_xml.findtext("name", ""))
-        if (alias := type_xml.get("alias")) is not None:
-            self._add_obj(name, AliasObj(
-                alias=alias
-            ))
-            return
-
         match type_xml.get("category", "externtype"):
             case "include":
-                if self._has_obj(name):
+                name = type_xml.get("name", "")
+                if registry.get(name, None) is not None:
                     return
-                obj = Include()
+                registry.include_records.new(
+                    name=name
+                )
 
             case "define":
-                define_contents = tuple(
+                c_type = CType("void")
+                argument_c_types = None
+                if len(define_contents := tuple(
                     match.group(1)
-                    for line in self._join_xml_text(type_xml).replace("\\\n", "").splitlines()
+                    for line in cls._join_xml_text(type_xml).replace("\\\n", "").splitlines()
                     if (match := re.fullmatch(fr"#define {name}\b(.*)", line.lstrip())) is not None
-                )
-                if len(define_contents) != 1:
-                    obj = Define(
-                        c_type=CType("void"),
-                        argument_c_types=None
-                    )
-                else:
+                )) == 1:
                     (define_content,) = define_contents
-                    obj = Define(
-                        c_type=CType("uint32_t"),
-                        argument_c_types={
+                    c_type = CType("uint32_t")
+                    if (arguments_match := re.match(r"\((.*?)\)", define_content)) is not None:
+                        argument_c_types = {
                             argument_name: CType("uint32_t")
                             for argument_name in arguments_match.group(1).split(", ")
-                        } if (arguments_match := re.match(r"\((.*?)\)", define_content)) is not None else None
-                    )
+                        }
+                registry.define_records.new(
+                    name=name,
+                    c_type=c_type,
+                    argument_c_types=argument_c_types
+                )
 
             case "basetype":
-                obj = Typedef(
+                registry.typedef_records.new(
+                    name=name,
                     c_type=CType(BASE_TYPE_DICT[name])
                 )
 
             case "externtype":
-                if self._has_obj(name):
+                if registry.get(name, None) is not None:
                     return
-                if name not in PLATFORM_TYPE_DICT:
-                    print("Missing externtype:", name)
-                obj = Typedef(
+                #if name not in PLATFORM_TYPE_DICT:
+                #    print("Missing externtype:", name)
+                registry.typedef_records.new(
+                    name=name,
                     c_type=CType(PLATFORM_TYPE_DICT.get(name, "void"))
                 )
 
             case "bitmask":
-                obj = Bitmask(
+                if (alias := type_xml.get("alias")) is not None:
+                    registry.bitmask_records.new_alias(name, alias)
+                    return
+                registry.bitmask_records.new(
+                    name=name,
                     attr_requires=type_xml.get("requires")
                 )
 
             case "enum":
-                obj = Enum(
+                if (alias := type_xml.get("alias")) is not None:
+                    registry.enum_records.new_alias(name, alias)
+                    return
+                registry.enum_records.new(
+                    name=name,
                     attr_type="enum",  # Fill later
                     attr_bitwidth=None  # Fill later
                 )
@@ -1820,9 +2194,10 @@ class Registry:
             case "funcpointer":
                 assert (match := re.fullmatch(
                     fr"typedef (.*?) \(VKAPI_PTR \*{name}\)\((.*)\);",
-                    self._join_xml_text(type_xml).replace("\n", "")
+                    cls._join_xml_text(type_xml).replace("\n", "")
                 )) is not None
-                obj = FunctionPointer(
+                registry.function_pointer_records.new(
+                    name=name,
                     return_c_type=CType(match.group(1)),
                     argument_c_types={
                         argument_name: CType(c_type_str)
@@ -1834,12 +2209,20 @@ class Registry:
                 )
 
             case "handle":
-                obj = Handle(
+                if (alias := type_xml.get("alias")) is not None:
+                    registry.handle_records.new_alias(name, alias)
+                    return
+                registry.handle_records.new(
+                    name=name,
                     attr_parent=type_xml.get("parent")
                 )
 
             case "struct":
-                obj = Struct(
+                if (alias := type_xml.get("alias")) is not None:
+                    registry.struct_records.new_alias(name, alias)
+                    return
+                registry.struct_records.new(
+                    name=name,
                     fields={
                         member_xml.findtext("name", ""): Field(
                             c_type=CType(c_type_str),
@@ -1852,7 +2235,7 @@ class Registry:
                             attr_values=member_xml.get("values")
                         )
                         for member_xml, (c_type_str, _, bitwidth_str) in (
-                            (member_xml, self._join_xml_text(member_xml, ignored_tags=["comment", "name"]).partition(":"))
+                            (member_xml, cls._join_xml_text(member_xml, ignored_tags=["comment", "name"]).partition(":"))
                             for member_xml in type_xml.iterfind("member")
                         )
                     },
@@ -1861,7 +2244,11 @@ class Registry:
                 )
 
             case "union":
-                obj = Union(
+                if (alias := type_xml.get("alias")) is not None:
+                    registry.union_records.new_alias(name, alias)
+                    return
+                registry.union_records.new(
+                    name=name,
                     fields={
                         member_xml.findtext("name", ""): Field(
                             c_type=CType(c_type_str),
@@ -1874,7 +2261,7 @@ class Registry:
                             attr_values=member_xml.get("values")
                         )
                         for member_xml, (c_type_str, _, bitwidth_str) in (
-                            (member_xml, self._join_xml_text(member_xml, ignored_tags=["comment", "name"]).partition(":"))
+                            (member_xml, cls._join_xml_text(member_xml, ignored_tags=["comment", "name"]).partition(":"))
                             for member_xml in type_xml.iterfind("member")
                         )
                     }
@@ -1883,25 +2270,24 @@ class Registry:
             case _:
                 assert False
 
-        self._add_obj(name, obj)
-
+    @classmethod
     def _read_enum_xml(
-        self: Self,
+        cls: type[Self],
+        registry: Registry,
         enum_xml: etree.Element,
         enum_name: str | None
     ) -> None:
         name = enum_xml.get("name", "")
-        if self._has_obj(name):
-            return
-        if (alias := enum_xml.get("alias")) is not None:
-            self._add_obj(name, AliasObj(
-                alias=alias
-            ))
+        if registry.get(name, None) is not None:
             return
 
         if enum_name is None:
-            if (attr_value := enum_xml.get("value")) is None:
+            if (alias := enum_xml.get("alias")) is not None:
+                registry.constant_records.new_alias(name, alias)
                 return
+            #if (attr_value := enum_xml.get("value")) is None:
+            #    return
+            attr_value = enum_xml.get("value", "")
             if (c_type_str := enum_xml.get("type")) is not None:
                 c_type = CType(c_type_str)
             elif attr_value.isidentifier():
@@ -1912,43 +2298,47 @@ class Registry:
                 c_type = CType("char []")
             else:
                 assert False
-            obj = Constant(
+            registry.constant_records.new(
+                name=name,
                 c_type=c_type,
                 attr_value=attr_value
             )
         else:
-            obj = EnumMember(
-                scope=enum_name,
+            if (alias := enum_xml.get("alias")) is not None:
+                registry.enum_member_records.new_alias(name, alias)
+                return
+            registry.enum_member_records.new(
+                name=name,
+                enum_name=enum_name,
                 attr_protect=enum_xml.get("protect")
             )
 
-        self._add_obj(name, obj)
-
+    @classmethod
     def _read_command_xml(
-        self: Self,
+        cls: type[Self],
+        registry: Registry,
         command_xml: etree.Element
     ) -> None:
+        name = command_xml.get("name", command_xml.findtext("proto/name", ""))
         if (alias := command_xml.get("alias")) is not None:
-            name = command_xml.get("name", "")
-            self._add_obj(name, AliasObj(
-                alias=alias
-            ))
+            registry.command_records.new_alias(name, alias)
             return
 
-        assert (proto_xml := command_xml.find("proto")) is not None
-        name = proto_xml.findtext("name", "")
-        scope = (
+        #assert (proto_xml := command_xml.find("proto")) is not None
+        #name = proto_xml.findtext("name", "")
+        handle_name = (
             first_param_type_str
             if (first_param_xml := command_xml.find("param")) is not None
             and (first_param_type_str := first_param_xml.findtext("type")) is not None
-            and isinstance(self._get_obj(first_param_type_str), Handle)
+            and registry.handle_records.get(first_param_type_str, None) is not None
             else None
         )
-        self._add_obj(name, Command(
-            scope=scope,
+        registry.command_records.new(
+            name=name,
+            handle_name=handle_name,
             arguments={
                 param_xml.findtext("name", ""): Argument(
-                    c_type=CType(self._join_xml_text(param_xml, ignored_tags=["comment", "name"])),
+                    c_type=CType(cls._join_xml_text(param_xml, ignored_tags=["comment", "name"])),
                     attr_len=param_xml.get("len"),
                     attr_altlen=param_xml.get("altlen"),
                     attr_optional=param_xml.get("optional"),
@@ -1956,7 +2346,7 @@ class Registry:
                 )
                 for param_xml in command_xml.iterfind("param")
             }
-        ))
+        )
 
         #self._add_obj(self.obj_dict, Obj(
         #    name=(
@@ -2035,8 +2425,10 @@ class Registry:
     #        return None
     #    return tag
 
+    @classmethod
     def _read_registry_xml(
-        self: Self,
+        cls: type[Self],
+        registry: Registry,
         registry_xml: etree.Element,
         api: str,
         platform: str
@@ -2047,17 +2439,17 @@ class Registry:
                 case "platforms":
                     for platform_xml in xml.iterfind("platform"):
                         if platform_xml.get("name", "") == platform:
-                            self._define_list.append(platform_xml.get("protect", ""))
+                            registry.define_list.append(platform_xml.get("protect", ""))
 
                 case "tags":
                     for tag_xml in xml.iterfind("tag"):
-                        self._tag_list.append(tag_xml.get("name", ""))
+                        registry.tag_list.append(tag_xml.get("name", ""))
 
                 case "types":
                     for type_xml in xml.iterfind("type"):
-                        if not self._check_api(type_xml, api):
+                        if not cls._check_api(type_xml, api):
                             continue
-                        self._read_type_xml(type_xml)
+                        cls._read_type_xml(registry, type_xml)
                         #self._add_obj(self.obj_dict, Obj(
                         #    name=type_xml.get("name", type_xml.findtext("name", "")),
                         #    alias=type_xml.get("alias"),
@@ -2075,17 +2467,19 @@ class Registry:
                     if (enum_name := xml.get("name", "")) == "API Constants":
                         enum_name = None
                     else:
-                        assert isinstance(enum := self._get_obj(enum_name), Enum)
+                        enum = registry.enum_records.get(enum_name)
                         enum.attr_type = xml.get("type", "enum")
                         enum.attr_bitwidth = xml.get("bitwidth")
                     for enum_xml in xml.iterfind("enum"):
-                        self._read_enum_xml(
+                        cls._read_enum_xml(
+                            registry=registry,
                             enum_xml=enum_xml,
                             enum_name=enum_name
                         )
                         if enum_name is not None:
                             name = enum_xml.get("name", "")
-                            self._get_obj(name).required = True
+                            registry.enum_member_records.get_requirement(name).mark_required()
+                            #self._get_obj(name).required = True
                         #name = enum_xml.get("name", "")
                         #if (alias := enum_xml.get("alias")) is not None:
                         #    self._add_obj(name, AliasObj(
@@ -2139,14 +2533,15 @@ class Registry:
 
                 case "commands":
                     for command_xml in xml.iterfind("command"):
-                        if not self._check_api(command_xml, api):
+                        if not cls._check_api(command_xml, api):
                             continue
-                        self._read_command_xml(
+                        cls._read_command_xml(
+                            registry=registry,
                             command_xml=command_xml
                         )
 
                 case "feature":
-                    if not self._check_api(xml, api):
+                    if not cls._check_api(xml, api):
                         continue
                     for requirement_batch_xml in xml:
                         if requirement_batch_xml.tag not in ("require", "remove"):
@@ -2155,19 +2550,22 @@ class Registry:
                         for requirement_unit_xml in requirement_batch_xml:
                             if requirement_unit_xml.tag not in ("type", "enum", "command"):
                                 continue
-                            if not self._check_api(requirement_unit_xml, api):
+                            if not cls._check_api(requirement_unit_xml, api):
                                 continue
                             name = requirement_unit_xml.get("name", "")
                             if remove:
-                                self._get_obj(name).removed = True
+                                registry.get_requirement(name).mark_removed()
+                                #self._get_obj(name).removed = True
                                 continue
                             #protect = requirement_unit_xml.get("protect")
                             if requirement_unit_xml.tag == "enum":
-                                self._read_enum_xml(
+                                cls._read_enum_xml(
+                                    registry=registry,
                                     enum_xml=requirement_unit_xml,
                                     enum_name=requirement_unit_xml.get("extends")
                                 )
-                            self._get_obj(name).required = True
+                            registry.get_requirement(name).mark_required()
+                            #self._get_obj(name).required = True
                             #self._read_requirement_unit_xml(
                             #    requirement_unit_xml=requirement_unit_xml,
                             #    remove=remove
@@ -2216,11 +2614,11 @@ class Registry:
 
                 case "extensions":
                     for extension_xml in xml.iterfind("extension"):
-                        if not self._check_api(extension_xml, api) or not self._check_supported(extension_xml, api) \
-                                or not self._check_platform(extension_xml, platform):
+                        if not cls._check_api(extension_xml, api) or not cls._check_supported(extension_xml, api) \
+                                or not cls._check_platform(extension_xml, platform):
                             continue
                         for requirement_batch_xml in extension_xml:
-                            if not self._check_api(requirement_batch_xml, api):
+                            if not cls._check_api(requirement_batch_xml, api):
                                 continue
                             #self._read_requirement_batch_xml(
                             #    requirement_batch_xml=requirement_batch_xml,
@@ -2230,19 +2628,20 @@ class Registry:
                             for requirement_unit_xml in requirement_batch_xml:
                                 if requirement_unit_xml.tag not in ("type", "enum", "command"):
                                     continue
-                                if not self._check_api(requirement_unit_xml, api):
+                                if not cls._check_api(requirement_unit_xml, api):
                                     continue
                                 name = requirement_unit_xml.get("name", "")
                                 if remove:
-                                    self._get_obj(name).removed = True
+                                    registry.get_requirement(name).mark_removed()
                                     continue
                                 #protect = requirement_unit_xml.get("protect")
                                 if requirement_unit_xml.tag == "enum":
-                                    self._read_enum_xml(
+                                    cls._read_enum_xml(
+                                        registry=registry,
                                         enum_xml=requirement_unit_xml,
                                         enum_name=requirement_unit_xml.get("extends")
                                     )
-                                self._get_obj(name).required = True
+                                registry.get_requirement(name).mark_required()
                             #    if requirement_unit_xml.tag == "enum":
                             #        add_enum_member(
                             #            obj_dict=obj_dict,
@@ -2294,19 +2693,22 @@ class Registry:
                             #    #    #tags=tags
                             #    #)
 
+    @classmethod
     def read(
-        self: Self,
+        cls: type[Self],
+        registry: Registry,
         registry_xml_paths: list[pathlib.Path],
         api: str,
         platform: str,
         defines: list[str]
     ) -> None:
-        self._define_list.extend(defines)
+        registry.define_list.extend(defines)
         for name, py_type_str in BUILTIN_TYPE_DICT.items():
-            self._add_obj(name, BuiltinType(
+            registry.builtin_type_records.new(
+                name=name,
                 c_type=CType(name),
                 py_type_str=py_type_str
-            ))
+            )
         #self.obj_dict.update(
         #    (name, Obj(
         #        name=name,
@@ -2319,7 +2721,7 @@ class Registry:
         #    for name, py_type_str in BUILTIN_TYPE_DICT.items()
         #)
         for registry_xml_path in registry_xml_paths:
-            self._include_list.extend(REGISTRY_SRC_DICT[registry_xml_path.name])
+            registry.include_list.extend(REGISTRY_SRC_DICT[registry_xml_path.name])
             #for include in REGISTRY_SRC_DICT[registry_xml_path.name]:
             #    self._add_obj(include, Include())
             #includes = REGISTRY_SRC_DICT[registry_xml_path.name]  # TODO
@@ -2329,22 +2731,25 @@ class Registry:
             #        lambda child_xml: child_xml.tag != "comment",
             #        xml
             #    )  # TODO: better approach?
-            self._read_registry_xml(
+            cls._read_registry_xml(
+                registry=registry,
                 registry_xml=etree.parse(registry_xml_path).getroot(),
                 api=api,
                 platform=platform
             )
 
-    def _check_obj_requirement(
-        self: Self,
-        obj: Obj
-    ) -> bool:
-        return (
-            (obj.scope is None or self._check_obj_requirement(self._get_obj(obj.scope)))
-            and obj.required
-            and not obj.removed
-            and (obj.attr_protect is None or obj.attr_protect in self._define_list)
-        )
+        assert registry.alias_resolved()
+
+    #def _check_obj_requirement(
+    #    self: Self,
+    #    obj: Obj
+    #) -> bool:
+    #    return (
+    #        (obj.scope is None or self._check_obj_requirement(self._get_obj(obj.scope)))
+    #        and obj.required
+    #        and not obj.removed
+    #        and (obj.attr_protect is None or obj.attr_protect in self._define_list)
+    #    )
 
     def _get_obj_def(
         self: Self,
@@ -2550,8 +2955,9 @@ class Registry:
 
         assert False
 
+    @classmethod
     def _write_str(
-        self: Self,
+        cls: type[Self],
         file: TextIO,
         content: str
     ) -> None:
@@ -2566,22 +2972,26 @@ class Registry:
                 line = line.removeprefix(spaces)
             file.write(f"{line}\n")
 
+    @classmethod
     def _write_cdef(
-        self: Self,
-        cdef_file: TextIO,
-        obj_items_grouped: dict[type[Obj], list[tuple[str, Obj]]]
+        cls: type[Self],
+        registry: Registry,
+        cdef_file: TextIO
     ) -> None:
         pass
 
+    @classmethod
     def _write_pydef(
-        self: Self,
-        pydef_file: TextIO,
-        obj_items_grouped: dict[type[Obj], list[tuple[str, Obj]]]
+        cls: type[Self],
+        registry: Registry,
+        pydef_file: TextIO
     ) -> None:
         pass
 
+    @classmethod
     def write(
-        self: Self,
+        cls: type[Self],
+        registry: Registry,
         cdef_path: pathlib.Path,
         pydef_path: pathlib.Path,
         ffi_path: pathlib.Path,
@@ -2589,70 +2999,14 @@ class Registry:
         build_pydef: bool,
         build_ffi: bool
     ) -> None:
-        obj_items: list[tuple[str, Obj]] = []
-        for name, obj in self._obj_dict.items():
-            while isinstance(obj, AliasObj) and self._check_obj_requirement(obj):
-                obj = self._obj_dict[obj.alias]
-            if not self._check_obj_requirement(obj):
-                continue
-            obj_items.append((name, obj))
-        #obj_triplets: list[tuple[str, str, etree.Element]] = []
-        #for name, obj in self.obj_dict.items():
-        #    while obj.alias is not None:
-        #        obj = self.obj_dict[obj.alias]
-        #    if obj.check_requirement():
-        #        obj_triplets.append((obj.category, name, obj.xml))
-
-        obj_classes: list[type[Obj]] = [
-            Include,
-            Define,
-            BuiltinType,
-            Typedef,
-            Bitmask,
-            Enum,
-            FunctionPointer,
-            Handle,
-            Struct,
-            Union,
-            Constant,
-            EnumMember,
-            Command
-        ]
-        obj_items.sort(key=lambda t: obj_classes.index(type(t[1])))
-        obj_items_grouped: dict[type[Obj], list[tuple[str, Obj]]] = {
-            obj_cls: []
-            for obj_cls in obj_classes
-        }
-        for obj_cls, obj_items_iter in itertools.groupby(obj_items, key=lambda t: type(t[1])):
-            obj_items_grouped[obj_cls].extend(obj_items_iter)
-
-        #category_order = [
-        #    "include",
-        #    "define",
-        #    "basetype",
-        #    "externtype",
-        #    "enum",
-        #    "bitmask",
-        #    "funcpointer",
-        #    "handle",
-        #    "struct",
-        #    "union",
-        #    "constant_intrinsic",
-        #    "constant_extrinsic",
-        #    "enum_member_intrinsic",
-        #    "enum_member_extrinsic",
-        #    "command"
-        #]
-        #obj_triplets.sort(key=lambda t: category_order.index(t[0]))
-
         if build_cdef:
             with cdef_path.open("w") as cdef_file:
-                self._write_str(cdef_file, f"""
+                cls._write_str(cdef_file, f"""
                     // Auto-generated C definitions
                 """)
-                self._write_cdef(
-                    cdef_file=cdef_file,
-                    obj_items_grouped=obj_items_grouped
+                cls._write_cdef(
+                    registry=registry,
+                    cdef_file=cdef_file
                 )
                 #for section in ("cdef_preamble", "cdef_document"):
                 #    for category, name, xml in obj_triplets:
@@ -2669,7 +3023,7 @@ class Registry:
             #    obj_items_grouped=obj_items_grouped
             #)
             with pydef_path.open("w") as pydef_file:
-                self._write_str(pydef_file, f"""
+                cls._write_str(pydef_file, f"""
                     from __future__ import annotations
 
                     # Auto-generated python interface
@@ -2691,9 +3045,9 @@ class Registry:
                     )
 
                 """)
-                self._write_pydef(
-                    pydef_file=pydef_file,
-                    obj_items_grouped=obj_items_grouped
+                cls._write_pydef(
+                    registry=registry,
+                    pydef_file=pydef_file
                 )
                 #for section in ("pydef_preamble", "pydef_document"):
                 #    for category, name, xml in obj_triplets:
@@ -2710,8 +3064,8 @@ class Registry:
             ffi.set_source(
                 module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
                 source="".join((
-                    *(f"#define {define}\n" for define in self._define_list),
-                    *(f"#include <{include}>\n" for include in self._include_list)
+                    *(f"#define {define}\n" for define in registry.define_list),
+                    *(f"#include <{include}>\n" for include in registry.include_list)
                 )),
                 include_dirs=["extern/vulkan/Include"],
                 library_dirs=["extern/vulkan/Lib"],
@@ -2853,7 +3207,8 @@ if __name__ == "__main__":
     generated_dir.mkdir(exist_ok=True)
 
     registry = Registry()
-    registry.read(
+    Program.read(
+        registry=registry,
         registry_xml_paths=[
             pathlib.Path("extern/xml/video.xml"),
             pathlib.Path("extern/xml/vk.xml")
@@ -2864,7 +3219,8 @@ if __name__ == "__main__":
             "VK_ENABLE_BETA_EXTENSIONS"
         ]
     )
-    registry.write(
+    Program.write(
+        registry=registry,
         cdef_path=generated_dir.joinpath("_vulkan_cdef.h"),
         pydef_path=generated_dir.joinpath("_vulkan.py"),
         ffi_path=generated_dir.joinpath("_vulkan_ffi.py"),
