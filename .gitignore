@@ -5,6 +5,5 @@ __pycache__/
 /generated/*
 !/generated/_vulkan_cdef.h
 !/generated/_vulkan.py
-!/generated/test.py
 /playground/
 /Release/

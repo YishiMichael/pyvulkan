@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import itertools
 import pathlib
 import re
 import xml.etree.ElementTree as etree
@@ -12,12 +11,10 @@ from typing import (
     Iterator,
     Mapping,
     Self,
-    TextIO,
     Union
 )
 
 import attrs
-import cffi
 
 
 REGISTRY_SRC_DICT = {
@@ -111,7 +108,7 @@ PLATFORM_TYPE_DICT = {
 
 class CType:
     __slots__ = (
-        "_class_str",
+        "_base_type_str",
         "_const_specifier",
         "_pointer_const_specifiers",
         "_array_size_strs",
@@ -125,8 +122,8 @@ class CType:
         c_type_str: str
     ) -> None:
         super().__init__()
-        class_str, const_specifier, pointer_const_specifiers, array_size_strs = type(self)._parse_c_type_str(c_type_str)
-        self._class_str: str = class_str
+        base_type_str, const_specifier, pointer_const_specifiers, array_size_strs = type(self)._parse_c_type_str(c_type_str)
+        self._base_type_str: str = base_type_str
         self._const_specifier: bool = const_specifier
         self._pointer_const_specifiers: tuple[bool, ...] = pointer_const_specifiers
         self._array_size_strs: tuple[str, ...] = array_size_strs
@@ -137,46 +134,12 @@ class CType:
             cls = type(self)
             cls._unresolved_c_types.append(self)
 
-    def format(
-        self: Self,
-        name: str | None = None
-    ) -> str:
-        return f"""{self._class_str}{" const" if self._const_specifier else ""}{"".join(
-            f" *{f" const" if pointer_const_specifier else ""}"
-            for pointer_const_specifier in self._pointer_const_specifiers
-        )}{f" {name}" if name is not None else ""}{"".join(
-            f"[{array_size_str}]"
-            for array_size_str in self._array_size_strs
-        )}"""
-        #components = [self.base_type_str]
-        #for index, const_specifier in enumerate(self.const_specifiers):
-        #    if index:
-        #        components.append("*")
-        #    #if const_specifier:
-        #    if format_spec != "v":
-        #        components.append("const")
-        #return " ".join(components)
-
-    @classmethod
-    def resolve_array_sizes(
-        cls: type[Self],
-        array_size_values: dict[str, str]
-    ) -> None:
-        while cls._unresolved_c_types:
-            c_type = cls._unresolved_c_types.pop()
-            c_type._array_size_strs = tuple(
-                array_size_values[array_size_str] if array_size_str.isidentifier() else array_size_str
-                for array_size_str in c_type._array_size_strs
-            )
-
     @classmethod
     def _parse_c_type_str(
         cls: type[Self],
         c_type_str: str
-        #objs: Container[Obj] | None
     ) -> tuple[str, bool, tuple[bool, ...], tuple[str, ...]]:
-        #class_specifier: str | None = None
-        class_strs: list[str] = []
+        base_type_strs: list[str] = []
         const_specifier: bool = False
         pointer_const_specifiers: list[bool] = []
         array_size_strs: list[str] = []
@@ -187,7 +150,7 @@ class CType:
             const_specifier = True
             next_token = next(tokens)
         while next_token.isidentifier() and next_token != "const":
-            class_strs.append(next_token)
+            base_type_strs.append(next_token)
             next_token = next(tokens, "")
         if next_token == "const":
             const_specifier = True
@@ -210,267 +173,31 @@ class CType:
             array_size_strs.append(array_size_str)
             next_token = next(tokens, "")
         assert not next_token
-        #base_type_str = next(tokens)
-        #if base_type_str in ("struct", "union"):
-        #    class_specifier = base_type_str
-        #    base_type_str = next(tokens)
-        #assert base_type_str.isidentifier()
-        #next_token = next(tokens, "")
-        #if next_token == "const":
-        #    const_specifier = True
-        #    next_token = next(tokens, "")
-        #while next_token in 
-        #while tokens[-1] == "]":
-        #    assert tokens.pop() == "]"
-        #    array_size_str = tokens.pop()
-        #    assert array_size_str.isdecimal() or array_size_str.isidentifier()
-        #    array_size_strs.insert(0, array_size_str)
-        #    assert tokens.pop() == "["
+        return " ".join(base_type_strs), const_specifier, tuple(pointer_const_specifiers), tuple(array_size_strs)
 
+    @classmethod
+    def resolve_array_sizes(
+        cls: type[Self],
+        array_size_values: dict[str, str]
+    ) -> None:
+        while cls._unresolved_c_types:
+            c_type = cls._unresolved_c_types.pop()
+            c_type._array_size_strs = tuple(
+                array_size_values[array_size_str] if array_size_str.isidentifier() else array_size_str
+                for array_size_str in c_type._array_size_strs
+            )
 
-        #assert (match := re.fullmatch(r"(const\s+)?((struct|union)\s+)?(.+?)(\s+const)?((\s*\*(\s*const)?)*)", c_type_str.strip())) is not None
-        #class_specifier = match.group(3)
-        #base_type_str = match.group(4)
-        #const_specifiers = (
-        #    match.group(1) is not None or match.group(5) is not None,
-        #    *(
-        #        pointer_match.group(1) is not None
-        #        for pointer_match in re.finditer(r"\*(\s*const)?", match.group(6))
-        #    )
-        #)
-        #if objs is not None:
-        #    base_type_str = objs.get_nonalias_name(base_type_str)
-        return " ".join(class_strs), const_specifier, tuple(pointer_const_specifiers), tuple(array_size_strs)
-        ##array_size_strs: tuple[str, ...] = ()
-        #pointer_count: int = 0
-        #is_nonconst_pointer: bool = False
-        #components = re.findall(r"\w+|\S", cdecl)
-        #match components:
-        #    case (base_type_name,):
-        #        pass
-        #    case (base_type_name, "*"):
-        #        pointer_count = 1
-        #        is_nonconst_pointer = True
-        #    case ("struct", base_type_name, "*"):
-        #        pointer_count = 1
-        #        is_nonconst_pointer = True
-        #    case (base_type_name, "*", "*"):
-        #        pointer_count = 2
-        #        is_nonconst_pointer = True
-        #    case ("struct", base_type_name, "*", "*"):
-        #        pointer_count = 2
-        #        is_nonconst_pointer = True
-        #    #case (base_type_name, name, "[", array_size_str_0, "]"):
-        #    #    array_size_strs = (array_size_str_0,)
-        #    #case (base_type_name, name, "[", array_size_str_0, "]", "[", array_size_str_1, "]"):
-        #    #    array_size_strs = (array_size_str_0, array_size_str_1)
-        #    #case (base_type_name, name, ":", _):
-        #    #    pass
-        #    case ("const", base_type_name, "*"):
-        #        pointer_count = 1
-        #    case ("const", "struct", base_type_name, "*"):
-        #        pointer_count = 1
-        #    case ("const", base_type_name, "*", "const", "*"):
-        #        pointer_count = 2
-        #    #case ("const", base_type_name, name, "[", array_size_str_0, "]"):
-        #    #    array_size_strs = (array_size_str_0,)
-        #    case _:
-        #        raise ValueError(cdecl)
-        #formatted_cdecl = " ".join(components)
-        #return formatted_cdecl, base_type_name, pointer_count, is_nonconst_pointer
-
-
-#class CDeclaration:
-#    __slots__ = (
-#        "c_type",
-#        "name",
-#        "array_size_strs",
-#        "bitwidth"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        c_decl_str: str
-#    ) -> None:
-#        super().__init__()
-#        c_type_str, name, array_size_strs, bitwidth = type(self).parse_c_decl_str(c_decl_str)
-#        self.c_type: CType = CType(c_type_str)
-#        self.name: str = name
-#        self.array_size_strs: tuple[str, ...] = array_size_strs
-#        self.bitwidth: int | None = bitwidth
-
-#    def __format__(
-#        self: Self,
-#        format_spec: str | None
-#    ) -> str:
-#        components = [f"{self.c_type:format_spec}", " ", self.name, *(f"[{array_size_str}]" for array_size_str in self.array_size_strs)]
-#        if self.bitwidth is not None:
-#            components.append(f":{self.bitwidth}")
-#        return "".join(components)
-
-#    @classmethod
-#    def parse_c_decl_str(
-#        cls: type[Self],
-#        c_decl_str: str
-#    ) -> tuple[str, str, tuple[str, ...], int | None]:
-#        assert (match := re.fullmatch(r"(.*?)\s*(\b\w+\b)((\s*\[\w*\])*)(\s*:\s*(\d+))?", c_decl_str.strip())) is not None
-#        c_type_str = match.group(1)
-#        name = match.group(2)
-#        array_size_strs = tuple(
-#            array_size_str_match.group(1)
-#            for array_size_str_match in re.finditer(r"\[(\w*)\]", match.group(3))
-#        )
-#        bitwidth = int(bitwidth_str) if (bitwidth_str := match.group(6)) is not None else None
-#        return c_type_str, name, array_size_strs, bitwidth
-
-
-#class CDecl:
-#    __slots__ = (
-#        "name",
-#        "_c_decl_str_segments"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        # Must contain a name; may contain `const/struct/union/*/[...]`, but not bitwidth.
-#        c_decl_str: str,
-#        name: str
-#    ) -> None:
-#        super().__init__()
-#        self.name: str = name
-#        self._c_decl_str_segments: tuple[str, ...] = tuple(
-#            segment if (segment := match.group()) != name else "$"
-#            for match in re.finditer(r"\w+|\S", c_decl_str)
-#        )
-#        assert list(self._c_decl_str_segments).count("$") == 1
-
-#    @classmethod
-#    def _generate_segments(
-#        cls: type[Self],
-#        segments: Iterable[str],
-#        name: str
-#    ) -> Iterator[str]:
-#        prev_segment = ""
-#        for segment in segments:
-#            if segment == "$":
-#                if not name:
-#                    continue
-#                segment = name
-#            if (prev_segment.isidentifier() or prev_segment in ("*", ",")) and (segment.isidentifier() or segment == "*"):
-#                yield " "
-#            yield segment
-#            prev_segment = segment
-
-#    def format(
-#        self: Self,
-#        name: str | None = None,
-#        #omit_const: bool = False
-#    ) -> str:
-#        if name is None:
-#            name = self.name
-#        return "".join(type(self)._generate_segments(self._c_decl_str_segments, name))
-#        #return "".join(type(self)._generate_segments(filter(
-#        #    lambda segment: not omit_const or segment != "const",
-#        #    self._c_decl_str_segments
-#        #), name))
-
-#    #def get_cffi_type_str(
-#    #    self: Self,
-#    #    name_replacement: str | None = None
-#    #) -> str:
-#    #    #components = list(filter(lambda component: component != "const", self._c_decl_str_components))
-#    #    #name_index = 3 if components[0] in ("struct", "union") else 2
-#    #    #if components[name_index].isidentifier():
-#    #    #    components.pop(name_index)
-#    #    #return " ".join(components)
-
-
-#class TypeCDecl(CDecl):
-#    __slots__ = ()
-
-#    def __init__(
-#        self: Self,
-#        c_type_str: str
-#    ) -> None:
-#        super().__init__(
-#            c_decl_str=f"{c_type_str} _",
-#            name="_"
-#        )
-
-
-#class CallableCDecl(CDecl):
-#    __slots__ = (
-#        "return_c_decl",
-#        "arg_c_decls"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        #c_decl_str: str,
-#        return_c_decl: TypeCDecl,
-#        arg_c_decls: tuple[CDecl, ...],
-#        name: str
-#        #return_c_type_str: str,
-#        #arg_c_decl_strs: tuple[str, ...]
-#    ) -> None:
-#        super().__init__(c_decl_str=f"{return_c_decl.format(name="")} (* {name})({", ".join(
-#            arg_c_decl.format() for arg_c_decl in arg_c_decls
-#        )})", name=name)
-#        #assert (match := re.fullmatch(
-#        #    fr"(.*?)\(\s*\*\s*{name}\s*\)\s*\((.*)\)",
-#        #    c_decl_str,
-#        #    flags=re.DOTALL
-#        #)) is not None
-#        #return_c_decl_str = f"{match.group(1)} _"
-#        #args_c_decl_str = match.group(2)
-#        self.return_c_decl: TypeCDecl = return_c_decl
-#        self.arg_c_decls: tuple[CDecl, ...] = arg_c_decls
-
-
-#class RequirementRecord:
-#    __slots__ = (
-#        "_required",
-#        "_removed",
-#        "_enabled"
-#    )
-
-#    def __init__(
-#        self: Self
-#    ) -> None:
-#        super().__init__()
-#        self._required: bool = False
-#        self._removed: bool = False
-#        self._enabled: bool = False
-
-#    def mark(
-#        self: Self,
-#        requirement_batch_tag: str | None,
-#        enabled: bool
-#    ) -> None:
-#        #if (match := re.search(r"[A-Z]+$", self._name)) is not None:
-#        #    tag = match.group()
-#        #    if tag not in tags:
-#        #        tag = None
-#        #else:
-#        #    tag = None
-#        match requirement_batch_tag:
-#            case "require":
-#                if self._required:
-#                    assert self._enabled == enabled
-#                    #assert self._tag == tag
-#                    return
-#                self._required = True
-#            case "remove":
-#                self._removed = True
-#            case _:
-#                return
-#        self._enabled = enabled
-#        #self._tag = tag
-
-#    def check(
-#        self: Self
-#    ) -> bool:
-#        return self._required and not self._removed and self._enabled
+    def format(
+        self: Self,
+        name: str | None = None
+    ) -> str:
+        return f"""{self._base_type_str}{" const" if self._const_specifier else ""}{"".join(
+            f" *{f" const" if pointer_const_specifier else ""}"
+            for pointer_const_specifier in self._pointer_const_specifiers
+        )}{f" {name}" if name is not None else ""}{"".join(
+            f"[{array_size_str}]"
+            for array_size_str in self._array_size_strs
+        )}"""
 
 
 @attrs.define(kw_only=True)
@@ -499,41 +226,17 @@ class Argument:
 @attrs.define(kw_only=True)
 class Record:
     pass
-    #name: str
-    # Possible scoping:
-    # Enum |> EnumMember
-    # Handle |> Command
-    #scope: str | None = None
-    #required: bool = False
-    #removed: bool = False
-    #attr_platform: str | None = None
-
-
-#@attrs.define(kw_only=True)
-#class AliasObj(Obj):
-#    alias: str
 
 
 @attrs.define(kw_only=True)
-class UnusedRecord(Record):
+class BlankRecord(Record):
     pass
-    #text: str
 
 
 @attrs.define(kw_only=True)
 class BuiltinTypeRecord(Record):
     c_type: CType
     py_type_str: str
-
-
-#@attrs.define(kw_only=True)
-#class BaseTypeRecord(Record):
-#    c_type: CType
-
-
-#@attrs.define(kw_only=True)
-#class ExternalTypeRecord(Record):
-#    c_type: CType
 
 
 @attrs.define(kw_only=True)
@@ -585,7 +288,6 @@ class MacroRecord(Record):
 class FunctionMacroRecord(Record):
     return_c_type: CType
     argument_c_types: dict[str, CType]
-    #text: str
 
 
 @attrs.define(kw_only=True)
@@ -594,20 +296,9 @@ class ConstantRecord(Record):
     attr_value: str
 
 
-#@attrs.define(kw_only=True)
-#class ConstantExtrinsicRecord(Record):
-#    pass
-
-
 @attrs.define(kw_only=True)
 class EnumMemberRecord(Record):
     enum_name: str
-    #attr_protect: str | None
-
-
-#@attrs.define(kw_only=True)
-#class EnumMemberExtrinsicRecord(Record):
-#    pass
 
 
 @attrs.define(kw_only=True)
@@ -616,1071 +307,6 @@ class CommandRecord(Record):
     return_c_type: CType
     arguments: dict[str, Argument]
     attr_type: str | None  # "instance" | "device" | None
-
-
-#class Obj:
-#    __slots__ = (
-#        "name",
-#        "alias",
-#        "category",
-#        "xml",
-#        #"_tag",
-#        "required",
-#        "removed",
-#        "enabled"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        name: str,
-#        alias: str | None,
-#        category: str,
-#        xml: etree.Element
-#    ) -> None:
-#        super().__init__()
-#        self.name: str = name
-#        self.alias: str | None = alias
-#        self.category: str = category
-#        self.xml: etree.Element = xml
-#        #self.alias: str | None = alias
-#        #self._tag: str | None = None
-#        self.required: bool = False
-#        self.removed: bool = False
-#        self.enabled: bool = False
-
-#    #@property
-#    #def tag(
-#    #    self: Self
-#    #) -> str | None:
-#    #    return self._tag
-
-#    #@classmethod
-#    #def filter[T](
-#    #    cls: type[Self],
-#    #    objs: Iterable[T]
-#    #) -> Iterable[T]:
-#    #    return filter(
-#    #        lambda obj: isinstance(obj, Obj) and obj.check_requirement(),
-#    #        objs
-#    #    )
-
-#class Obj:
-#    __slots__ = ()
-
-#    def write_cdef_incomplete(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        pass
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        pass
-
-#    def write_pydef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        pass
-
-
-#class Container[ChildT: Obj]:
-#    __slots__ = (
-#        "_child_dict",
-#        #"_alias_dict",
-#        "_label_dict"
-#    )
-
-#    def __init__(
-#        self: Self
-#    ) -> None:
-#        super().__init__()
-#        self._child_dict: dict[Label, ChildT] = {}
-#        #self._inverse_dict: dict[ChildT, set[str]] = {}
-#        #self._alias_dict: dict[str, str] = {}
-#        self._label_dict: dict[str, Label] = {}
-#        #self._forwardref_aliases: dict[str, list[str]] = {}
-
-#    def iter_filtered_items(
-#        self: Self
-#    ) -> Iterator[tuple[ChildT, Label]]:
-#        for label in self._label_dict.values():
-#            if not label.check_requirement():
-#                continue
-#            yield self.get_child(label.name), label
-
-#    #def get_nonalias_name(
-#    #    self: Self,
-#    #    name: str
-#    #) -> str:
-#    #    label = self._label_dict[name]
-#    #    while label.alias is not None:
-#    #        label = self._label_dict[label.alias]
-#    #    return label.name
-
-#    def get_child(
-#        self: Self,
-#        name: str
-#    ) -> ChildT:
-#        label = self._label_dict[name]
-#        while label.alias is not None:
-#            label = self._label_dict[label.alias]
-#        return self._child_dict[label]
-
-#    def get_label(
-#        self: Self,
-#        name: str
-#    ) -> Label:
-#        return self._label_dict[name]
-
-#    def contains(
-#        self: Self,
-#        name: str
-#    ) -> bool:
-#        return name in self._label_dict
-
-#    def add_child(
-#        self: Self,
-#        name: str,
-#        child: ChildT
-#    ) -> None:
-#        assert not self.contains(name)
-#        label = Label(name)
-#        self._label_dict[name] = label
-#        self._child_dict[label] = child
-#        #assert child not in self._inverse_dict
-#        #self._inverse_dict[child] = {name}
-#        #return child
-
-#    def add_alias(
-#        self: Self,
-#        name: str,
-#        alias: str
-#    ) -> None:
-#        assert not self.contains(name)
-#        label = Label(name, alias=alias)
-#        self._label_dict[name] = label
-#        #assert name not in self._child_dict
-
-##    def get_label(
-##        self: Self,
-##        name: str
-##    ) -> Label:
-##        return self._label_dict[name]
-
-##    def contains(
-##        self: Self,
-##        name: str
-##    ) -> bool:
-##        return name in self._label_dict
-
-##    def add_child(
-##        self: Self,
-##        name: str,
-##        child: ChildT
-##    ) -> None:
-##        assert name not in self._child_dict
-##        self._child_dict[name] = child
-##        if name in self._label_dict:
-##            for alias in self._forwardref_aliases.pop(name):
-##                self.add_child(alias, child)
-##        else:
-##            self._label_dict[name] = Label(name)
-
-#    #def add_child_alias(
-#    #    self: Self,
-#    #    name: str,
-#    #    aliased_name: str
-#    #) -> None:
-#    #    if aliased_name in self._child_dict:
-#    #        self.add_child(name, self.get_child(aliased_name))
-#    #    else:
-#    #        self._label_dict[name] = Label(name)
-#    #        self._forwardref_aliases.setdefault(aliased_name, []).append(name)
-
-
-#class Declaration:
-#    __slots__ = (
-#        "cdecl",
-#        "name",
-#        "base_type_name",
-#        "array_size_strs",
-#        "pointer_count",
-#        "is_nonconst_pointer",
-#        "base_type"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        cdecl: str
-#    ) -> None:
-#        cdecl, name, base_type_name, array_size_strs, pointer_count, is_nonconst_pointer = type(self).parse_cdecl(cdecl)
-#        super().__init__()
-#        self.cdecl: str = cdecl
-#        self.name: str = name
-#        self.base_type_name: str = base_type_name
-#        self.array_size_strs: tuple[str, ...] = array_size_strs
-#        self.pointer_count: int = pointer_count
-#        self.is_nonconst_pointer: bool = is_nonconst_pointer
-#        self.base_type: Obj = NotImplemented
-
-
-#class ElementaryType(Obj):
-#    __slots__ = ("py_type_str",)
-#
-#    def __init__(
-#        self: Self,
-#        #name: str,
-#        py_type_str: str
-#    ) -> None:
-#        super().__init__()
-#        self.py_type_str: str = py_type_str
-
-    #def write_cdef(
-    #    self: Self,
-    #    file: TextIO
-    #) -> None:
-    #    if self.name == self.ctype:
-    #        return
-    #    file.write("\n")
-    #    file.write(f"typedef {self.ctype} {self.name};\n")
-
-    #def write_pydef(
-    #    self: Self,
-    #    file: TextIO,
-    #    label: Label
-    #) -> None:
-    #    file.write("\n")
-    #    file.write(f"{label.name} = {self.pytype}\n")
-
-
-#class ElementaryTypedef(Obj):
-#    __slots__ = ("elememtary_type",)
-
-#    def __init__(
-#        self: Self,
-#        name: str,
-#        elememtary_type: ElementaryType
-#    ) -> None:
-#        super().__init__(
-#            name=name
-#        )
-#        self.elememtary_type: ElementaryType = elememtary_type
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"typedef {self.elememtary_type.name} {self.name};\n")
-
-
-#class Typedef(Obj):
-#    __slots__ = ("c_decl",)
-
-#    def __init__(
-#        self: Self,
-#        c_type_str: str
-#    ) -> None:
-#        super().__init__()
-#        self.c_decl: CDecl = CDecl(
-#            name="_",
-#            c_decl_str=f"{c_type_str} _"
-#        )
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"typedef {self.c_decl.format(name="")} {label.name};\n")
-
-
-#class ExternalInclude(Obj):
-#    __slots__ = ()
-
-
-## TODO: expose macros through c script (under #include <vulkan/vulkan.h>)
-#class Macro(Obj):
-#    __slots__ = ("py_macro",)
-
-#    def __init__(
-#        self: Self,
-#        c_macro: str
-#    ) -> None:
-#        super().__init__()
-#        self.py_macro: str | None = type(self).parse_c_macro(c_macro)
-
-#    @classmethod
-#    def parse_c_macro(
-#        cls: type[Self],
-#        c_macro: str
-#    ) -> str | None:
-
-#        def format_line(
-#            line: str
-#        ) -> str:
-#            line = line.strip()
-#            if "//" in line:  # Remove comments.
-#                line = line[:line.index("//")].rstrip()
-#            if line.endswith("\\"):  # Join line continuation.
-#                return line.rstrip("\\")
-#            return line + "\n"
-
-#        c_macro = "".join(filter(None, (
-#            format_line(line)
-#            for line in c_macro.splitlines()
-#        ))).strip()
-
-#        if (macro_match := re.fullmatch(r"#define\s+(\b\w+\b)\s*(.*)", c_macro)) is None:
-#            return None
-
-#        name = macro_match.group(1)
-#        value = macro_match.group(2)
-
-#        # A number literal.
-#        if value.isdecimal():
-#            return f"{name} = {value}"
-
-#        # A number from a macro function call.
-#        if (match := re.fullmatch(r"(\w+)\(((?:\w+,\s*)*\w+)\)", value)) is not None:
-#            func_name = match.group(1)
-#            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(2)))
-#            return f"{name} = {func_name}({", ".join(args)})"
-
-#        # A macro function.
-#        if (match := re.fullmatch(r"\(((?:\w+,\s*)*\w+)\)\s*\((.*)\)", value)) is not None:
-#            args = tuple(arg_match.group() for arg_match in re.finditer(r"\w+", match.group(1)))
-#            result = match.group(2)
-#            result = re.sub(
-#                r"\(uint32_t\)\((\w+)\)",
-#                lambda match: match.group(1),
-#                result
-#            )
-#            result = re.sub(
-#                r"\b(\d+|0x[\dA-F]+)U",
-#                lambda match: match.group(1),
-#                result
-#            )
-#            result = re.sub(
-#                r"\((\w+)\)",
-#                lambda match: match.group(1),
-#                result
-#            )
-#            return "\n".join((
-#                f"def {name}(",
-#                *(f"    {arg}: int," for  arg in args),
-#                ") -> int:",
-#                f"    return {result}"
-#            ))
-
-#        return None
-
-#    def write_pydef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        if self.py_macro is None:
-#            return
-#        file.write("\n")
-#        file.write(f"{self.py_macro}\n")
-
-
-#class Constant(Obj):
-#    __slots__ = (
-#        "c_decl",
-#        "c_value"
-#        #"write_macro"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        c_value: str,
-#        c_type_str: str | None
-#    ) -> None:
-#        super().__init__()
-#        #c_type_str, write_macro = type(self).parse_constant(c_value)
-#        if c_type_str is not None:
-#            c_decl = TypeCDecl(c_type_str=c_type_str)
-#        elif c_value.isidentifier():
-#            c_decl = TypeCDecl(c_type_str="uint64_t")
-#        elif re.fullmatch(r"0|[1-9][0-9]*|0x[\dA-F]+", c_value) is not None:
-#            c_decl = TypeCDecl(c_type_str="uint64_t")
-#        #if (match := re.fullmatch(r"0x[\dA-F]+", c_value)) is not None:
-#        #    return c_value, True
-#        #if (match := re.fullmatch(r"\(~(\d+)U\)", c_value)) is not None:
-#        #    return f"0x{(1 << 32) - 1 - int(match.group(1)):X}", False
-#        #if (match := re.fullmatch(r"\(~(\d+)ULL\)", c_value)) is not None:
-#        #    return f"0x{(1 << 64) - 1 - int(match.group(1)):X}", False
-#        #if (match := re.fullmatch(r"([+-]?\d*\.?\d+(?:E[+-]?\d+)?)F?", c_value, flags=re.IGNORECASE)) is not None:
-#        #    return f"{match.group(1)}", False
-#        elif re.fullmatch(r"\"\w+\"", c_value) is not None:
-#            c_decl = CDecl(c_decl_str="char _[]", name="_")
-#        else:
-#            assert False
-#        self.c_decl: CDecl = c_decl
-#        self.c_value: str | None = c_value if c_value.isdecimal() else None
-#        #self.py_value: str = py_value
-#        #self.write_macro: bool = write_macro
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        if self.c_value is not None:
-#            #file.write(f"{self.name} = None\n")
-#            file.write(f"#define {label.name} {self.c_value}\n")
-#        else:
-#            file.write(f"static const {self.c_decl.format(name=label.name)};\n")
-
-#    def write_pydef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"{label.name} = lib.{label.name}\n")
-
-
-#class EnumMember(Obj):
-#    __slots__ = ()
-
-#    #def __init__(
-#    #    self: Self,
-#    #    enum_value: int
-#    #) -> None:
-#    #    super().__init__()
-#    #    self.enum_value: int = enum_value
-
-
-#class Enum(Obj):
-#    __slots__ = (
-#        "bitmask",
-#        "long_bitwidth",
-#        "members"
-#    )
-
-#    def __init__(
-#        self: Self
-#    ) -> None:
-#        super().__init__()
-#        self.bitmask: bool = False
-#        self.long_bitwidth: bool = False
-#        self.members: Container[EnumMember] = Container()
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"typedef {f"VkFlags64" if self.long_bitwidth else f"enum {label.name} {{ ... }}"} {label.name};\n")
-#        if label.alias is not None:
-#            return
-#        for _, member_label in self.members.iter_filtered_items():
-#            file.write(f"static const uint64_t {member_label.name};\n")
-
-#    def write_pydef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        bitmask = self.bitmask
-#        #assert label.name.startswith("Vk"), label.name
-#        py_enum_name = label.name.removeprefix("Vk")
-
-#        enum_tag = label.tag
-#        assert (match := re.fullmatch(r"(([A-Z][a-z0-9]+)+?)(FlagBits(2)?)?([A-Z]+)?", label.name)) is not None
-#        assert enum_tag == match.group(5)
-#        assert bitmask == (match.group(3) is not None)
-#        member_prefixes = [segment.group().upper() for segment in re.finditer(r"[A-Z][a-z0-9]+", match.group(1))]
-#        if member_prefixes == ["VK", "RESULT"]:
-#            member_prefixes.pop()
-#        if match.group(4) is not None:
-#            member_prefixes.append("2")
-
-#        file.write("\n")
-#        file.write(f"class {py_enum_name}({"Flag" if bitmask else "Enum"}):\n")
-#        class_body_empty = True
-#        for _, member_label in self.members.iter_filtered_items():
-#            member_segments = member_label.name.split("_")
-#            if member_label.alias is not None:
-#                continue
-#            member_segments = member_segments[len(member_prefixes):]
-#            if (member_tag := member_label.tag) is not None:
-#                assert member_segments.pop() == member_tag
-#            if bitmask and member_segments[-1] == "BIT":
-#                member_segments.pop()
-#            if member_tag is not None and member_tag != enum_tag:
-#                member_segments.append(member_tag)
-#            py_membr_name = "_".join(member_segments)
-#            if not py_membr_name.isidentifier():
-#                py_membr_name = f"_{py_membr_name}"
-#            file.write(f"    {py_membr_name} = lib.{member_label.name}\n")
-#            class_body_empty = False
-#        if class_body_empty:
-#            file.write("    pass\n")
-
-
-#class FunctionPointer(Obj):
-#    __slots__ = ("c_decl",)
-
-#    def __init__(
-#        self: Self,
-#        c_statement_str: str,
-#        name: str
-#    ) -> None:
-#        super().__init__()
-#        assert (match := re.fullmatch(
-#            r"typedef\s+(.*?)\s*\(VKAPI_PTR\s*\*\w+\)\((.*)\);",
-#            c_statement_str,
-#            flags=re.DOTALL
-#        )) is not None
-#        return_c_type_str = match.group(1)
-#        args_c_decl_str = match.group(2)
-#        arg_c_decl_strs = args_c_decl_str.split(",") if args_c_decl_str.strip() != "void" else []
-#        self.c_decl: CallableCDecl = CallableCDecl(
-#            return_c_decl=TypeCDecl(c_type_str=return_c_type_str),
-#            arg_c_decls=tuple(
-#                CDecl(c_decl_str=arg_c_decl_str, name=arg_c_decl_str.rsplit(" ", 1)[-1])
-#                for arg_c_decl_str in arg_c_decl_strs
-#            ),
-#            name=name
-#        )
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        #file.write(f"""typedef {self.return_c_type.get_c_decl_str()} (*{label.name})({
-#        #    ", ".join(f"{arg_decl.get_c_decl_str()}" for arg_decl in self.arg_c_decls)
-#        #});\n""")
-#        file.write(f"""typedef {self.c_decl.format(name=label.name)};\n""")
-
-
-#class Handle(Obj):
-#    __slots__ = ()
-
-#    def write_cdef_incomplete(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"typedef struct {label.name}_T *{label.name};\n")
-
-#    #def write_pydef(
-#    #    self: Self,
-#    #    file: TextIO,
-#    #    label: Label
-#    #) -> None:
-#    #    file.write("\n")
-#    #    file.write(f"class {label.name}(VulkanCData):\n")
-#    #    file.write(f"    __slots__ = ()\n")
-
-
-#class Struct(Obj):
-#    __slots__ = ("member_c_decls",)
-
-#    class_specifier: ClassVar[str] = "struct"
-
-#    def __init__(
-#        self: Self,
-#        member_c_decl_str_name_pairs: tuple[tuple[str, str], ...]
-#        #member_c_decl_strs: tuple[str, ...],
-#        #member_names: tuple[str, ...]
-#    ) -> None:
-#        super().__init__()
-#        self.member_c_decls: tuple[CDecl, ...] = tuple(
-#            CDecl(
-#                c_decl_str=member_c_decl_str,
-#                name=member_name
-#            )
-#            for member_c_decl_str, member_name in member_c_decl_str_name_pairs
-#        )
-
-#    def write_cdef_incomplete(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"typedef {self.class_specifier} {label.name} {label.name};\n")
-
-#    def write_cdef(
-#        self: Self,
-#        file: TextIO,
-#        label: Label
-#    ) -> None:
-#        file.write("\n")
-#        file.write(f"typedef {self.class_specifier} {label.name} {{\n")
-#        for c_decl in self.member_c_decls:
-#            file.write(f"    {c_decl.format()};\n")  # TODO: bitwidth
-#        file.write(f"}} {label.name};\n")
-
-
-#class Union(Struct):
-#    __slots__ = ()
-
-#    class_specifier: ClassVar[str] = "union"
-
-#    #def __init__(
-#    #    self: Self,
-#    #    member_c_decl_strs: tuple[str, ...],
-#    #    objs: Container[Obj]
-#    #) -> None:
-#    #    super().__init__()
-#    #    self.member_c_decls: tuple[CDeclaration, ...] = tuple(
-#    #        CDeclaration(member_c_decl_str, objs)
-#    #        for member_c_decl_str in member_c_decl_strs
-#    #    )
-
-#    #def write_cdef_incomplete(
-#    #    self: Self,
-#    #    file: TextIO,
-#    #    label: Label
-#    #) -> None:
-#    #    file.write("\n")
-#    #    file.write(f"typedef union {label.name} {label.name};\n")
-
-#    #def write_cdef(
-#    #    self: Self,
-#    #    file: TextIO,
-#    #    label: Label
-#    #) -> None:
-#    #    file.write("\n")
-#    #    file.write(f"typedef union {label.name} {{\n")
-#    #    for arg_decl in self.member_c_decls:
-#    #        file.write(f"    {arg_decl};\n")
-#    #    file.write(f"}} {label.name};\n")
-
-
-#class Command(Obj):
-#    __slots__ = ("c_decl",)
-
-#    def __init__(
-#        self: Self,
-#        return_c_type_str: str,
-#        arg_c_decl_str_name_pairs: tuple[tuple[str, str], ...],
-#        name: str
-#    ) -> None:
-#        super().__init__()
-#        self.c_decl: CallableCDecl = CallableCDecl(
-#            return_c_decl=TypeCDecl(c_type_str=return_c_type_str),
-#            arg_c_decls=tuple(
-#                CDecl(
-#                    c_decl_str=c_decl_str,
-#                    name=name
-#                )
-#                for c_decl_str, name in arg_c_decl_str_name_pairs
-#            ),
-#            name=name
-#        )
-
-#    #def write_cdef(
-#    #    self: Self,
-#    #    file: TextIO,
-#    #    label: Label
-#    #) -> None:
-#    #    file.write("\n")
-#    #    file.write(f"""{self.return_decl.cdecl}({
-#    #        ", ".join(arg_decl.cdecl for arg_decl in self.arg_decls)
-#    #    });\n""")
-
-
-#class Registry:
-#    __slots__ = (
-#        "api",
-#        "platform",
-#        "defines",
-#        "tags",
-#        "objs"
-#        #"elementary_type_container",
-#        #"typedef_container",
-#        #"external_type_container",
-#        #"external_include_container",
-#        #"macro_container",
-#        #"constant_container",
-#        #"enum_container",
-#        #"function_pointer_container",
-#        #"handle_container",
-#        #"struct_container",
-#        #"union_container",
-#        #"command_container"
-#    )
-
-#    def __init__(
-#        self: Self,
-#        api: str,
-#        platform: str,
-#        defines: list[str]
-#    ) -> None:
-#        super().__init__()
-#        self.api: str = api
-#        self.platform: str = platform
-#        self.defines: dict[str, bool] = dict.fromkeys(defines, True)
-#        self.tags: set[str] = set()
-#        self.objs: Container[Obj] = Container()
-#        for name, py_type_str in (
-#            ("void", "Never"),
-#            ("char", "str"),
-#            ("short", "int"),
-#            ("int", "int"),
-#            ("long", "int"),
-#            ("unsigned short", "int"),
-#            ("unsigned int", "int"),
-#            ("unsigned long", "int"),
-#            ("size_t", "int"),
-#            ("float", "float"),
-#            ("double", "float"),
-#            ("int8_t", "int"),
-#            ("int16_t", "int"),
-#            ("int32_t", "int"),
-#            ("int64_t", "int"),
-#            ("uint8_t", "int"),
-#            ("uint16_t", "int"),
-#            ("uint32_t", "int"),
-#            ("uint64_t", "int")
-#        ):
-#            self.objs.add_child(name, ElementaryType(
-#                #name=name,
-#                py_type_str=py_type_str
-#            ))
-
-#        #self.elementary_type_container: Container[ElementaryType] = Container()
-#        #self.typedef_container: Container[Typedef] = Container()
-#        #self.external_type_container: Container[ExternalType] = Container()
-#        #self.external_include_container: Container[ExternalInclude] = Container()
-#        #self.macro_container: Container[Macro] = Container()
-#        #self.constant_container: Container[Constant] = Container()
-#        #self.enum_container: Container[Enum] = Container()
-#        #self.function_pointer_container: Container[FunctionPointer] = Container()
-#        #self.handle_container: Container[Handle] = Container()
-#        #self.struct_container: Container[Struct] = Container()
-#        #self.union_container: Container[Union] = Container()
-#        #self.command_container: Container[Command] = Container()
-
-#        #for name, py_type_str in (
-#        #    ("void", "Never"),
-#        #    ("char", "str"),
-#        #    ("short", "int"),
-#        #    ("int", "int"),
-#        #    ("long", "int"),
-#        #    ("unsigned short", "int"),
-#        #    ("unsigned int", "int"),
-#        #    ("unsigned long", "int"),
-#        #    ("size_t", "int"),
-#        #    ("float", "float"),
-#        #    ("double", "float"),
-#        #    ("int8_t", "int"),
-#        #    ("int16_t", "int"),
-#        #    ("int32_t", "int"),
-#        #    ("int64_t", "int"),
-#        #    ("uint8_t", "int"),
-#        #    ("uint16_t", "int"),
-#        #    ("uint32_t", "int"),
-#        #    ("uint64_t", "int")
-#        #):
-#        #    self.elementary_type_container.add_child(name, ElementaryType(
-#        #        name=name,
-#        #        py_type_str=py_type_str
-#        #    ))
-#        #    #self.elementary_type_container.get_label(name).required = True
-
-#    #def iter_interface_obj_items(
-#    #    self: Self
-#    #) -> Iterator[tuple[Obj, Label]]:
-#    #    for container in (
-#    #        self.elementary_type_container,
-#    #        self.external_type_container,
-#    #        self.external_include_container,
-#    #        self.macro_container,
-#    #        self.constant_container,
-#    #        self.enum_container,
-#    #        self.function_pointer_container,
-#    #        self.handle_container,
-#    #        self.struct_container,
-#    #        self.union_container,
-#    #        #self.command_container
-#    #    ):
-#    #        yield from container.iter_filtered_children_items()
-
-#    #def get_interface_label(
-#    #    self: Self,
-#    #    name: str
-#    #) -> Label:
-#    #    for container in (
-#    #        self.elementary_type_container,
-#    #        self.external_type_container,
-#    #        self.external_include_container,
-#    #        self.macro_container,
-#    #        self.constant_container,
-#    #        self.enum_container,
-#    #        self.function_pointer_container,
-#    #        self.handle_container,
-#    #        self.struct_container,
-#    #        self.union_container,
-#    #        #self.command_container
-#    #    ):
-#    #        if container.contains(name):
-#    #            return container.get_label(name)
-#    #    raise KeyError(name)
-
-#    def read_obj(
-#        self: Self,
-#        name: str,
-#        type_xml: etree.Element
-#    ) -> None:
-#        if (alias := type_xml.get("alias")) is not None:
-#            self.objs.add_alias(name, alias)
-#            return
-
-#        required: bool | None = None
-#        match type_xml.get("category"):
-#            case None:
-#                if self.objs.contains(name):
-#                    return
-#                obj = Typedef(
-#                    c_type_str="void" if type_xml.get("requires", "").startswith("vk_video/") else PLATFORM_TYPE_DICT[name]
-#                )
-#                required = True
-#                #obj.required = True
-#                #self.obj_dict[name] = obj
-#                #self.external_type_container.get_label(name).required = True
-
-#            case "include":
-#                if self.objs.contains(name):
-#                    return
-#                obj = ExternalInclude()
-#                #self.external_include_container.add_child(name, ExternalInclude())
-
-#            case "define":
-#                obj = Macro(
-#                    c_macro="".join(type_xml.itertext())
-#                )
-#                #self.macro_container.add_child(name, Macro(
-#                #    c_macro="".join(type_xml.itertext())
-#                #))
-
-#            case "basetype":
-#                obj = Typedef(
-#                    c_type_str=BASE_TYPE_DICT[name]
-#                )
-#                #if (alias := type_xml.findtext("type")) is not None and alias.isidentifier():
-#                #    self.elementary_type_container.add_child_alias(name, alias)
-#                #else:
-#                #    self.external_type_container.add_child(name, ExternalType(
-#                #        name=name
-#                #    ))
-
-#            case "enum":
-#                obj = Enum()
-#                #self.enum_container.add_child(name, Enum())
-
-#            case "bitmask":
-#                obj = Typedef(
-#                    c_type_str=type_xml.findtext("type", "")
-#                )
-#                #if (alias := type_xml.get("alias")) is not None:
-#                #    self.elementary_type_container.add_child_alias(name, alias)
-#                #else:
-#                #    self.elementary_type_container.add_child_alias(name, type_xml.findtext("type", ""))
-
-#            case "funcpointer":
-#                obj = FunctionPointer(
-#                    c_statement_str="".join(type_xml.itertext()),
-#                    name=name
-#                )
-
-#            case "handle":
-#                obj = Handle()
-
-#            case "struct":
-#                obj = Struct(
-#                    member_c_decl_str_name_pairs=tuple(
-#                        ("".join(member_xml.itertext()), member_xml.findtext("name", ""))
-#                        for member_xml in tuple(type_xml.iterfind("member"))
-#                    )
-#                )
-
-#            case "union":
-#                obj = Union(
-#                    member_c_decl_str_name_pairs=tuple(
-#                        ("".join(member_xml.itertext()), member_xml.findtext("name", ""))
-#                        for member_xml in tuple(type_xml.iterfind("member"))
-#                    )
-#                )
-
-#            case _ as category:
-#                raise ValueError(f"Unexpected category name: {category}")
-
-#        self.objs.add_child(name, obj)
-#        self.objs.get_label(name).mark_requirement(
-#            batch_tag=("require" if required else "remove") if required is not None else None,
-#            hidden=False,
-#            tags=self.tags
-#        )
-
-#    def read_constant(
-#        self: Self,
-#        name: str,
-#        enum_xml: etree.Element
-#    ) -> None:
-#        if self.objs.contains(name):
-#            return
-#        if (alias := enum_xml.get("alias")) is not None:
-#            self.objs.add_alias(name, alias)
-#            return
-#        self.objs.add_child(name, Constant(
-#            c_value=enum_xml.get("value", ""),
-#            c_type_str=enum_xml.get("type")
-#        ))
-
-#    def read_enum_member(
-#        self: Self,
-#        name: str,
-#        enum_xml: etree.Element,
-#        enum: Enum
-#    ) -> None:
-#        if enum.members.contains(name):
-#            return
-#        if (alias := enum_xml.get("alias")) is not None:
-#            enum.members.add_alias(name, alias)
-#            return
-#        enum.members.add_child(name, EnumMember())
-
-#    def read_command(
-#        self: Self,
-#        command_xml: etree.Element
-#    ) -> None:
-#        if (alias := command_xml.get("alias")) is not None:
-#            self.objs.add_alias(command_xml.get("name", ""), alias)
-#            return
-#        assert (proto_xml := command_xml.find("proto")) is not None
-#        name = proto_xml.findtext("name", "")
-#        self.objs.add_child(name, Command(
-#            return_c_type_str=proto_xml.findtext("type", ""),
-#            arg_c_decl_str_name_pairs=tuple(
-#                ("".join(param_xml.itertext()), param_xml.findtext("name", ""))
-#                for param_xml in command_xml.iterfind("param")
-#            ),
-#            name=name
-#        ))
-
-#    def build_cdef(
-#        self: Self,
-#        cdef_path: pathlib.Path
-#    ) -> None:
-#        with cdef_path.open("w") as file:
-#            file.write("// Auto-generated C definitions\n")
-#            for obj, label in self.objs.iter_filtered_items():
-#                obj.write_cdef_incomplete(file, label)
-#            for obj, label in self.objs.iter_filtered_items():
-#                obj.write_cdef(file, label)
-
-#    def build_ffi(
-#        self: Self,
-#        ffi_path: pathlib.Path,
-#        cdef_path: pathlib.Path
-#    ) -> None:
-#        ffi = cffi.FFI()
-#        ffi.cdef(csource=cdef_path.read_text())
-#        ffi.set_source(
-#            module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
-#            source="".join((
-#                *(f"#define {define}\n" for define, enabled in self.defines.items() if enabled),
-#                "#include <vulkan/vulkan.h>\n"
-#            )),
-#            include_dirs=["extern/vulkan/Include"],
-#            library_dirs=["extern/vulkan/Lib"],
-#            libraries=["vulkan-1"]
-#        )
-#        ffi.compile()
-
-#    def build_pydef(
-#        self: Self,
-#        pydef_path: pathlib.Path,
-#        ffi_path: pathlib.Path
-#    ) -> None:
-#        with pydef_path.open("w") as file:
-#            file.write("from __future__ import annotations\n")
-#            file.write("\n")
-#            file.write("# Auto-generated python interface\n")
-#            file.write("\n")
-#            file.write("from enum import (\n")
-#            file.write("    Enum,\n")
-#            file.write("    Flag\n")
-#            file.write(")\n")
-#            file.write("from typing import (\n")
-#            file.write("    Never,\n")
-#            file.write("    Union\n")
-#            file.write(")\n")
-#            file.write("\n")
-#            file.write("import cffi\n")
-#            file.write("\n")
-#            file.write(f"from {ffi_path.relative_to(pydef_path.parent).stem} import (\n")
-#            file.write("    ffi,\n")
-#            file.write("    lib\n")
-#            file.write(")\n")
-#            file.write("\n\n")
-#            for obj, label in self.objs.iter_filtered_items():
-#                obj.write_pydef(file, label)
-
-#            #file.write("\n")
-#            #file.write("RETURN_CODES.update({\n")
-#            #file.write("    result_field.value: result_field.name\n")
-#            #file.write("    for result_field in VkResult\n")
-#            #file.write("    if isinstance(result_field.value, int)\n")
-#            #file.write("})\n")
-
-#            #file.write("\n")
-#            #file.write("__all__ = (\n")
-#            #for obj in self.iter_objs():
-#            #    if isinstance(obj, ElementaryType | ExternalType):
-#            #        continue
-#            #    file.write(f"    \"{obj.name}\",\n")
-#            #file.write(")\n")
-
-
-#def main() -> None:
-#    registry = Registry(
-#        api="vulkan",
-#        platform="win32",
-#        defines=["VK_ENABLE_BETA_EXTENSIONS"]
-#    )
-#    for xml_path in (
-#        "extern/xml/video.xml",
-#        "extern/xml/vk.xml"
-#    ):
-#        registry.read_registry_xml(etree.parse(xml_path).getroot())
-
-
-#    match parser.parse_args().mode:
-#        case "all":
-#            registry.build_cdef(cdef_path)
-#            registry.build_ffi(ffi_path, cdef_path)
-#            registry.build_pydef(pydef_path, ffi_path)
-
-#        case "cdef":
-#            registry.build_cdef(cdef_path)
-
-#        case "ffi":
-#            #registry.build_cdef(cdef_path)
-#            registry.build_ffi(ffi_path, cdef_path)
-
-#        case "pydef":
-#            registry.build_pydef(pydef_path, ffi_path)
 
 
 class Requirement:
@@ -1712,14 +338,12 @@ class Requirement:
         return self._required and not self._removed
 
 
-class RecordCollection[T: Record, **P]:
+class RecordCollection[T: Record, **P](Mapping[str, T]):
     __slots__ = (
         "_record_constructor",
         "_record_dict",
         "_alias_forwardref_dict",
         "_requirement_dict"
-        #"_required_set",
-        #"_removed_set"
     )
 
     def __init__(
@@ -1731,25 +355,22 @@ class RecordCollection[T: Record, **P]:
         self._record_dict: dict[str, T] = {}
         self._alias_forwardref_dict: dict[str, list[str]] = {}
         self._requirement_dict: dict[str, Requirement] = {}
-        #self._required_set: set[str] = set()
-        #self._removed_set: set[str] = set()
 
-    #def _resolve_alias_forwardref(
-    #    self: Self,
-    #    alias: str
-    #) -> None:
-    #    for name in self._alias_forwardref_dict.pop(alias, []):
-    #        self._record_dict[name] = self._record_dict[alias]
-    #        self._resolve_alias_forwardref(name)
+    def __len__(
+        self: Self
+    ) -> int:
+        return len(self._record_dict)
 
-    #def contains(
-    #    self: Self,
-    #    name: str
-    #) -> bool:
-    #    return name in self._record_dict or any(
-    #        name in names
-    #        for names in self._alias_forwardref_dict.values()
-    #    )
+    def __iter__(
+        self: Self
+    ) -> Iterator[str]:
+        yield from self._record_dict
+
+    def __getitem__(
+        self: Self,
+        __name: str
+    ) -> T:
+        return self._record_dict[__name]
 
     def new(
         self: Self,
@@ -1765,8 +386,6 @@ class RecordCollection[T: Record, **P]:
         while resolvable_aliases:
             alias = resolvable_aliases.pop(0)
             for name in self._alias_forwardref_dict.pop(alias, []):
-                #assert name not in self._requirement_dict
-                #self._requirement_dict[name] = Requirement()
                 self._record_dict[name] = self._record_dict[alias]
                 resolvable_aliases.append(name)
 
@@ -1781,37 +400,16 @@ class RecordCollection[T: Record, **P]:
             self._record_dict[name] = self._record_dict[alias]
         else:
             self._alias_forwardref_dict.setdefault(alias, []).append(name)
-        #self._alias_dict[name] = alias
 
-    #def _get_record_and_requirement(
+    #def get[DefaultT](
     #    self: Self,
-    #    name: str
-    #) -> tuple[T, bool]:
-    #    requirement = name in self._required_set and name not in self._removed_set
-    #    while name in self._alias_dict:
-    #        name = self._alias_dict[name]
-    #        requirement = requirement and name in self._required_set and name not in self._removed_set
-    #    return self._record_dict[name], requirement
-
-    def __getitem__(
-        self: Self,
-        __name: str
-    ) -> T:
-        return self._record_dict[__name]
-
-    def get[DefaultT](
-        self: Self,
-        __name: str,
-        __default: DefaultT
-    ) -> T | DefaultT:
-        try:
-            return self[__name]
-        except KeyError:
-            return __default
-
-        #return self._record_dict[name]
-        #record, _ = self._get_record_and_requirement(name)
-        #return record
+    #    __name: str,
+    #    __default: DefaultT
+    #) -> T | DefaultT:
+    #    try:
+    #        return self[__name]
+    #    except KeyError:
+    #        return __default
 
     def get_requirement(
         self: Self,
@@ -1825,44 +423,121 @@ class RecordCollection[T: Record, **P]:
     def finalize(
         self: Self,
         filter: Callable[[T], bool] | None = None
-    ) -> dict[str, T]:
+    ) -> None:
         assert not self._alias_forwardref_dict
-        return {
+        self._record_dict = {
             name: record
             for name, record in self._record_dict.items()
             if self._requirement_dict[name].check_requirement()
             and (filter is None or filter(record))
         }
 
-    #def get(
-    #    self: Self,
-    #    name: str
-    #) -> T | None:
-    #    try:
-    #        return self.fetch(name)
-    #    except KeyError:
-    #        return None
 
-    #def get(
-    #    self: Self,
-    #    __name: str
-    #) -> T:
-    #    return self._finalized_record_dict[__name]
+#class Registry:
+#    __slots__ = (
+#        "define_list",
+#        "include_list",
+#        "tag_list",
+#        "blank_records",
+#        "builtin_type_records",
+#        "macro_records",
+#        "function_macro_records",
+#        "typedef_records",
+#        "bitmask_records",
+#        "enum_records",
+#        "handle_records",
+#        "struct_records",
+#        "union_records",
+#        "function_pointer_records",
+#        "constant_records",
+#        "enum_member_records",
+#        "command_records",
+#        "_records_tuple"
+#    )
 
-    #def items(
-    #    self: Self
-    #) -> Iterator[tuple[str, T]]:
-    #    yield from self._finalized_record_dict.items()
-    #    #for name, record in self._record_dict.items():
-    #    #    if self._requirement_dict[name].check_requirement():
-    #    #        yield name, record
-    #    #    #record, requirement = self._get_record_and_requirement(name)
-    #    #    #if requirement:
-    #    #    #    yield name, record
+#    def __init__(
+#        self: Self,
+#        define_list: list[str],
+#        include_list: list[str],
+#        tag_list: list[str],
+#        blank_records: dict[str, BlankRecord],
+#        builtin_type_records: dict[str, BuiltinTypeRecord],
+#        macro_records: dict[str, MacroRecord],
+#        function_macro_records: dict[str, FunctionMacroRecord],
+#        typedef_records: dict[str, TypedefRecord],
+#        bitmask_records: dict[str, BitmaskRecord],
+#        enum_records: dict[str, EnumRecord],
+#        handle_records: dict[str, HandleRecord],
+#        struct_records: dict[str, StructRecord],
+#        union_records: dict[str, UnionRecord],
+#        function_pointer_records: dict[str, FunctionPointerRecord],
+#        constant_records: dict[str, ConstantRecord],
+#        enum_member_records: dict[str, EnumMemberRecord],
+#        command_records: dict[str, CommandRecord]
+#    ) -> None:
+#        super().__init__()
+#        self.define_list: Final[list[str]] = define_list
+#        self.include_list: Final[list[str]] = include_list
+#        self.tag_list: Final[list[str]] = tag_list
+
+#        self.blank_records: Final[dict[str, BlankRecord]] = blank_records
+#        self.builtin_type_records: Final[dict[str, BuiltinTypeRecord]] = builtin_type_records
+#        self.macro_records: Final[dict[str, MacroRecord]] = macro_records
+#        self.function_macro_records: Final[dict[str, FunctionMacroRecord]] = function_macro_records
+#        self.typedef_records: Final[dict[str, TypedefRecord]] = typedef_records
+#        self.bitmask_records: Final[dict[str, BitmaskRecord]] = bitmask_records
+#        self.enum_records: Final[dict[str, EnumRecord]] = enum_records
+#        self.handle_records: Final[dict[str, HandleRecord]] = handle_records
+#        self.struct_records: Final[dict[str, StructRecord]] = struct_records
+#        self.union_records: Final[dict[str, UnionRecord]] = union_records
+#        self.function_pointer_records: Final[dict[str, FunctionPointerRecord]] = function_pointer_records
+#        self.constant_records: Final[dict[str, ConstantRecord]] = constant_records
+#        self.enum_member_records: Final[dict[str, EnumMemberRecord]] = enum_member_records
+#        self.command_records: Final[dict[str, CommandRecord]] = command_records
+
+#        self._records_tuple: Final[tuple] = (
+#            self.builtin_type_records,
+#            self.blank_records,
+#            self.typedef_records,
+#            self.bitmask_records,
+#            self.enum_records,
+#            self.handle_records,
+#            self.struct_records,
+#            self.union_records,
+#            self.function_pointer_records,
+#            self.macro_records,
+#            self.function_macro_records,
+#            self.constant_records,
+#            self.enum_member_records,
+#            self.command_records
+#        )
+
+#    def __getitem__(
+#        self: Self,
+#        __name: str
+#    ) -> RecordUnionType:
+#        for records in self._records_tuple:
+#            try:
+#                return records[__name]
+#            except KeyError:
+#                continue
+#        raise KeyError(__name)
+
+#    def get[DefaultT](
+#        self: Self,
+#        __name: str,
+#        __default: DefaultT
+#    ) -> RecordUnionType | DefaultT:
+#        for records in self._records_tuple:
+#            try:
+#                return records[__name]
+#            except KeyError:
+#                continue
+#        return __default
 
 
 type RecordUnionType = Union[
-    UnusedRecord,
+    BlankRecord,
     BuiltinTypeRecord,
     TypedefRecord,
     BitmaskRecord,
@@ -1879,123 +554,15 @@ type RecordUnionType = Union[
 ]
 
 
-class Registry:
+class Registry(Mapping[str, RecordUnionType]):
     __slots__ = (
+        "version_major",
+        "version_minor",
+        "version_patch",
         "define_list",
         "include_list",
         "tag_list",
-        "unused_records",
-        "builtin_type_records",
-        "macro_records",
-        "function_macro_records",
-        "typedef_records",
-        "bitmask_records",
-        "enum_records",
-        "handle_records",
-        "struct_records",
-        "union_records",
-        "function_pointer_records",
-        "constant_records",
-        "enum_member_records",
-        "command_records",
-        "_records_tuple"
-    )
-
-    def __init__(
-        self: Self,
-        define_list: list[str],
-        include_list: list[str],
-        tag_list: list[str],
-        unused_records: dict[str, UnusedRecord],
-        builtin_type_records: dict[str, BuiltinTypeRecord],
-        macro_records: dict[str, MacroRecord],
-        function_macro_records: dict[str, FunctionMacroRecord],
-        typedef_records: dict[str, TypedefRecord],
-        bitmask_records: dict[str, BitmaskRecord],
-        enum_records: dict[str, EnumRecord],
-        handle_records: dict[str, HandleRecord],
-        struct_records: dict[str, StructRecord],
-        union_records: dict[str, UnionRecord],
-        function_pointer_records: dict[str, FunctionPointerRecord],
-        constant_records: dict[str, ConstantRecord],
-        enum_member_records: dict[str, EnumMemberRecord],
-        command_records: dict[str, CommandRecord]
-    ) -> None:
-        super().__init__()
-        self.define_list: Final[list[str]] = define_list
-        self.include_list: Final[list[str]] = include_list
-        self.tag_list: Final[list[str]] = tag_list
-
-        self.unused_records: Final[dict[str, UnusedRecord]] = unused_records
-        self.builtin_type_records: Final[dict[str, BuiltinTypeRecord]] = builtin_type_records
-        self.macro_records: Final[dict[str, MacroRecord]] = macro_records
-        self.function_macro_records: Final[dict[str, FunctionMacroRecord]] = function_macro_records
-        self.typedef_records: Final[dict[str, TypedefRecord]] = typedef_records
-        self.bitmask_records: Final[dict[str, BitmaskRecord]] = bitmask_records
-        self.enum_records: Final[dict[str, EnumRecord]] = enum_records
-        self.handle_records: Final[dict[str, HandleRecord]] = handle_records
-        self.struct_records: Final[dict[str, StructRecord]] = struct_records
-        self.union_records: Final[dict[str, UnionRecord]] = union_records
-        self.function_pointer_records: Final[dict[str, FunctionPointerRecord]] = function_pointer_records
-        self.constant_records: Final[dict[str, ConstantRecord]] = constant_records
-        self.enum_member_records: Final[dict[str, EnumMemberRecord]] = enum_member_records
-        self.command_records: Final[dict[str, CommandRecord]] = command_records
-
-        self._records_tuple: Final[tuple] = (
-            self.builtin_type_records,
-            self.unused_records,
-            self.typedef_records,
-            self.bitmask_records,
-            self.enum_records,
-            self.handle_records,
-            self.struct_records,
-            self.union_records,
-            self.function_pointer_records,
-            self.macro_records,
-            self.function_macro_records,
-            self.constant_records,
-            self.enum_member_records,
-            self.command_records
-        )
-
-    #def alias_resolved(
-    #    self: Self
-    #) -> bool:
-    #    return all(records.alias_resolved() for records in self._records_tuple)
-
-    def __getitem__(
-        self: Self,
-        __name: str
-    ) -> RecordUnionType:
-        for records in self._records_tuple:
-            try:
-                return records[__name]
-            except KeyError:
-                continue
-        raise KeyError(__name)
-
-    def get[DefaultT](
-        self: Self,
-        __name: str,
-        __default: DefaultT
-    ) -> RecordUnionType | DefaultT:
-        for records in self._records_tuple:
-            try:
-                return records[__name]
-            except KeyError:
-                continue
-        return __default
-        #if __default is Ellipsis:
-        #    raise KeyError(__name)
-        #return __default
-
-
-class MutableRegistry:
-    __slots__ = (
-        "define_list",
-        "include_list",
-        "tag_list",
-        "unused_records",
+        "blank_records",
         "builtin_type_records",
         "macro_records",
         "function_macro_records",
@@ -2016,13 +583,15 @@ class MutableRegistry:
         self: Self
     ) -> None:
         super().__init__()
+        self.version_major: int = 0
+        self.version_minor: int = 0
+        self.version_patch: int = 0
+
         self.define_list: Final[list[str]] = []
         self.include_list: Final[list[str]] = []
         self.tag_list: Final[list[str]] = []
 
-        #self.obj_cls_dict: dict[str, type[Obj]] = {}
-        #self.alias_obj_dict: dict[str, AliasObj] = {}
-        self.unused_records: Final = RecordCollection(UnusedRecord)
+        self.blank_records: Final = RecordCollection(BlankRecord)
         self.builtin_type_records: Final = RecordCollection(BuiltinTypeRecord)
         self.typedef_records: Final = RecordCollection(TypedefRecord)
         self.bitmask_records: Final = RecordCollection(BitmaskRecord)
@@ -2039,7 +608,7 @@ class MutableRegistry:
 
         self._records_tuple: Final[tuple] = (
             self.builtin_type_records,
-            self.unused_records,
+            self.blank_records,
             self.typedef_records,
             self.bitmask_records,
             self.enum_records,
@@ -2054,10 +623,16 @@ class MutableRegistry:
             self.command_records
         )
 
-    #def alias_resolved(
-    #    self: Self
-    #) -> bool:
-    #    return all(records.alias_resolved() for records in self._records_tuple)
+    def __len__(
+        self: Self
+    ) -> int:
+        return sum(map(len, self._records_tuple))
+
+    def __iter__(
+        self: Self
+    ) -> Iterator[str]:
+        for records in self._records_tuple:
+            yield from records
 
     def __getitem__(
         self: Self,
@@ -2065,22 +640,22 @@ class MutableRegistry:
     ) -> RecordUnionType:
         for records in self._records_tuple:
             try:
-                return records.get(__name)
+                return records[__name]
             except KeyError:
                 continue
         raise KeyError(__name)
 
-    def get[DefaultT](
-        self: Self,
-        __name: str,
-        __default: DefaultT
-    ) -> RecordUnionType | DefaultT:
-        for records in self._records_tuple:
-            try:
-                return records[__name]
-            except KeyError:
-                continue
-        return __default
+    #def get[DefaultT](
+    #    self: Self,
+    #    __name: str,
+    #    __default: DefaultT
+    #) -> RecordUnionType | DefaultT:
+    #    for records in self._records_tuple:
+    #        try:
+    #            return records[__name]
+    #        except KeyError:
+    #            continue
+    #    return __default
 
     def get_requirement(
         self: Self,
@@ -2095,146 +670,36 @@ class MutableRegistry:
 
     def finalize(
         self: Self
-    ) -> Registry:
-        registry = Registry(
-            define_list=self.define_list,
-            include_list=self.include_list,
-            tag_list=self.tag_list,
-            unused_records=self.unused_records.finalize(),
-            builtin_type_records=self.builtin_type_records.finalize(),
-            macro_records=self.macro_records.finalize(),
-            function_macro_records=self.function_macro_records.finalize(),
-            typedef_records=self.typedef_records.finalize(),
-            bitmask_records=self.bitmask_records.finalize(),
-            enum_records=self.enum_records.finalize(),
-            handle_records=self.handle_records.finalize(),
-            struct_records=self.struct_records.finalize(),
-            union_records=self.union_records.finalize(),
-            function_pointer_records=self.function_pointer_records.finalize(),
-            constant_records=self.constant_records.finalize(),
-            enum_member_records=self.enum_member_records.finalize(
-                filter=lambda enum_member:
-                    self.enum_records.get_requirement(enum_member.enum_name).check_requirement()
-            ),
-            command_records=self.command_records.finalize(
-                filter=lambda command:
-                    command.handle_name is None or self.handle_records.get_requirement(command.handle_name).check_requirement()
-            ),
+    ) -> None:
+        self.blank_records.finalize()
+        self.builtin_type_records.finalize()
+        self.macro_records.finalize()
+        self.function_macro_records.finalize()
+        self.typedef_records.finalize()
+        self.bitmask_records.finalize()
+        self.enum_records.finalize()
+        self.handle_records.finalize()
+        self.struct_records.finalize()
+        self.union_records.finalize()
+        self.function_pointer_records.finalize()
+        self.constant_records.finalize()
+        self.enum_member_records.finalize(
+            filter=lambda enum_member:
+                self.enum_records.get_requirement(enum_member.enum_name).check_requirement()
+        )
+        self.command_records.finalize(
+            filter=lambda command:
+                command.handle_name is None or self.handle_records.get_requirement(command.handle_name).check_requirement()
         )
         CType.resolve_array_sizes({
             name: value
-            for name, constant in registry.constant_records.items()
+            for name, constant in self.constant_records.items()
             if (value := constant.attr_value).isdecimal()
         })
-        return registry
-
-    #def get(
-    #    self: Self,
-    #    name: str
-    #) -> Union[
-    #    IncludeRecord,
-    #    DefineRecord,
-    #    BuiltinTypeRecord,
-    #    TypedefRecord,
-    #    BitmaskRecord,
-    #    EnumRecord,
-    #    FunctionPointerRecord,
-    #    HandleRecord,
-    #    StructRecord,
-    #    UnionRecord,
-    #    ConstantRecord,
-    #    EnumMemberRecord,
-    #    CommandRecord,
-    #    None
-    #]:
-    #    try:
-    #        return self.fetch(name)
-    #    except KeyError:
-    #        return None
-
-
-    #def enum_tag_get(
-    #    self: Self,
-    #    name: str
-    #) -> Union[
-    #    ConstantRecord,
-    #    EnumMemberRecord,
-    #    None
-    #]:
-    #    for records in (
-    #        self.constant_records,
-    #        self.enum_member_records
-    #    ):
-    #        if (record := records.get(name)) is not None:
-    #            return record
-    #    return None
-
-    #def command_tag_get(
-    #    self: Self,
-    #    name: str
-    #) -> Union[
-    #    CommandRecord,
-    #    None
-    #]:
-    #    for records in (
-    #        self.command_records,
-    #    ):
-    #        if (record := records.get(name)) is not None:
-    #            return record
-    #    return None
-
-    #def _has_obj(
-    #    self: Self,
-    #    name: str
-    #) -> bool:
-    #    return name in self._obj_cls_dict
-
-    #def _get_obj(
-    #    self: Self,
-    #    name: str
-    #) -> Obj:
-    #    return self._obj_dict[name]
-
-    #def _add_obj(
-    #    self: Self,
-    #    name: str,
-    #    obj: Obj
-    #) -> None:
-    #    assert name not in self._obj_dict
-    #    self._obj_dict[name] = obj
-    #        #self._requirement_dict[name] = RequirementRecord()
 
 
 class Program:
-    __slots__ = (
-        #"api",
-        #"platform",
-        #"_define_list",
-        #"_include_list",
-        #"_tag_list",
-        #"_obj_dict"
-        #"_requirement_dict"
-        #"enum_children_dict"
-    )
-
-    #def __init__(
-    #    self: Self
-    #    #api: str,
-    #    #platform: str,
-    #    #defines: list[str]
-    #    #registry_xml_paths: list[pathlib.Path],
-    #    #cdef_path: pathlib.Path,
-    #    #pydef_path: pathlib.Path,
-    #    #ffi_path: pathlib.Path
-    #) -> None:
-    #    #self.api: str = api
-    #    #self.platform: str = platform
-    #    self._define_list: list[str] = []
-    #    self._include_list: list[str] = []
-    #    self._tag_list: list[str] = []
-    #    self._obj_dict: dict[str, Obj] = {}
-    #    #self._requirement_dict: dict[str, RequirementRecord] = {}
-    #    #self.enum_children_dict: dict[str, dict[str, Obj]] = {}
+    __slots__ = ()
 
     @classmethod
     def _join_xml_text(
@@ -2263,8 +728,6 @@ class Program:
         cls: type[Self],
         xml: etree.Element,
         target_api: str
-        #api: str | None,
-        #target_api: str
     ) -> bool:
         api = xml.get("api")
         return api is None or target_api in api.split(",")
@@ -2274,8 +737,6 @@ class Program:
         cls: type[Self],
         xml: etree.Element,
         target_api: str
-        #supported: str | None,
-        #target_api: str
     ) -> bool:
         supported = xml.get("supported")
         return supported is None or supported != "disabled" and target_api in supported.split(",")
@@ -2284,31 +745,26 @@ class Program:
     def _check_platform(
         cls: type[Self],
         xml: etree.Element,
-        target_platforms: list[str]
-        #platform: str | None,
-        #target_platform: str
+        target_platforms: list[str] | None
     ) -> bool:
         platform = xml.get("platform")
-        return platform is None or platform in target_platforms
+        return platform is None or target_platforms is None or platform in target_platforms
 
     @classmethod
     def _read_type_xml(
         cls: type[Self],
-        registry: MutableRegistry,
+        registry: Registry,
         type_xml: etree.Element,
     ) -> None:
-        #if (alias := type_xml.get("alias")) is not None:
-        #    self._add_obj(name, AliasObj(
-        #        alias=alias
-        #    ))
-        #    return
         name = type_xml.get("name", type_xml.findtext("name", ""))
-        match type_xml.get("category", "externtype"):
+        category = type_xml.get("category", "externtype")
+        if registry.get(name, None) is not None:
+            assert category in ("include", "externtype")
+            return
+
+        match category:
             case "include":
-                name = type_xml.get("name", "")
-                if registry.get(name, None) is not None:
-                    return
-                registry.unused_records.new(
+                registry.blank_records.new(
                     name=name
                 )
 
@@ -2319,10 +775,6 @@ class Program:
                 )
 
             case "externtype":
-                if registry.get(name, None) is not None:
-                    return
-                #if name not in PLATFORM_TYPE_DICT:
-                #    print("Missing externtype:", name)
                 registry.typedef_records.new(
                     name=name,
                     c_type=CType(PLATFORM_TYPE_DICT.get(name, "void"))
@@ -2432,7 +884,7 @@ class Program:
                     for line in cls._join_xml_text(type_xml).replace("\\\n", "").splitlines()
                     if (match := re.fullmatch(fr"#define {name}\b(.*)", line.lstrip())) is not None
                 )) != 1 or "##" in (define_content := define_contents[0]):
-                    registry.unused_records.new(
+                    registry.blank_records.new(
                         name=name
                     )
                     return
@@ -2446,6 +898,19 @@ class Program:
                         }
                     )
                 else:
+                    if name == "VK_HEADER_VERSION":
+                        assert (match := re.fullmatch(
+                            r" (\d+)",
+                            define_content
+                        )) is not None
+                        registry.version_patch = int(match.group(1))
+                    elif name == "VK_HEADER_VERSION_COMPLETE":
+                        assert (match := re.fullmatch(
+                            r" VK_MAKE_API_VERSION\(\w+, (\d+), (\d+), VK_HEADER_VERSION\)",
+                            define_content
+                        )) is not None
+                        registry.version_major = int(match.group(1))
+                        registry.version_minor = int(match.group(2))
                     registry.macro_records.new(
                         name=name,
                         c_type=CType("const uint32_t")
@@ -2457,7 +922,7 @@ class Program:
     @classmethod
     def _read_enum_xml(
         cls: type[Self],
-        registry: MutableRegistry,
+        registry: Registry,
         enum_xml: etree.Element,
         enum_name: str | None
     ) -> None:
@@ -2469,8 +934,6 @@ class Program:
             if (alias := enum_xml.get("alias")) is not None:
                 registry.constant_records.new_alias(name, alias)
                 return
-            #if (attr_value := enum_xml.get("value")) is None:
-            #    return
             attr_value = enum_xml.get("value", "")
             if (c_type_str := enum_xml.get("type")) is not None:
                 c_type = CType(f"const {c_type_str}")
@@ -2479,7 +942,7 @@ class Program:
             elif re.fullmatch(r"\d+|0x[\dA-F]+", attr_value):
                 c_type = CType("const uint32_t")
             elif re.fullmatch(r"\"\w+\"", attr_value) is not None:
-                c_type = CType("const char []")
+                c_type = CType("const char[]")
             else:
                 assert False
             registry.constant_records.new(
@@ -2496,13 +959,12 @@ class Program:
             registry.enum_member_records.new(
                 name=name,
                 enum_name=enum_name
-                #attr_protect=enum_xml.get("protect")
             )
 
     @classmethod
     def _read_command_xml(
         cls: type[Self],
-        registry: MutableRegistry,
+        registry: Registry,
         command_xml: etree.Element
     ) -> None:
         name = command_xml.get("name", command_xml.findtext("proto/name", ""))
@@ -2511,7 +973,6 @@ class Program:
             return
 
         assert (proto_xml := command_xml.find("proto")) is not None
-        #name = proto_xml.findtext("name", "")
         handle_name = (
             first_param_type_str
             if (first_param_xml := command_xml.find("param")) is not None
@@ -2536,97 +997,19 @@ class Program:
             attr_type=None
         )
 
-        #self._add_obj(self.obj_dict, Obj(
-        #    name=(
-        #        proto_xml.findtext("name", "")
-        #        if (proto_xml := command_xml.find("proto")) is not None
-        #        else command_xml.get("name", "")
-        #    ),
-        #    alias=command_xml.get("alias"),
-        #    category="command",
-        #    xml=command_xml
-        #))
-
-    #def _read_requirement_unit_xml(
-    #    self: Self,
-    #    requirement_unit_xml: etree.Element,
-    #    remove: bool
-    #) -> None:
-    #    name = requirement_unit_xml.get("name", "")
-    #    if remove:
-    #        self._get_obj(name).removed = True
-    #        return
-
-    #    #protect = requirement_unit_xml.get("protect")
-    #    if requirement_unit_xml.tag == "enum":
-    #        self._read_extended_enum_xml(requirement_unit_xml)
-
-    #    self._get_obj(name).required = True
-    #    #obj = self.obj_dict[requirement_unit_xml.get("name", "")]
-    #    #requirement_batch_tag = requirement_batch_xml.tag
-    #    #enabled = (protect := requirement_unit_xml.get("protect")) is None or self._define_list.get(protect, False)
-    #    #obj.mark_requirement(requirement_batch_tag, enabled)
-    #    #if obj.category == "enum":
-    #    #    for enum_member in self.enum_children_dict.get(obj.name, {}).values():
-    #    #        if enum_member.category == "enum_member_intrinsic":
-    #    #            enum_member.mark_requirement(requirement_batch_tag, enabled)
-
-
-    #def _read_requirement_batch_xml(
-    #    self: Self,
-    #    requirement_batch_xml: etree.Element,
-    #    api: str
-    #) -> None:
-    #    for requirement_unit_xml in requirement_batch_xml:
-    #        if not self._check_api(requirement_unit_xml, api):
-    #            continue
-    #        #protect = requirement_unit_xml.get("protect")
-    #        if requirement_unit_xml.tag == "enum":
-    #            enum_name = requirement_unit_xml.get("extends")
-    #            obj = Obj(
-    #                name=requirement_unit_xml.get("name", ""),
-    #                alias=requirement_unit_xml.get("alias"),
-    #                category="enum_member_extrinsic" if enum_name is not None else "constant_extrinsic",
-    #                xml=requirement_unit_xml
-    #            )
-    #            self._add_obj(obj)
-    #            #if enum_name is not None:
-    #            #    self._add_obj(self.enum_children_dict.setdefault(enum_name, {}), obj)
-
-    #        obj = self.obj_dict[requirement_unit_xml.get("name", "")]
-    #        requirement_batch_tag = requirement_batch_xml.tag
-    #        enabled = (protect := requirement_unit_xml.get("protect")) is None or self._define_list.get(protect, False)
-    #        obj.mark_requirement(requirement_batch_tag, enabled)
-    #        if obj.category == "enum":
-    #            for enum_member in self.enum_children_dict.get(obj.name, {}).values():
-    #                if enum_member.category == "enum_member_intrinsic":
-    #                    enum_member.mark_requirement(requirement_batch_tag, enabled)
-
-    #def extract_tag(
-    #    extension_name: str | None
-    #) -> str | None:
-    #    if extension_name is None:
-    #        return None
-    #    if (match := re.match(r"^VK_([A-Z]+)_", extension_name)) is None:
-    #        return None
-    #    if (tag := match.group(1)) == "VERSION":
-    #        return None
-    #    return tag
-
     @classmethod
     def _read_registry_xml(
         cls: type[Self],
-        registry: MutableRegistry,
+        registry: Registry,
         registry_xml: etree.Element,
         api: str,
-        platforms: list[str]
-        #registry_xml_path: pathlib.Path
+        platforms: list[str] | None
     ) -> None:
         for xml in registry_xml:
             match xml.tag:
                 case "platforms":
                     for platform_xml in xml.iterfind("platform"):
-                        if platform_xml.get("name", "") in platforms:
+                        if platforms is None or platform_xml.get("name", "") in platforms:
                             registry.define_list.append(platform_xml.get("protect", ""))
 
                 case "tags":
@@ -2638,20 +1021,8 @@ class Program:
                         if not cls._check_api(type_xml, api):
                             continue
                         cls._read_type_xml(registry, type_xml)
-                        #self._add_obj(self.obj_dict, Obj(
-                        #    name=type_xml.get("name", type_xml.findtext("name", "")),
-                        #    alias=type_xml.get("alias"),
-                        #    category=type_xml.get("category", "externtype"),
-                        #    xml=type_xml
-                        #))
 
                 case "enums":
-                    #enum_dict = (
-                    #    enum_children_dict.setdefault(enum_name, {})
-                    #    if (enum_name := xml.get("name", "")) != "API Constants"
-                    #    else None
-                    #)
-                    #enum_name = xml.get("name", "")
                     if (enum_name := xml.get("name", "")) == "API Constants":
                         enum_name = None
                     else:
@@ -2667,57 +1038,6 @@ class Program:
                         if enum_name is not None:
                             name = enum_xml.get("name", "")
                             registry.enum_member_records.get_requirement(name).mark_required()
-                            #self._get_obj(name).required = True
-                        #name = enum_xml.get("name", "")
-                        #if (alias := enum_xml.get("alias")) is not None:
-                        #    self._add_obj(name, AliasObj(
-                        #        alias=alias
-                        #    ))
-                        #    continue
-                        #if enum_name is None:
-                        #    obj = Constant(
-                        #        c_type=CType(enum_xml.get("type", "")),
-                        #        attr_value=enum_xml.get("value", "")
-                        #    )
-                        #else:
-                        #    obj = EnumMember(
-                        #        scope=enum_name,
-                        #        required=True
-                        #    )
-                        #self._add_obj(name, obj)
-                    #for enum_xml in xml.iterfind("enum"):
-                    #    obj = Obj(
-                    #        name=enum_xml.get("name", ""),
-                    #        alias=enum_xml.get("alias"),
-                    #        category="enum_member_intrinsic" if enum_name is not None else "constant_intrinsic",
-                    #        xml=enum_xml
-                    #    )
-                    #    self._add_obj(self.obj_dict, obj)
-                    #    if enum_name is not None:
-                    #        self._add_obj(self.enum_children_dict.setdefault(enum_name, {}), obj)
-                    #    for enum_xml in xml.iterfind("enum"):
-                    #        _add_obj(obj_dict, Obj(
-                    #            name=enum_xml.get("name", ""),
-                    #            category="constant",
-                    #            xml=enum_xml
-                    #        ))
-                    #else:
-                    #    #assert isinstance((enum := objs.get_child(enum_name)), Enum)
-                    #    #enum.bitmask = xml.get("type") == "bitmask"
-                    #    #enum.long_bitwidth = xml.get("bitwidth") == "64"
-                    #    for enum_xml in xml.iterfind("enum"):
-                    #        _add_obj(obj_dict, _add_obj(enum_children_dict[enum_name], Obj(
-                    #            name=enum_xml.get("name", ""),
-                    #            category="enum_member",
-                    #            xml=enum_xml
-                    #        )))
-                    #        #member_name = enum_xml.get("name", "")
-                    #        #read_enum_member(member_name, enum_xml, enum)
-                    #        #enum.members.get_label(member_name).mark_requirement(
-                    #        #    batch_tag="require",
-                    #        #    hidden=False
-                    #        #    #tags=_tag_list
-                    #        #)
 
                 case "commands":
                     for command_xml in xml.iterfind("command"):
@@ -2743,9 +1063,7 @@ class Program:
                             name = requirement_unit_xml.get("name", "")
                             if remove:
                                 registry.get_requirement(name).mark_removed()
-                                #self._get_obj(name).removed = True
                                 continue
-                            #protect = requirement_unit_xml.get("protect")
                             if requirement_unit_xml.tag == "enum":
                                 cls._read_enum_xml(
                                     registry=registry,
@@ -2753,66 +1071,19 @@ class Program:
                                     enum_name=requirement_unit_xml.get("extends")
                                 )
                             registry.get_requirement(name).mark_required()
-                            #self._get_obj(name).required = True
-                            #self._read_requirement_unit_xml(
-                            #    requirement_unit_xml=requirement_unit_xml,
-                            #    remove=remove
-                            #)
-                        #self._read_requirement_batch_xml(
-                        #    requirement_batch_xml=requirement_batch_xml,
-                        #    api=api
-                        #)
-                            #name = feature_unit_xml.get("name", "")
-                            #match feature_unit_xml.tag:
-                            #    case "type":
-                            #        obj = obj_dict[name]
-                            #    case "enum":
-                            #        obj = add_enum_member(
-                            #            obj_dict=obj_dict,
-                            #            enum_dict=(
-                            #                enum_children_dict[extends]
-                            #                if (extends := feature_unit_xml.get("extends")) is not None
-                            #                else None
-                            #            ),
-                            #            enum_xml=feature_unit_xml
-                            #        )
-                            #        #if (extends := feature_unit_xml.get("extends")) is not None:
-                            #        #    #assert isinstance((enum := objs.get_child(extends)), Enum)
-                            #        #    obj = _add_obj(obj_dict, _add_obj(enum_children_dict[extends], Obj(
-                            #        #        name=name,
-                            #        #        category="enum_member",
-                            #        #        xml=feature_unit_xml
-                            #        #    )))
-                            #        #    #read_enum_member(name, feature_unit_xml, enum)
-                            #        #    #label = enum.members.get_label(name)
-                            #        #else:
-                            #        #    obj = _add_obj(obj_dict, Obj(
-                            #        #        name=name,
-                            #        #        category="constant",
-                            #        #        xml=feature_unit_xml
-                            #        #    ))
-                            #        #    #read_constant(name, feature_unit_xml)
-                            #        #    #label = objs.get_label(name)
-                            #    case "command":
-                            #        obj = obj_dict[name]
-                            #        #label = objs.get_label(name)
-                            #    case _:
-                            #        continue
-                            #obj
 
                 case "extensions":
                     for extension_xml in xml.iterfind("extension"):
-                        if not cls._check_api(extension_xml, api) or not cls._check_supported(extension_xml, api) \
+                        if not cls._check_api(extension_xml, api) \
+                                or not cls._check_supported(extension_xml, api) \
                                 or not cls._check_platform(extension_xml, platforms):
                             continue
                         extension_type = extension_xml.get("type")
                         for requirement_batch_xml in extension_xml:
+                            if requirement_batch_xml.tag not in ("require", "remove"):
+                                continue
                             if not cls._check_api(requirement_batch_xml, api):
                                 continue
-                            #self._read_requirement_batch_xml(
-                            #    requirement_batch_xml=requirement_batch_xml,
-                            #    api=api
-                            #)
                             remove = requirement_batch_xml.tag == "remove"
                             for requirement_unit_xml in requirement_batch_xml:
                                 if requirement_unit_xml.tag not in ("type", "enum", "command"):
@@ -2823,7 +1094,6 @@ class Program:
                                 if remove:
                                     registry.get_requirement(name).mark_removed()
                                     continue
-                                #protect = requirement_unit_xml.get("protect")
                                 if requirement_unit_xml.tag == "enum":
                                     cls._read_enum_xml(
                                         registry=registry,
@@ -2833,118 +1103,36 @@ class Program:
                                 if requirement_unit_xml.tag == "command":
                                     registry.command_records[name].attr_type = extension_type
                                 registry.get_requirement(name).mark_required()
-                            #    if requirement_unit_xml.tag == "enum":
-                            #        add_enum_member(
-                            #            obj_dict=obj_dict,
-                            #            enum_dict=(
-                            #                enum_children_dict[extends]
-                            #                if (extends := requirement_unit_xml.get("extends")) is not None
-                            #                else None
-                            #            ),
-                            #            enum_xml=requirement_unit_xml
-                            #        )
-                            #    obj_dict[requirement_unit_xml.get("name", "")].mark_requirement(
-                            #        batch_tag=requirement_batch_xml.tag,
-                            #        enabled=_define_list.get(requirement_unit_xml.get("protect", ""), False)
-                            #        #hidden=(protect := requirement_unit_xml.get("protect")) is not None and not _define_list.get(protect, False)
-                            #        #tags=_tag_list
-                            #    )
-                            #    #name = extension_unit_xml.get("name", "")
-                            #    #match extension_unit_xml.tag:
-                            #    #    case "type":
-                            #    #        obj = obj_dict[name]
-                            #    #    case "enum":
-                            #    #        if (extends := extension_unit_xml.get("extends")) is not None:
-                            #    #            #assert isinstance((enum := objs.get_child(extends)), Enum)
-                            #    #            obj = _add_obj(obj_dict, _add_obj(enum_children_dict[extends], Obj(
-                            #    #                name=name,
-                            #    #                category="enum_member",
-                            #    #                xml=extension_unit_xml
-                            #    #            )))
-                            #    #            #read_enum_member(name, extension_unit_xml, enum)
-                            #    #            #label = enum.members.get_label(name)
-                            #    #        else:
-                            #    #            obj = _add_obj(obj_dict, Obj(
-                            #    #                name=name,
-                            #    #                category="constant",
-                            #    #                xml=extension_unit_xml
-                            #    #            ))
-                            #    #            #read_constant(name, extension_unit_xml)
-                            #    #            #label = objs.get_label(name)
-                            #    #    case "command":
-                            #    #        obj = obj_dict[name]
-                            #    #        #label = objs.get_label(name)
-                            #    #    case _:
-                            #    #        continue
-                            #    ##print(name, tag)
-                            #    #protect = extension_unit_xml.get("protect")
-                            #    #obj.mark_requirement(
-                            #    #    batch_tag=extension_batch_xml.tag,
-                            #    #    hidden=protect is not None and not _define_list.get(protect, False)
-                            #    #    #tags=tags
-                            #    #)
 
     @classmethod
     def read(
         cls: type[Self],
-        registry: MutableRegistry,
+        registry: Registry,
         registry_xml_paths: list[pathlib.Path],
         api: str,
-        platform: str | None,
-        beta_extensions: bool
+        platform: str
     ) -> None:
-        platforms: list[str] = []
-        if platform is not None:
-            platforms.append(platform)
-        if beta_extensions:
-            platforms.append("provisional")
+        if platform == "all":
+            platforms = None
+        else:
+            platforms = [platform]
+            if platform != "provisional":
+                platforms.append("provisional")
 
-        #registry.define_list.extend(defines)
         for name, py_type_str in BUILTIN_TYPE_DICT.items():
             registry.builtin_type_records.new(
                 name=name,
                 c_type=CType(name),
                 py_type_str=py_type_str
             )
-        #self.obj_dict.update(
-        #    (name, Obj(
-        #        name=name,
-        #        alias=None,
-        #        category="elememtary_type",
-        #        xml=etree.Element("type", {
-        #            "py_type_str": py_type_str
-        #        })
-        #    ))
-        #    for name, py_type_str in BUILTIN_TYPE_DICT.items()
-        #)
         for registry_xml_path in registry_xml_paths:
             registry.include_list.extend(REGISTRY_SRC_DICT[registry_xml_path.name])
-            #for include in REGISTRY_SRC_DICT[registry_xml_path.name]:
-            #    self._add_obj(include, Include())
-            #includes = REGISTRY_SRC_DICT[registry_xml_path.name]  # TODO
-            #registry_xml = etree.parse(registry_xml_path).getroot()
-            #for xml in list(registry_xml.iter()):
-            #    xml[:] = filter(
-            #        lambda child_xml: child_xml.tag != "comment",
-            #        xml
-            #    )  # TODO: better approach?
             cls._read_registry_xml(
                 registry=registry,
                 registry_xml=etree.parse(registry_xml_path).getroot(),
                 api=api,
                 platforms=platforms
             )
-
-    #def _check_obj_requirement(
-    #    self: Self,
-    #    obj: Obj
-    #) -> bool:
-    #    return (
-    #        (obj.scope is None or self._check_obj_requirement(self._get_obj(obj.scope)))
-    #        and obj.required
-    #        and not obj.removed
-    #        and (obj.attr_protect is None or obj.attr_protect in self._define_list)
-    #    )
 
     def _get_obj_def(
         self: Self,
@@ -3118,7 +1306,7 @@ class Program:
                         elif re.fullmatch(r"0x[\dA-F]+", c_value) is not None:
                             c_type = ffi.typeof("uint32_t")
                         elif re.fullmatch(r"\"\w+\"", c_value) is not None:
-                            c_type = ffi.typeof("char []")
+                            c_type = ffi.typeof("char[]")
                         else:
                             assert False
                         return f"""
@@ -3150,44 +1338,11 @@ class Program:
 
         assert False
 
-    #@classmethod
-    #def _write_str(
-    #    cls: type[Self],
-    #    file: TextIO,
-    #    content: str
-    #) -> None:
-    #    lines = content.splitlines()
-    #    assert lines.pop(0) == ""
-    #    spaces = lines.pop(-1) + "    "
-    #    assert not spaces.strip(" ")
-    #    file.write("\n")
-    #    for line in lines:
-    #        if line:
-    #            assert line.startswith(spaces)
-    #            line = line.removeprefix(spaces)
-    #        file.write(f"{line}\n")
-
     @classmethod
     def _iter_cdef_strs(
         cls: type[Self],
         registry: Registry
     ) -> Iterator[str]:
-        #include_records
-        #builtin_type_records
-
-        #typedef_records
-        #bitmask_records
-        #enum_records
-        #handle_records
-        #struct_records
-        #union_records
-        #function_pointer_records
-
-        #macro_records
-        #function_macro_records
-        #constant_records
-        #enum_member_records
-        #command_records
         for name, typedef in registry.typedef_records.items():
             yield f"""typedef {typedef.c_type.format()} {name};"""
 
@@ -3248,44 +1403,67 @@ class Program:
             )}\n}};"""
 
     @classmethod
+    def _iter_csrc_strs(
+        cls: type[Self],
+        registry: Registry
+    ) -> Iterator[str]:
+        for define in registry.define_list:
+            yield f"#define {define}"
+
+        for include in registry.include_list:
+            yield f"#include <{include}>"
+
+    @classmethod
     def _iter_pydef_strs(
         cls: type[Self],
         registry: Registry
     ) -> Iterator[str]:
         yield from ()
+        #for name, macro in registry.macro_records.items():
+        #    yield f"""{name}: {BUILTIN_TYPE_DICT[macro.c_type._base_type_str]} = lib.{name}"""
+
+        #for name, function_macro in registry.function_macro_records.items():
+        #    yield f"""def {name}(\n{",\n".join(
+        #        f"    {argument_c_type.format(argument_name)}"
+        #        for argument_name, argument_c_type in function_macro.argument_c_types.items()
+        #    ) if function_macro.argument_c_types else "    void"}\n);"""
+        #f"""
+        #                        {name}: int = lib.{name}
+        #                    """
+        #                return f"""
+        #                    def {name}({", ".join(f"{arg}: int" for arg in args)}) -> int:
+        #                        return lib.{name}({", ".join(args)})
+        #                """
 
     @classmethod
-    def write(
+    def write_cdef(
         cls: type[Self],
         registry: Registry,
-        cdef_path: pathlib.Path,
-        pydef_path: pathlib.Path,
-        ffi_path: pathlib.Path,
-        build_cdef: bool,
-        build_pydef: bool,
-        build_ffi: bool
+        cdef_path: pathlib.Path
     ) -> None:
-        if build_cdef:
-            with cdef_path.open("w") as cdef_file:
-                cdef_file.write("// Auto-generated C definitions\n")
-                for cdef_str in cls._iter_cdef_strs(registry):
-                    cdef_file.write(f"\n{cdef_str}\n")
-                #for section in ("cdef_preamble", "cdef_document"):
-                #    for category, name, xml in obj_triplets:
-                #        self._write_str(cdef_file, self._get_obj_def(
-                #            category=category,
-                #            section=section,
-                #            name=name,
-                #            xml=xml
-                #        ))
+        with cdef_path.open("w") as cdef_file:
+            cdef_file.write("// Auto-generated C definitions\n")
+            for cdef_str in cls._iter_cdef_strs(registry):
+                cdef_file.write(f"\n{cdef_str}\n")
 
-        if build_pydef:
-            #self._build_pydef(
-            #    pydef_path=pydef_path,
-            #    obj_items_grouped=obj_items_grouped
-            #)
-            with pydef_path.open("w") as pydef_file:
-                pydef_file.write(f"""
+    @classmethod
+    def write_csrc(
+        cls: type[Self],
+        registry: Registry,
+        csrc_path: pathlib.Path
+    ) -> None:
+        with csrc_path.open("w") as csrc_file:
+            for csrc_str in cls._iter_csrc_strs(registry):
+                csrc_file.write(f"{csrc_str}\n")
+
+    @classmethod
+    def write_pydef(
+        cls: type[Self],
+        registry: Registry,
+        pydef_path: pathlib.Path
+    ) -> None:
+        with pydef_path.open("w") as pydef_file:
+            pydef_file.write(f"""
 from __future__ import annotations
 
 # Auto-generated python interface
@@ -3301,188 +1479,76 @@ from typing import (
 
 import cffi
 
-from {ffi_path.relative_to(pydef_path.parent).stem} import (
+from _vulkan_ffi import (
     ffi,
     lib
 )
-                """.strip())
-                for pydef_str in cls._iter_pydef_strs(registry):
-                    pydef_file.write(f"\n{pydef_str}\n")
-                #for section in ("pydef_preamble", "pydef_document"):
-                #    for category, name, xml in obj_triplets:
-                #        self._write_str(pydef_file, self._get_obj_def(
-                #            category=category,
-                #            section=section,
-                #            name=name,
-                #            xml=xml
-                #        ))
+            """.strip())
+            pydef_file.write("\n\n")
+            for pydef_str in cls._iter_pydef_strs(registry):
+                pydef_file.write(f"\n{pydef_str}\n")
 
-        if build_ffi:
-            ffi = cffi.FFI()
-            ffi.cdef(csource=cdef_path.read_text())
-            ffi.set_source(
-                module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
-                source="".join((
-                    *(f"#define {define}\n" for define in registry.define_list),
-                    *(f"#include <{include}>\n" for include in registry.include_list)
-                )),
-                include_dirs=["extern/vulkan/Include"],
-                library_dirs=["extern/vulkan/Lib"],
-                libraries=["vulkan-1"]
-            )
-            ffi.compile()
-
-        #def write_cdef(
-        #    *cdef_strs: str
-        #) -> None:
-        #    cdef_str = "\n".join(cdef_strs)
-        #    ffi.cdef(cdef_str)
-        #    cdef_file.write(f"\n{cdef_str}\n")
-
-        #def write_pydef(
-        #    *pydef_strs: str
-        #) -> None:
-        #    pydef_str = "\n".join(pydef_strs)
-        #    pydef_file.write(f"\n{pydef_str}\n")
-
-        #def write_preamble(
-        #    category: str,
-        #    name: str,
-        #    xml: etree.Element
-        #) -> None:
-
-        #def write_document(
-        #    category: str,
-        #    name: str,
-        #    xml: etree.Element
-        #) -> None:
-        #    match category:
-        #        case "":
-        #            pass  # TODO
-
-        #        case "include":
-        #            pass
-
-        #        case "define":
-        #            pass
-
-        #        case "basetype":
-        #            pass  # TODO
-
-        #        case "enum":
-        #            pass  # TODO
-
-        #        case "bitmask":
-        #            pass  # TODO
-
-        #        case "funcpointer":
-        #            pass
-
-        #        case "handle":
-        #            write_pydef(
-        #                f"class {name}(VulkanCData):",
-        #                f"    __slots__ = ()"
-        #            )
-
-        #        case "struct":
-        #            pass  # TODO
-
-        #        case "union":
-        #            pass  # TODO
-
-        #        case "constant_intrinsic":
-        #            pass
-
-        #        case "constant_extrinsic":
-        #            pass
-
-        #        case "enum_member_intrinsic":
-        #            pass
-
-        #        case "enum_member_extrinsic":
-        #            pass
-
-        #        case "command":
-        #            pass  # TODO
-
-        #        case _:
-        #            assert False
-
-        #write_cdef("// Auto-generated C definitions")
-        #write_pydef(
-        #    "from __future__ import annotations",
-        #    "",
-        #    "# Auto-generated python interface",
-        #    "",
-        #    "from enum import (",
-        #    "    Enum,",
-        #    "    Flag",
-        #    ")",
-        #    "from typing import (",
-        #    "    Never,",
-        #    "    Union",
-        #    ")",
-        #    "",
-        #    "import cffi",
-        #    "",
-        #    f"from {ffi_path.relative_to(pydef_path.parent).stem} import (",
-        #    "    ffi,",
-        #    "    lib",
-        #    ")",
-        #    ""
-        #)
-
-        
-        #for category, name, xml in obj_triplets:
-        #    write_preamble(category, name, xml)
-        #for category, name, xml in obj_triplets:
-        #    write_document(category, name, xml)
-
-        #ffi.set_source(
-        #    module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
-        #    source="".join((
-        #        *(f"#define {define}\n" for define, enabled in self._define_list.items() if enabled),
-        #        "#include <vulkan/vulkan.h>\n"
-        #    )),
-        #    include_dirs=["extern/vulkan/Include"],
-        #    library_dirs=["extern/vulkan/Lib"],
-        #    libraries=["vulkan-1"]
-        #)
-        #ffi.compile()
+        #if write_ffi:
+        #    ffi = cffi.FFI()
+        #    ffi.cdef(csource=cdef_path.read_text())
+        #    ffi.set_source(
+        #        module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
+        #        source="".join((
+        #            *(f"#define {define}\n" for define in registry.define_list),
+        #            *(f"#include <{include}>\n" for include in registry.include_list)
+        #        )),
+        #        include_dirs=["extern/vulkan/Include"],
+        #        library_dirs=["extern/vulkan/Lib"],
+        #        libraries=["vulkan-1"]
+        #    )
+        #    ffi.compile()
 
 
 if __name__ == "__main__":
-    modes = {
-        "all": ["build_cdef", "build_pydef", "build_ffi"],
-        "cdef": ["build_cdef"],
-        "pydef": ["build_pydef"],
-        "ffi": ["build_ffi"],
-    }
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=modes)
-    commands = modes[parser.parse_args().mode]
+    parser.add_argument("--api", default="vulkan")
+    parser.add_argument("--platform", default="all")
+    parser.add_argument("--targets", default="cdef,csrc,pydef")
+    arg_namespace = parser.parse_args()
 
-    generated_dir = pathlib.Path("generated")
-    generated_dir.mkdir(exist_ok=True)
-
-    mutable_registry = MutableRegistry()
+    api = arg_namespace.api
+    platform = arg_namespace.platform
+    registry = Registry()
     Program.read(
-        registry=mutable_registry,
+        registry=registry,
         registry_xml_paths=[
             pathlib.Path("extern/xml/video.xml"),
             pathlib.Path("extern/xml/vk.xml")
         ],
-        api="vulkan",
-        platform="win32",
-        beta_extensions=True
+        api=api,
+        platform=platform
     )
-    registry = mutable_registry.finalize()
-    Program.write(
-        registry=registry,
-        cdef_path=generated_dir.joinpath("_vulkan_cdef.h"),
-        pydef_path=generated_dir.joinpath("_vulkan.py"),
-        ffi_path=generated_dir.joinpath("_vulkan_ffi.py"),
-        build_cdef="build_cdef" in commands,
-        build_pydef="build_pydef" in commands,
-        build_ffi="build_ffi" in commands
-    )
+    registry.finalize()
+
+    subdir_name = "_".join((
+        api,
+        platform,
+        str(registry.version_major),
+        str(registry.version_minor),
+        str(registry.version_patch)
+    ))
+    generated_dir = pathlib.Path("generated")
+    generated_dir.mkdir(exist_ok=True)
+    generated_subdir = generated_dir.joinpath(subdir_name)
+    generated_subdir.mkdir(exist_ok=True)
+    targets = list(map(str.strip, arg_namespace.targets.split(",")))
+    if "cdef" in targets:
+        Program.write_cdef(
+            registry=registry,
+            cdef_path=generated_subdir.joinpath(f"_vulkan_cdef.h")
+        )
+    if "csrc" in targets:
+        Program.write_csrc(
+            registry=registry,
+            csrc_path=generated_subdir.joinpath(f"_vulkan_csrc.h")
+        )
+    if "pydef" in targets:
+        Program.write_pydef(
+            registry=registry,
+            pydef_path=generated_subdir.joinpath(f"_pyvulkan.py")
+        )
