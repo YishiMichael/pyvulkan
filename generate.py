@@ -6,7 +6,6 @@ import pathlib
 import re
 import xml.etree.ElementTree as etree
 from typing import (
-    ClassVar,
     Iterator,
     Self
 )
@@ -94,38 +93,41 @@ class CType:
         "_base_type_str",
         "_const_specifier",
         "_pointer_const_specifiers",
-        "_array_size_strs",
         "_array_sizes"
     )
 
-    _unresolved_c_types: ClassVar[list[CType]] = []
+    #_unresolved_c_types: ClassVar[list[CType]] = []
 
     def __init__(
         self: Self,
-        c_type_str: str
+        c_type_str: str,
+        constant_decimal_literal_dict: dict[str, str] | None = None
     ) -> None:
         super().__init__()
-        base_type_str, const_specifier, pointer_const_specifiers, array_size_strs = type(self)._parse_c_type_str(c_type_str)
+        base_type_str, const_specifier, pointer_const_specifiers, array_sizes = type(self)._parse_c_type_str(
+            c_type_str, constant_decimal_literal_dict
+        )
         self._base_type_str: str = base_type_str
         self._const_specifier: bool = const_specifier
         self._pointer_const_specifiers: tuple[bool, ...] = pointer_const_specifiers
-        self._array_size_strs: tuple[str, ...] = array_size_strs
-        if any(
-            array_size_str.isidentifier()
-            for array_size_str in array_size_strs
-        ):
-            cls = type(self)
-            cls._unresolved_c_types.append(self)
+        self._array_sizes: tuple[str, ...] = array_sizes
+        #if any(
+        #    array_size_str.isidentifier()
+        #    for array_size_str in array_size_strs
+        #):
+        #    cls = type(self)
+        #    cls._unresolved_c_types.append(self)
 
     @classmethod
     def _parse_c_type_str(
         cls: type[Self],
-        c_type_str: str
+        c_type_str: str,
+        constant_decimal_literal_dict: dict[str, str] | None
     ) -> tuple[str, bool, tuple[bool, ...], tuple[str, ...]]:
         base_type_strs: list[str] = []
         const_specifier: bool = False
         pointer_const_specifiers: list[bool] = []
-        array_size_strs: list[str] = []
+        array_sizes: list[str] = []
 
         tokens = (match.group() for match in re.finditer(r"\w+|\S", c_type_str))
         next_token = next(tokens)
@@ -148,27 +150,29 @@ class CType:
         while next_token == "[":
             next_token = next(tokens)
             if next_token == "]":
-                array_size_str = ""
+                array_size = ""
             else:
-                array_size_str = next_token
-                assert array_size_str.isdecimal() or array_size_str.isidentifier()
+                array_size = next_token
+                if not array_size.isdecimal():
+                    assert constant_decimal_literal_dict is not None
+                    array_size = constant_decimal_literal_dict[array_size]
                 assert next(tokens) == "]"
-            array_size_strs.append(array_size_str)
+            array_sizes.append(array_size)
             next_token = next(tokens, "")
         assert not next_token
-        return " ".join(base_type_strs), const_specifier, tuple(pointer_const_specifiers), tuple(array_size_strs)
+        return " ".join(base_type_strs), const_specifier, tuple(pointer_const_specifiers), tuple(array_sizes)
 
-    @classmethod
-    def resolve_array_sizes(
-        cls: type[Self],
-        array_size_values: dict[str, str]
-    ) -> None:
-        while cls._unresolved_c_types:
-            c_type = cls._unresolved_c_types.pop()
-            c_type._array_size_strs = tuple(
-                array_size_values[array_size_str] if array_size_str.isidentifier() else array_size_str
-                for array_size_str in c_type._array_size_strs
-            )
+    #@classmethod
+    #def resolve_array_sizes(
+    #    cls: type[Self],
+    #    array_size_values: dict[str, str]
+    #) -> None:
+    #    while cls._unresolved_c_types:
+    #        c_type = cls._unresolved_c_types.pop()
+    #        c_type._array_size_strs = tuple(
+    #            array_size_values[array_size_str] if array_size_str.isidentifier() else array_size_str
+    #            for array_size_str in c_type._array_size_strs
+    #        )
 
     def format(
         self: Self,
@@ -178,8 +182,8 @@ class CType:
             f" *{f" const" if pointer_const_specifier else ""}"
             for pointer_const_specifier in self._pointer_const_specifiers
         )}{f" {name}" if name is not None else ""}{"".join(
-            f"[{array_size_str}]"
-            for array_size_str in self._array_size_strs
+            f"[{array_size}]"
+            for array_size in self._array_sizes
         )}"""
 
 
@@ -525,22 +529,22 @@ class CommandRecord(Record):
 @attrs.frozen(kw_only=True)
 class Registry:
     version: tuple[int, int, int]
-    defines: tuple[str, ...]
-    tags: tuple[str, ...]
-    #blank_records: tuple[BlankRecord, ...]
-    builtin_type_records: tuple[BuiltinTypeRecord, ...]
-    typedef_records: tuple[TypedefRecord, ...]
-    bitmask_records: tuple[BitmaskRecord, ...]
-    enum_records: tuple[EnumRecord, ...]
-    handle_records: tuple[HandleRecord, ...]
-    struct_records: tuple[StructRecord, ...]
-    union_records: tuple[UnionRecord, ...]
-    function_pointer_records: tuple[FunctionPointerRecord, ...]
-    macro_records: tuple[MacroRecord, ...]
-    function_macro_records: tuple[FunctionMacroRecord, ...]
-    constant_records: tuple[ConstantRecord, ...]
-    enum_member_records: tuple[EnumMemberRecord, ...]
-    command_records: tuple[CommandRecord, ...]
+    defines: list[str]
+    tags: list[str]
+    #blank_records: list[BlankRecord]
+    builtin_type_records: list[BuiltinTypeRecord]
+    typedef_records: list[TypedefRecord]
+    bitmask_records: list[BitmaskRecord]
+    enum_records: list[EnumRecord]
+    handle_records: list[HandleRecord]
+    struct_records: list[StructRecord]
+    union_records: list[UnionRecord]
+    function_pointer_records: list[FunctionPointerRecord]
+    macro_records: list[MacroRecord]
+    function_macro_records: list[FunctionMacroRecord]
+    constant_records: list[ConstantRecord]
+    enum_member_records: list[EnumMemberRecord]
+    command_records: list[CommandRecord]
 
 
 #type RecordUnionType = Union[
@@ -749,15 +753,6 @@ class Program:
         return supported_attr is None or supported_attr != "disabled" and api in supported_attr.split(",")
 
     @classmethod
-    def _check_ratified(
-        cls: type[Self],
-        xml: etree.Element,
-        api: str
-    ) -> bool:
-        ratified_attr = xml.get("ratified")
-        return ratified_attr is None or api in ratified_attr.split(",")
-
-    @classmethod
     def _check_platform(
         cls: type[Self],
         xml: etree.Element,
@@ -832,20 +827,30 @@ class Program:
             #    xml = xml_dict[name]
             #return name, xml
 
-        required_type_dict: dict[str, None] = {}
-        required_enum_dict: dict[str, etree.Element] = {}
-        required_command_dict: dict[str, str | None] = {}
-        removed_type_set: set[str] = set()
-        removed_enum_set: set[str] = set()
-        removed_command_set: set[str] = set()
-        for removed, requirement_unit_xml_tag, requirement_unit_xml, type_attr in (
-            (removed, requirement_unit_xml_tag, requirement_unit_xml, type_attr)
+        #removed_sets: dict[str, set[str]] = {tag: set() for tag in tags}
+        #required_dicts: dict[str, dict[str, tuple[etree.Element, str | None]]] = {tag: {} for tag in tags}
+        required_types: list[str] = []
+        required_enums: list[str] = []
+        required_commands: list[str] = []
+        removed_types: list[str] = []
+        removed_enums: list[str] = []
+        removed_commands: list[str] = []
+        type_xml_dict: dict[str, etree.Element] = {}
+        enum_xml_dict: dict[str, etree.Element] = {}
+        command_xml_dict: dict[str, etree.Element] = {}
+
+        enums_xml_dict: dict[str, etree.Element] = {}
+        enum_enums_name_dict: dict[str, str | None] = {}
+        command_type_attr_dict: dict[str, str | None] = {}
+
+        requirement_items = [
+            (removed, requirement_unit_xml_tag, requirement_unit_xml.get("name", ""), requirement_unit_xml, type_attr)
             for requirement_xml, type_attr in itertools.chain((
                 (feature_xml, None)
                 for feature_xml in registry_xml.iterfind("feature")
                 if cls._check_api(feature_xml, api)
             ), (
-                (extension_xml, None if cls._check_ratified(extension_xml, api) else extension_xml.get("type"))
+                (extension_xml, extension_xml.get("type"))
                 for extensions_xml in registry_xml.iterfind("extensions")
                 for extension_xml in extensions_xml.iterfind("extension")
                 if cls._check_api(extension_xml, api)
@@ -859,49 +864,113 @@ class Program:
             for requirement_unit_xml in requirement_batch_xml
             if (requirement_unit_xml_tag := requirement_unit_xml.tag) in ("type", "enum", "command")
             and cls._check_api(requirement_unit_xml, api)
-        ):
-            name = requirement_unit_xml.get("name", "")
-            if removed:
-                match requirement_unit_xml_tag:
-                    case "type":
-                        removed_type_set.add(name)
-                        required_type_dict.pop(name, None)
-                    case "enum":
-                        removed_enum_set.add(name)
-                        required_enum_dict.pop(name, None)
-                    case "command":
-                        removed_command_set.add(name)
-                        required_command_dict.pop(name, None)
+        ]
+        for removed, requirement_unit_xml_tag, name, _, _ in requirement_items:
+            if not removed:
                 continue
             match requirement_unit_xml_tag:
                 case "type":
-                    if name in removed_type_set:
-                        continue
-                    required_type_dict[name] = None
+                    removed_types.append(name)
                 case "enum":
-                    if name in removed_enum_set:
-                        continue
-                    required_enum_dict[name] = requirement_unit_xml
+                    removed_enums.append(name)
                 case "command":
-                    if name in removed_command_set:
+                    removed_commands.append(name)
+        for removed, requirement_unit_xml_tag, name, requirement_unit_xml, type_attr in requirement_items:
+            if removed:
+                continue
+            match requirement_unit_xml_tag:
+                case "type":
+                    if name in removed_types:
                         continue
-                    required_command_dict[name] = type_attr
+                    required_types.append(name)
+                case "enum":
+                    if name in removed_enums:
+                        continue
+                    required_enums.append(name)
+                    enum_xml_dict[name] = requirement_unit_xml
+                    enum_enums_name_dict[name] = requirement_unit_xml.get("extends")
+                case "command":
+                    if name in removed_commands:
+                        continue
+                    required_commands.append(name)
+                    command_type_attr_dict[name] = type_attr
 
-        type_xml_dict = {
-            name: type_xml
-            for type_xml in registry_xml.iterfind("types/type")
-            if cls._check_api(type_xml, api)
-            and (name := type_xml.get("name", type_xml.findtext("name", ""))) in required_type_dict
-        }
-        enum_xml_item_dict = {
-            enum_name: (enums_xml.get("type", "enum"), enums_xml.get("bitwidth"), {
-                enum_xml.get("name", ""): enum_xml
-                for enum_xml in enums_xml.iterfind("enum")
-                if cls._check_api(enum_xml, api)
-            })
-            for enums_xml in registry_xml.iterfind("enums")
-            if (enum_name := enums_xml.get("name", "")) in required_type_dict
-        }
+        for xml in registry_xml:
+            match xml.tag:
+                case "types":
+                    for type_xml in xml.iterfind("type"):
+                        if not cls._check_api(type_xml, api):
+                            continue
+                        name = type_xml.get("name", type_xml.findtext("name", ""))
+                        if type_xml.get("category") is None:
+                            yield TypedefRecord(
+                                name=name,
+                                c_type=CType(PLATFORM_TYPE_DICT.get(name, "void"))
+                            )
+                            continue
+                        if name not in required_types:
+                            continue
+                        type_xml_dict[name] = type_xml
+
+                case "enums":
+                    enums_name = xml.get("name", "")
+                    if enums_name == "API Constants":
+                        enums_name = None
+                    elif enums_name not in required_types:
+                        continue
+                    else:
+                        enums_xml_dict[enums_name] = xml
+                    for enum_xml in xml.iterfind("enum"):
+                        if not cls._check_api(enum_xml, api):
+                            continue
+                        name = enum_xml.get("name", "")
+                        if enums_name is not None:
+                            required_enums.append(name)
+                        enum_xml_dict[name] = enum_xml
+                        enum_enums_name_dict[name] = enums_name
+
+                case "commands":
+                    for command_xml in xml.iterfind("command"):
+                        if not cls._check_api(command_xml, api):
+                            continue
+                        name = command_xml.get("name", command_xml.findtext("proto/name", ""))
+                        if name not in required_commands:
+                            continue
+                        command_xml_dict[name] = command_xml
+
+        #enums_xml_item_dict = {
+        #    enums_name: (enums_xml, {
+        #        enum_xml.get("name", ""): enum_xml
+        #        for enum_xml in enums_xml.iterfind("enum")
+        #        if cls._check_api(enum_xml, api)
+        #    })
+        #    for enums_xml in registry_xml.iterfind("enums")
+        #    if (enums_name := enums_xml.get("name", "")) in required_dicts["type"] or enums_name == "API Constants"
+        #}
+        #xml_dicts = {
+        #    "type": {
+        #        name: type_xml
+        #        for type_xml in registry_xml.iterfind("types/type")
+        #        if cls._check_api(type_xml, api)
+        #        and (name := type_xml.get("name", type_xml.findtext("name", ""))) in required_dicts["type"]
+        #    },
+        #    "enum": dict(itertools.chain(
+        #        (
+        #            (name, enum_xml)
+        #            for name, (enum_xml, _) in required_dicts["enum"].items()
+        #        ),
+        #        itertools.chain.from_iterable(
+        #            enums_enum_xml_dict.items()
+        #            for _, enums_enum_xml_dict in enums_xml_item_dict.values()
+        #        )
+        #    )),
+        #    "command": {
+        #        name: command_xml
+        #        for command_xml in registry_xml.iterfind("commands/command")
+        #        if cls._check_api(command_xml, api)
+        #        and (name := command_xml.get("name", command_xml.findtext("proto/name", ""))) in required_dicts["command"]
+        #    }
+        #}
         #enums_xml_dict = {
         #    name if name != "API Constants" else None: enums_xml
         #    for enums_xml in registry_xml.iterfind("enums")
@@ -915,21 +984,21 @@ class Program:
         #    }
         #    for enums_name, enums_xml in enums_xml_dict.items()
         #}
-        command_xml_dict = {
-            name: command_xml
-            for command_xml in registry_xml.iterfind("commands/command")
-            if cls._check_api(command_xml, api)
-            and (name := command_xml.get("name", command_xml.findtext("proto/name", ""))) in required_command_dict
-        }
-        enum_xml_dict_dict = {
-            enum_name: {
-                name: enum_xml
-                for name, enum_xml in enum_xml_dict.items()
-            }
-            for enum_name, (_, _, enum_xml_dict) in enum_xml_item_dict.items()
-        }
-        for name, enum_xml in required_enum_dict.items():
-            enum_xml_dict_dict.setdefault(enum_xml.get("extends", ""), {})[name] = enum_xml
+        #enum_xml_dict = required_enum_dict.copy()
+        #enum_xml_dict.update(itertools.chain.from_iterable(
+        #    enum_xml_dict.items()
+        #    for _, _, enum_xml_dict in enums_item_dict.values()
+        #))
+
+        #enum_xml_dict_dict = {
+        #    enum_name: {
+        #        name: enum_xml
+        #        for name, enum_xml in enum_xml_dict.items()
+        #    }
+        #    for enum_name, (_, _, enum_xml_dict) in enums_item_dict.items()
+        #}
+        #for name, enum_xml in required_enum_dict.items():
+        #    enum_xml_dict_dict.setdefault(enum_xml.get("extends", ""), {})[name] = enum_xml
 
 
 
@@ -1002,17 +1071,6 @@ class Program:
         #    and cls._check_api(requirement_unit_xml, api)
         #)))
 
-        for type_xml in registry_xml.iterfind("types/type"):
-            if not cls._check_api(type_xml, api):
-                continue
-            if type_xml.get("category") is not None:
-                continue
-            name = type_xml.get("name", "")
-            yield TypedefRecord(
-                name=name,
-                c_type=CType(PLATFORM_TYPE_DICT.get(name, "void"))
-            )
-
         #type_requirements = {
         #    name: type_xml_dict[name]
         #    for requirement_unit_xml_tag, name, _, _ in required_unit_items
@@ -1038,7 +1096,40 @@ class Program:
         #    for requirement_unit_xml_tag, name, _, _ in required_unit_items
         #    if requirement_unit_xml_tag == "command"
         #}
-        for name in required_type_dict:
+
+        constant_decimal_literal_dict: dict[str, str] = {}
+
+        for name in required_enums:
+            enum_xml = resolve_alias(name, enum_xml_dict)
+            if (enums_name := enum_enums_name_dict.get(name)) is None:
+                value_attr = enum_xml.get("value", "")
+                if value_attr.isdecimal():
+                    constant_decimal_literal_dict[name] = value_attr
+                if (c_type_str := enum_xml.get("type")) is not None:
+                    c_type = CType(f"const {c_type_str}")
+                elif value_attr.isidentifier():
+                    c_type = CType("const uint32_t")
+                elif re.fullmatch(r"\d+|0x[\dA-F]+", value_attr):
+                    c_type = CType("const uint32_t")
+                elif re.fullmatch(r"\"\w+\"", value_attr) is not None:
+                    c_type = CType("const char[]")
+                else:
+                    assert False
+                yield ConstantRecord(
+                    name=name,
+                    c_type=c_type,
+                    value_attr=value_attr
+                )
+
+            else:
+                if (protect := enum_xml.get("protect")) is not None and protect not in defines:
+                    continue
+                yield EnumMemberRecord(
+                    name=name,
+                    enum_name=enums_name
+                )
+
+        for name in required_types:
             type_xml = resolve_alias(name, type_xml_dict)
             match type_xml.get("category"):
                 case None:
@@ -1069,24 +1160,17 @@ class Program:
                     )
 
                 case "enum":
-                    if (enum_xml_item := enum_xml_item_dict.get(name)) is None:
-                        yield EnumRecord(
-                            name=name,
-                            type_attr="enum",
-                            bitwidth_attr=None
-                        )
-                        continue
-                    type_attr, bitwidth_attr, enum_xml_dict = enum_xml_item
+                    enums_xml = enums_xml_dict.get(name)
                     yield EnumRecord(
                         name=name,
-                        type_attr=type_attr,
-                        bitwidth_attr=bitwidth_attr
+                        type_attr=enums_xml.get("type", "enum") if enums_xml is not None else "enum",
+                        bitwidth_attr=enums_xml.get("bitwidth") if enums_xml is not None else None
                     )
-                    for enum_member_name in enum_xml_dict:
-                        yield EnumMemberRecord(
-                            name=enum_member_name,
-                            enum_name=name
-                        )
+                    #for enum_member_name in enums_enum_xml_dict:
+                    #    yield EnumMemberRecord(
+                    #        name=enum_member_name,
+                    #        enum_name=name
+                    #    )
 
                 case "handle":
                     yield HandleRecord(
@@ -1100,7 +1184,7 @@ class Program:
                         field_list=[
                             Field(
                                 name=member_xml.findtext("name", ""),
-                                c_type=CType(c_type_str),
+                                c_type=CType(c_type_str, constant_decimal_literal_dict),
                                 bitwidth=int(bitwidth_str) if bitwidth_str else None,
                                 len_attr=member_xml.get("len"),
                                 altlen_attr=member_xml.get("altlen"),
@@ -1112,6 +1196,7 @@ class Program:
                             for member_xml, (c_type_str, _, bitwidth_str) in (
                                 (member_xml, cls._join_xml_text(member_xml, ignored_tags=["comment", "name"]).partition(":"))
                                 for member_xml in type_xml.iterfind("member")
+                                if cls._check_api(member_xml, api)
                             )
                         ],
                         structextends_attr=type_xml.get("structextends"),
@@ -1124,7 +1209,7 @@ class Program:
                         field_list=[
                             Field(
                                 name=member_xml.findtext("name", ""),
-                                c_type=CType(c_type_str),
+                                c_type=CType(c_type_str, constant_decimal_literal_dict),
                                 bitwidth=int(bitwidth_str) if bitwidth_str else None,
                                 len_attr=member_xml.get("len"),
                                 altlen_attr=member_xml.get("altlen"),
@@ -1136,6 +1221,7 @@ class Program:
                             for member_xml, (c_type_str, _, bitwidth_str) in (
                                 (member_xml, cls._join_xml_text(member_xml, ignored_tags=["comment", "name"]).partition(":"))
                                 for member_xml in type_xml.iterfind("member")
+                                if cls._check_api(member_xml, api)
                             )
                         ]
                     )
@@ -1189,34 +1275,7 @@ class Program:
                 case _:
                     assert False
 
-        for name, enum_xml in required_enum_dict.items():
-            enum_xml = resolve_alias(name, enum_xml_dict_dict[enum_xml.get("extends", "")])
-            if (value_attr := enum_xml.get("value")) is not None:
-                if (c_type_str := enum_xml.get("type")) is not None:
-                    c_type = CType(f"const {c_type_str}")
-                elif value_attr.isidentifier():
-                    c_type = CType("const uint32_t")
-                elif re.fullmatch(r"\d+|0x[\dA-F]+", value_attr):
-                    c_type = CType("const uint32_t")
-                elif re.fullmatch(r"\"\w+\"", value_attr) is not None:
-                    c_type = CType("const char[]")
-                else:
-                    assert False
-                yield ConstantRecord(
-                    name=name,
-                    c_type=c_type,
-                    value_attr=value_attr
-                )
-
-            else:
-                if (protect := enum_xml.get("protect")) is not None and protect not in defines:
-                    continue
-                yield EnumMemberRecord(
-                    name=name,
-                    enum_name=enum_name
-                )
-
-        for name, type_attr in required_command_dict.items():
+        for name in required_commands:
             command_xml = resolve_alias(name, command_xml_dict)
             assert (proto_xml := command_xml.find("proto")) is not None
             #handle_name = (
@@ -1228,19 +1287,20 @@ class Program:
             #)
             yield CommandRecord(
                 name=name,
-                return_c_type=CType(cls._join_xml_text(proto_xml, ignored_tags=["comment", "name"])),
+                return_c_type=CType(cls._join_xml_text(proto_xml, ignored_tags=["comment", "name"]), constant_decimal_literal_dict),
                 command_argument_list=[
                     CommandArgument(
                         name=param_xml.findtext("name", ""),
-                        c_type=CType(cls._join_xml_text(param_xml, ignored_tags=["comment", "name"])),
+                        c_type=CType(cls._join_xml_text(param_xml, ignored_tags=["comment", "name"]), constant_decimal_literal_dict),
                         len_attr=param_xml.get("len"),
                         altlen_attr=param_xml.get("altlen"),
                         optional_attr=param_xml.get("optional"),
                         selector_attr=param_xml.get("selector"),
                     )
                     for param_xml in command_xml.iterfind("param")
+                    if cls._check_api(param_xml, api)
                 ],
-                type_attr=type_attr
+                type_attr=command_type_attr_dict.get(name)
             )
 
         #yield from (
@@ -1472,6 +1532,7 @@ class Program:
             tag_xml.get("name", "")
             for tag_xml in vk_registry_xml.iterfind("tags/tag")
         ]
+        assert platforms is None or len(platforms) == len(defines)
 
         record_dict: dict[str, Record] = {
             name: BuiltinTypeRecord(
@@ -1536,21 +1597,21 @@ class Program:
 
         return Registry(
             version=version,
-            defines=tuple(defines),
-            tags=tuple(tags),
-            builtin_type_records=tuple(builtin_type_records),
-            typedef_records=tuple(typedef_records),
-            bitmask_records=tuple(bitmask_records),
-            enum_records=tuple(enum_records),
-            handle_records=tuple(handle_records),
-            struct_records=tuple(struct_records),
-            union_records=tuple(union_records),
-            function_pointer_records=tuple(function_pointer_records),
-            macro_records=tuple(macro_records),
-            function_macro_records=tuple(function_macro_records),
-            constant_records=tuple(constant_records),
-            enum_member_records=tuple(enum_member_records),
-            command_records=tuple(command_records)
+            defines=defines,
+            tags=tags,
+            builtin_type_records=builtin_type_records,
+            typedef_records=typedef_records,
+            bitmask_records=bitmask_records,
+            enum_records=enum_records,
+            handle_records=handle_records,
+            struct_records=struct_records,
+            union_records=union_records,
+            function_pointer_records=function_pointer_records,
+            macro_records=macro_records,
+            function_macro_records=function_macro_records,
+            constant_records=constant_records,
+            enum_member_records=enum_member_records,
+            command_records=command_records
         )
 
         #for name, py_type_str in BUILTIN_TYPE_DICT.items():
@@ -1930,21 +1991,6 @@ from _vulkan_ffi import (
             for pydef_str in cls._iter_pydef_strs(registry):
                 pydef_file.write(f"\n{pydef_str}\n")
 
-        #if write_ffi:
-        #    ffi = cffi.FFI()
-        #    ffi.cdef(csource=cdef_path.read_text())
-        #    ffi.set_source(
-        #        module_name=str(ffi_path.with_suffix("")).replace("\\", "."),
-        #        source="".join((
-        #            *(f"#define {define}\n" for define in registry.define_list),
-        #            *(f"#include <{include}>\n" for include in registry.include_list)
-        #        )),
-        #        include_dirs=["extern/vulkan/Include"],
-        #        library_dirs=["extern/vulkan/Lib"],
-        #        libraries=["vulkan-1"]
-        #    )
-        #    ffi.compile()
-
     @classmethod
     def run(
         cls: type[Self],
@@ -1974,6 +2020,7 @@ from _vulkan_ffi import (
         generated_subdir.mkdir(exist_ok=True)
 
         target_list = list(map(str.strip, targets.split(",")))
+        assert all(target in ("cdef", "csrc", "pydef") for target in target_list)
         if "cdef" in target_list:
             Program.write_cdef(
                 registry=registry,
