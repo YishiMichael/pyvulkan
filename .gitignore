@@ -2,8 +2,6 @@ __pycache__/
 *.py[cod]
 
 /extern/
-/generated/*
-!/generated/_vulkan_cdef.h
-!/generated/_vulkan.py
+/generated/
 /playground/
 /Release/

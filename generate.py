@@ -14,8 +14,8 @@ import attrs
 
 
 BUILTIN_TYPE_DICT = {
-    "void": "Never",
-    "char": "str",
+    "void": None,  # buffer protocol, absorbing a pointer
+    "char": None,  # str, absorbing a pointer
     "short": "int",
     "int": "int",
     "long": "int",
@@ -68,7 +68,7 @@ PLATFORM_TYPE_DICT = {
     "HANDLE": "void *",
     "SECURITY_ATTRIBUTES": "void",
     "DWORD": "unsigned long",
-    "LPCWSTR": "uint16_t const *",  # special convension from str required?
+    "LPCWSTR": "const uint16_t *",  # special convension from str required?
     "xcb_connection_t": "void",
     "xcb_visualid_t": "uint32_t",
     "xcb_window_t": "uint32_t",
@@ -178,7 +178,7 @@ class CType:
         self: Self,
         name: str | None = None
     ) -> str:
-        return f"""{self._base_type_str}{" const" if self._const_specifier else ""}{"".join(
+        return f"""{"const " if self._const_specifier else ""}{self._base_type_str}{"".join(
             f" *{f" const" if pointer_const_specifier else ""}"
             for pointer_const_specifier in self._pointer_const_specifiers
         )}{f" {name}" if name is not None else ""}{"".join(
@@ -224,13 +224,14 @@ class Record:
 
 @attrs.frozen(kw_only=True)
 class BuiltinTypeRecord(Record):
-    c_type: CType
-    py_type_str: str  # TODO
+    pass
+    #c_type: CType
+    #py_type_str: str  # TODO
 
 
 @attrs.frozen(kw_only=True)
 class TypedefRecord(Record):
-    c_type: CType
+    c_type_str: str
 
 
 @attrs.frozen(kw_only=True)
@@ -905,7 +906,7 @@ class Program:
                         if type_xml.get("category") is None:
                             yield TypedefRecord(
                                 name=name,
-                                c_type=CType(PLATFORM_TYPE_DICT.get(name, "void"))
+                                c_type_str=PLATFORM_TYPE_DICT.get(name, "void")
                             )
                             continue
                         if name not in required_types:
@@ -1149,7 +1150,7 @@ class Program:
                 case "basetype":
                     yield TypedefRecord(
                         name=name,
-                        c_type=CType(BASE_TYPE_DICT[name])
+                        c_type_str=BASE_TYPE_DICT[name]
                     )
 
                 case "bitmask":
@@ -1536,11 +1537,11 @@ class Program:
 
         record_dict: dict[str, Record] = {
             name: BuiltinTypeRecord(
-                name=name,
-                c_type=CType(name),
-                py_type_str=py_type_str
+                name=name
+                #c_type=CType(name),
+                #py_type_str=py_type_str
             )
-            for name, py_type_str in BUILTIN_TYPE_DICT.items()
+            for name in BUILTIN_TYPE_DICT
         }
         for registry_xml in (video_registry_xml, vk_registry_xml):
             for record in cls._read_registry_xml(
@@ -1838,64 +1839,262 @@ class Program:
         cls: type[Self],
         registry: Registry
     ) -> Iterator[str]:
-        for typedef in registry.typedef_records:
-            yield f"""typedef {typedef.c_type.format()} {typedef.name};"""
-
-        for bitmask in registry.bitmask_records:
-            yield f"""typedef {bitmask.type_attr} {bitmask.name};"""
-
-        for enum in registry.enum_records:
-            yield f"""typedef {f"VkFlags64" if enum.bitwidth_attr == "64" else f"enum {enum.name} {{ ... }}"} {enum.name};"""
-
-        for handle in registry.handle_records:
-            yield f"""typedef struct {handle.name}_T *{handle.name};"""
-
-        for struct in registry.struct_records:
-            yield f"""typedef struct {struct.name} {struct.name};"""
-
-        for union in registry.union_records:
-            yield f"""typedef union {union.name} {union.name};"""
-
-        for function_pointer in registry.function_pointer_records:
-            yield f"""typedef {function_pointer.return_c_type.format()} (* {function_pointer.name})(\n{",\n".join(
-                f"    {argument.c_type.format(argument.name)}"
-                for argument in function_pointer.argument_list
-            ) if function_pointer.argument_list else "    void"}\n);"""
-
-        for macro in registry.macro_records:
-            yield f"""static {macro.c_type.format(macro.name)};"""
-
-        for function_macro in registry.function_macro_records:
-            yield f"""static {function_macro.return_c_type.format()} {function_macro.name}(\n{",\n".join(
-                f"    {argument.c_type.format(argument.name)}"
-                for argument in function_macro.argument_list
-            ) if function_macro.argument_list else "    void"}\n);"""
-
-        for constant in registry.constant_records:
-            yield f"""static {constant.c_type.format(constant.name)};"""
-
-        for enum_member in registry.enum_member_records:
-            yield f"""static const {enum_member.enum_name} {enum_member.name};"""
-
+        enum_dict = {
+            enum.name: enum
+            for enum in registry.enum_records
+        } | {
+            bitmask.name: bitmask
+            for bitmask in registry.bitmask_records
+        }
+        struct_dict = {
+            struct.name: struct
+            for struct in registry.struct_records
+        } | {
+            union.name: union
+            for union in registry.union_records
+        }
+        handle_dict = {
+            handle.name: handle
+            for handle in registry.handle_records
+        }
+        typedef_dict = {
+            typedef.name: typedef
+            for typedef in registry.typedef_records
+        }
         for command in registry.command_records:
-            if command.type_attr is not None:
-                continue
-            yield f"""static {command.return_c_type.format()} {command.name}(\n{",\n".join(
-                f"    {command_argument.c_type.format(command_argument.name)}"
-                for command_argument in command.command_argument_list
-            ) if command.command_argument_list else "    void"}\n);"""
+            for command_argument in command.command_argument_list:
+                c_type = command_argument.c_type
+                if c_type._base_type_str in enum_dict:
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case False, (), ():
+                            pass
+                        case True, (), (_):
+                            pass
+                        case True, (False,), ():
+                            pass
+                        case False, (False,), ():
+                            pass
+                        case _:
+                            assert False
+                elif c_type._base_type_str in struct_dict:
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case True, (False,), ():
+                            pass
+                        case False, (False,), ():
+                            pass
+                        case True, (True, False), ():
+                            pass
+                        case _:
+                            assert False
+                elif c_type._base_type_str in handle_dict:
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case False, (), ():
+                            pass
+                        case True, (False,), ():
+                            pass
+                        case False, (False,), ():
+                            pass
+                        case _:
+                            assert False
+                elif c_type._base_type_str in typedef_dict:
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case False, (), ():
+                            pass
+                        case True, (False,), ():
+                            pass
+                        case False, (False,), ():
+                            pass
+                        case _:
+                            assert False
+                    #if typedef_dict[c_type._base_type_str].c_type._base_type_str == "void":
+                    #    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                    #        case False, (), ():
+                    #            pass
+                    #        case False, (False,), ():
+                    #            pass
+                    #        case _:
+                    #            assert False
+                    #elif typedef_dict[c_type._base_type_str].c_type._base_type_str == "char":
+                    #    assert False
+                    #elif typedef_dict[c_type._base_type_str].c_type._base_type_str in BUILTIN_TYPE_DICT:
+                    #    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                    #        #case False, (), ():
+                    #        #    pass
+                    #        #case False, (False,), ():
+                    #        #    pass
+                    #        case _:
+                    #            print(
+                    #            command.name,
+                    #            command_argument.name,
+                    #            c_type._base_type_str,
+                    #            c_type._const_specifier,
+                    #            c_type._pointer_const_specifiers,
+                    #            c_type._array_sizes
+                    #        )
+                    #else:
+                    #    assert False
 
-        for struct in registry.struct_records:
-            yield f"""struct {struct.name} {{\n{"\n".join(
-                f"    {field.c_type.format(field.name)}{f":{field.bitwidth}" if field.bitwidth is not None else ""};"
-                for field in struct.field_list
-            )}\n}};"""
+                    #match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                    #    case _:
+                    #        print(
+                    #            command.name,
+                    #            command_argument.name,
+                    #            c_type._base_type_str,
+                    #            c_type._const_specifier,
+                    #            c_type._pointer_const_specifiers,
+                    #            c_type._array_sizes,
+                    #            typedef_dict[c_type._base_type_str].c_type.format()
+                    #        )
+                elif c_type._base_type_str == "void":
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case True, (False,), ():
+                            pass
+                        case False, (False,), ():
+                            pass
+                        case False, (False, False), ():
+                            pass
+                        case _:
+                            assert False
+                elif c_type._base_type_str == "char":
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case True, (False,), ():
+                            pass
+                        case _:
+                            assert False
+                elif c_type._base_type_str in BUILTIN_TYPE_DICT:
+                    match c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+                        case False, (), ():
+                            pass
+                        case True, (False,), ():
+                            pass
+                        case False, (False,), ():
+                            pass
+                        case True, (), (_):
+                            pass
+                        case True, (True, False), ():
+                            pass
+                        case _:
+                            assert False
+                else:
+                    print(
+                        command.name,
+                        command_argument.name,
+                        c_type._base_type_str,
+                        c_type._const_specifier,
+                        c_type._pointer_const_specifiers,
+                        c_type._array_sizes
+                    )
 
-        for union in registry.union_records:
-            yield f"""union {union.name} {{\n{"\n".join(
-                f"    {field.c_type.format(field.name)}{f":{field.bitwidth}" if field.bitwidth is not None else ""};"
-                for field in union.field_list
-            )}\n}};"""
+        yield from ()
+        #for name, arg_name, c_type in itertools.chain(
+        #    (
+        #        (function_pointer.name, argument.name, argument.c_type)
+        #        for function_pointer in registry.function_pointer_records
+        #        for argument in function_pointer.argument_list
+        #    ),
+        #    (
+        #        (command.name, command_argument.name, command_argument.c_type)
+        #        for command in registry.command_records
+        #        for command_argument in command.command_argument_list
+        #    ),
+        #    (
+        #        (struct.name, field.name, field.c_type)
+        #        for struct in registry.struct_records
+        #        for field in struct.field_list
+        #    ),
+        #    (
+        #        (union.name, field.name, field.c_type)
+        #        for union in registry.union_records
+        #        for field in union.field_list
+        #    )
+        #):
+            #match arg_name, c_type._base_type_str, c_type._const_specifier, c_type._pointer_const_specifiers, c_type._array_sizes:
+            #    case (_, base_type_str, False, (), ()) if base_type_str in enum_dict:
+            #        # single enum
+            #            #if base_type_str in BUILTIN_TYPE_DICT and base_type_str != "void"
+            #        pass
+            #    case (_, base_type_str, _, _, _) if base_type_str in enum_dict:
+            #        print(
+            #            name,
+            #            arg_name,
+            #            c_type._base_type_str,
+            #            c_type._const_specifier,
+            #            c_type._pointer_const_specifiers,
+            #            c_type._array_sizes
+            #        )
+            #        pass
+            #    case ("pNext", "void", True, (False,), ()):
+            #        # pNext
+            #        pass
+            #    case _:
+            #        #print(
+            #        #    name,
+            #        #    arg_name,
+            #        #    c_type._base_type_str,
+            #        #    c_type._const_specifier,
+            #        #    c_type._pointer_const_specifiers,
+            #        #    c_type._array_sizes
+            #        #)
+            #        pass
+
+        #for typedef in registry.typedef_records:
+        #    yield f"""typedef {typedef.c_type_str} {typedef.name};"""
+
+        #for bitmask in registry.bitmask_records:
+        #    yield f"""typedef {bitmask.type_attr} {bitmask.name};"""
+
+        #for enum in registry.enum_records:
+        #    yield f"""typedef {f"VkFlags64" if enum.bitwidth_attr == "64" else f"enum {enum.name} {{ ... }}"} {enum.name};"""
+
+        #for handle in registry.handle_records:
+        #    yield f"""typedef struct {handle.name}_T *{handle.name};"""
+
+        #for struct in registry.struct_records:
+        #    yield f"""typedef struct {struct.name} {struct.name};"""
+
+        #for union in registry.union_records:
+        #    yield f"""typedef union {union.name} {union.name};"""
+
+        #for function_pointer in registry.function_pointer_records:
+        #    yield f"""typedef {function_pointer.return_c_type.format()} (* {function_pointer.name})(\n{",\n".join(
+        #        f"    {argument.c_type.format(argument.name)}"
+        #        for argument in function_pointer.argument_list
+        #    ) if function_pointer.argument_list else "    void"}\n);"""
+
+        #for macro in registry.macro_records:
+        #    yield f"""static {macro.c_type.format(macro.name)};"""
+
+        #for function_macro in registry.function_macro_records:
+        #    yield f"""static {function_macro.return_c_type.format()} {function_macro.name}(\n{",\n".join(
+        #        f"    {argument.c_type.format(argument.name)}"
+        #        for argument in function_macro.argument_list
+        #    ) if function_macro.argument_list else "    void"}\n);"""
+
+        #for constant in registry.constant_records:
+        #    yield f"""static {constant.c_type.format(constant.name)};"""
+
+        #for enum_member in registry.enum_member_records:
+        #    yield f"""static const {enum_member.enum_name} {enum_member.name};"""
+
+        #for command in registry.command_records:
+        #    if command.type_attr is not None:
+        #        continue
+        #    yield f"""static {command.return_c_type.format()} {command.name}(\n{",\n".join(
+        #        f"    {command_argument.c_type.format(command_argument.name)}"
+        #        for command_argument in command.command_argument_list
+        #    ) if command.command_argument_list else "    void"}\n);"""
+
+        #for struct in registry.struct_records:
+        #    yield f"""struct {struct.name} {{\n{"\n".join(
+        #        f"    {field.c_type.format(field.name)}{f":{field.bitwidth}" if field.bitwidth is not None else ""};"
+        #        for field in struct.field_list
+        #    )}\n}};"""
+
+        #for union in registry.union_records:
+        #    yield f"""union {union.name} {{\n{"\n".join(
+        #        f"    {field.c_type.format(field.name)}{f":{field.bitwidth}" if field.bitwidth is not None else ""};"
+        #        for field in union.field_list
+        #    )}\n}};"""
 
     @classmethod
     def _iter_csrc_strs(
