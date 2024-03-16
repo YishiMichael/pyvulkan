@@ -1,7 +1,8 @@
 __pycache__/
 *.py[cod]
 
+/build/
 /extern/
 /generated/
 /playground/
-/Release/
+/pyvulkan.egg-info/
