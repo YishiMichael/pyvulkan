@@ -150,7 +150,6 @@ typedef struct {
 
 // def __new__(
 //     cls,
-//     arg: int | float | bool | str = ...,
 //     /,
 //     *,
 //     value_32: int = ...,
@@ -161,16 +160,14 @@ typedef struct {
 // ) -> PerformanceValueDataINTELObject: ...
 static PyObject *
 PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds) {
-    static char *kwlist[] = {"arg", "value_32", "value_64", "value_float", "value_bool", "value_string", NULL};
+    static char *kwlist[] = {"value_32", "value_64", "value_float", "value_bool", "value_string", NULL};
     int argc = 0;
-    PyObject *arg = NULL;
     PyObject *arg_value_32 = NULL;
     PyObject *arg_value_64 = NULL;
     PyObject *arg_value_float = NULL;
     PyObject *arg_value_bool = NULL;
     PyObject *arg_value_string = NULL;
     PyObject *self = NULL;
-
 
     self = cls->tp_alloc(cls, 0);
     if (self == NULL) {
@@ -182,33 +179,10 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
     PyObject **self_obj = &((PerformanceValueDataINTELObject *)self)->obj;
 
     if (!PyArg_ParseTupleAndKeywords(
-        args, kwds, "|O$OOOOO", kwlist,
-        &arg, &arg_value_32, &arg_value_64, &arg_value_float, &arg_value_bool, &arg_value_string
+        args, kwds, "|$OOOOO", kwlist,
+        &arg_value_32, &arg_value_64, &arg_value_float, &arg_value_bool, &arg_value_string
     )) {
         goto error;
-    }
-    if (arg) {
-        ++argc;
-        if (PyLong_Check(arg)) {
-            *self_selection = 1;
-            self_data->value64 = PyLong_AsUnsignedLongLong(arg);
-            Py_XSETREF(*self_obj, Py_NewRef(arg));
-        } else if (PyFloat_Check(arg)) {
-            *self_selection = 2;
-            self_data->valueFloat = (float)PyFloat_AsDouble(arg);
-            Py_XSETREF(*self_obj, Py_NewRef(arg));
-        } else if (PyBool_Check(arg)) {
-            *self_selection = 3;
-            self_data->valueBool = arg == Py_True;
-            Py_XSETREF(*self_obj, Py_NewRef(arg));
-        } else if (PyUnicode_Check(arg)) {
-            *self_selection = 4;
-            self_data->valueString = PyUnicode_AsUTF8(arg);
-            Py_XSETREF(*self_obj, Py_NewRef(arg));
-        } else {
-            PyErr_Format(PyExc_TypeError, "%s() argument should be of type int | float | bool | str (got %s)", cls->tp_name, Py_TYPE(arg)->tp_name);
-            goto error;
-        }
     }
     if (arg_value_32) {
         ++argc;
@@ -218,7 +192,7 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
         }
         *self_selection = 0;
         self_data->value32 = PyLong_AsUnsignedLong(arg_value_32);
-        Py_XSETREF(*self_obj, Py_NewRef(arg_value_32));
+        *self_obj = Py_NewRef(arg_value_32);
     }
     if (arg_value_64) {
         ++argc;
@@ -228,7 +202,7 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
         }
         *self_selection = 1;
         self_data->value64 = PyLong_AsUnsignedLongLong(arg_value_64);
-        Py_XSETREF(*self_obj, Py_NewRef(arg_value_64));
+        *self_obj = Py_NewRef(arg_value_64);
     }
     if (arg_value_float) {
         ++argc;
@@ -238,7 +212,7 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
         }
         *self_selection = 2;
         self_data->valueFloat = (float)PyFloat_AsDouble(arg_value_float);
-        Py_XSETREF(*self_obj, Py_NewRef(arg_value_float));
+        *self_obj = Py_NewRef(arg_value_float);
     }
     if (arg_value_bool) {
         ++argc;
@@ -248,7 +222,7 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
         }
         *self_selection = 3;
         self_data->valueBool = arg_value_bool == Py_True;
-        Py_XSETREF(*self_obj, Py_NewRef(arg_value_bool));
+        *self_obj = Py_NewRef(arg_value_bool);
     }
     if (arg_value_string) {
         ++argc;
@@ -258,7 +232,7 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
         }
         *self_selection = 4;
         self_data->valueString = PyUnicode_AsUTF8(arg_value_string);
-        Py_XSETREF(*self_obj, Py_NewRef(arg_value_string));
+        *self_obj = Py_NewRef(arg_value_string);
     }
     if (argc != 1) {
         PyErr_Format(PyExc_TypeError, "%s() takes exactly 1 argument (%i given)", cls->tp_name, argc);
@@ -268,7 +242,6 @@ PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds)
 
 error:
     Py_XDECREF(self);
-    Py_XDECREF(arg);
     Py_XDECREF(arg_value_32);
     Py_XDECREF(arg_value_64);
     Py_XDECREF(arg_value_float);
