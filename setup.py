@@ -2,5 +2,10 @@ from setuptools import Extension, setup
 
 
 setup(ext_modules=[
-    Extension("template", ["template.c"])
+    Extension(
+        name="template",
+        sources=["template.c"],
+        extra_compile_args=["-Wall"],
+        language="c"
+    )
 ])

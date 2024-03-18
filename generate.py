@@ -6,8 +6,12 @@ import pathlib
 import re
 import xml.etree.ElementTree as etree
 from typing import (
+    Iterable,
     Iterator,
-    Self
+    Literal,
+    Self,
+    Sequence,
+    SupportsInt
 )
 
 import attrs
@@ -2264,3 +2268,8 @@ if __name__ == "__main__":
     #    platform=platform
     #)
     ##registry.finalize()
+
+
+# import numpy as np
+# ar: np.ndarray[tuple[Literal[3]], np.dtype[np.int32]] = np.array([1,2,3])
+# a: Iterable[SupportsInt] = ar
