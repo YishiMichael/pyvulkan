@@ -282,8 +282,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_32) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_32;
-        *self_arg = PyNumber_Long(arg_value_32);
-        if (!PyLong_Check(*self_arg)) {
+        if (!(*self_arg = PyNumber_Long(arg_value_32))) {
             PyErr_Format(PyExc_TypeError, "Expecting int (got %s)", Py_TYPE(arg_value_32)->tp_name);
             goto error;
         }
@@ -295,8 +294,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_64) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_64;
-        *self_arg = PyNumber_Long(arg_value_64);
-        if (!PyLong_Check(*self_arg)) {
+        if (!(*self_arg = PyNumber_Long(arg_value_64))) {
             PyErr_Format(PyExc_TypeError, "Expecting int (got %s)", Py_TYPE(arg_value_64)->tp_name);
             goto error;
         }
@@ -308,8 +306,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_float) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_float;
-        *self_arg = PyNumber_Float(arg_value_float);
-        if (!PyFloat_Check(*self_arg)) {
+        if (!(*self_arg = PyNumber_Float(arg_value_float))) {
             PyErr_Format(PyExc_TypeError, "Expecting float (got %s)", Py_TYPE(arg_value_float)->tp_name);
             goto error;
         }
@@ -321,8 +318,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_bool) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_bool;
-        *self_arg = Py_NewRef(arg_value_bool);
-        if (!PyBool_Check(*self_arg)) {
+        if (!(*self_arg = PyBool_Check(arg_value_bool) ? Py_NewRef(arg_value_bool) : NULL)) {
             PyErr_Format(PyExc_TypeError, "Expecting bool (got %s)", Py_TYPE(arg_value_bool)->tp_name);
             goto error;
         }
@@ -334,8 +330,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_string) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_string;
-        *self_arg = Py_NewRef(arg_value_string);
-        if (!PyUnicode_Check(*self_arg)) {
+        if (!(*self_arg = PyUnicode_Check(arg_value_string) ? Py_NewRef(arg_value_string) : NULL)) {
             PyErr_Format(PyExc_TypeError, "Expecting str (got %s)", Py_TYPE(arg_value_string)->tp_name);
             goto error;
         }
