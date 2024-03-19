@@ -8,17 +8,17 @@
 typedef struct {
     PyObject_HEAD
     uint64_t value;
-} UIntObject;
+} UInt_Object;
 
 static inline uint64_t
 UInt_GetValue(PyObject *self) {
-    return ((UIntObject *)self)->value;
+    return ((UInt_Object *)self)->value;
 }
 
 static inline PyObject *
 UInt_New(PyTypeObject *cls, uint64_t value) {
     PyObject *self = cls->tp_alloc(cls, 0);
-    ((UIntObject *)self)->value = value;
+    ((UInt_Object *)self)->value = value;
     return self;
 }
 
@@ -32,6 +32,27 @@ UInt_repr(PyObject *self) {
     PyObject *result = PyUnicode_FromFormat("<%s: %llu>", Py_TYPE(self)->tp_name, UInt_GetValue(self));
     return result;
 }
+
+static PyObject *
+UInt_and(PyObject *self, PyObject *other) {
+    if (Py_TYPE(self) != Py_TYPE(other)) {
+        return Py_NotImplemented;
+    }
+    return UInt_New(Py_TYPE(self), UInt_GetValue(self) & UInt_GetValue(other));
+}
+
+static PyObject *
+UInt_or(PyObject *self, PyObject *other) {
+    if (Py_TYPE(self) != Py_TYPE(other)) {
+        return Py_NotImplemented;
+    }
+    return UInt_New(Py_TYPE(self), UInt_GetValue(self) | UInt_GetValue(other));
+}
+
+static PyNumberMethods UInt_as_number = {
+    .nb_and = UInt_and,
+    .nb_or = UInt_or
+};
 
 static Py_hash_t
 UInt_hash(PyObject *self) {
@@ -53,121 +74,100 @@ UInt_richcompare(PyObject *self, PyObject *other, int op) {
     return Py_NotImplemented;
 }
 
-static PyObject *
-UInt_and(PyObject *self, PyObject *other) {
-    if (Py_TYPE(self) != Py_TYPE(other)) {
-        return Py_NotImplemented;
-    }
-    return UInt_New(Py_TYPE(self), UInt_GetValue(self) & UInt_GetValue(other));
-}
-
-static PyObject *
-UInt_or(PyObject *self, PyObject *other) {
-    if (Py_TYPE(self) != Py_TYPE(other)) {
-        return Py_NotImplemented;
-    }
-    return UInt_New(Py_TYPE(self), UInt_GetValue(self) | UInt_GetValue(other));
-}
-
-static PyNumberMethods UInt_numbermethods = {
-    .nb_and = UInt_and,
-    .nb_or = UInt_or
-};
-
 
 typedef struct {
     PyObject_HEAD
     PyTypeObject *uint_cls;
-} EnumObject;
+} Enum_Object;
 
 static PyObject *
 Enum_repr(PyObject *self) {
-    PyObject *result = PyUnicode_FromFormat("<enum '%s'>", ((EnumObject *)self)->uint_cls->tp_name);
+    PyObject *result = PyUnicode_FromFormat("<enum '%s'>", ((Enum_Object *)self)->uint_cls->tp_name);
     return result;
 }
 
 static PyObject *
 Enum_get(PyObject *self, void *closure) {
-    return UInt_New(((EnumObject *)self)->uint_cls, *(uint64_t *)closure);
+    return UInt_New(((Enum_Object *)self)->uint_cls, *(uint64_t *)closure);
 }
 
 
 typedef struct {
     PyObject_HEAD
     PyTypeObject *uint_cls;
-} FlagObject;
+} Flag_Object;
 
 static PyObject *
 Flag_repr(PyObject *self) {
-    PyObject *result = PyUnicode_FromFormat("<flag '%s'>", ((FlagObject *)self)->uint_cls->tp_name);
+    PyObject *result = PyUnicode_FromFormat("<flag '%s'>", ((Flag_Object *)self)->uint_cls->tp_name);
     return result;
 }
 
 static PyObject *
 Flag_get(PyObject *self, void *closure) {
-    return UInt_New(((FlagObject *)self)->uint_cls, *(uint64_t *)closure);
+    return UInt_New(((Flag_Object *)self)->uint_cls, *(uint64_t *)closure);
 }
 
 
 static uint64_t EnumDemo_A = 5;
 static uint64_t EnumDemo_B = 12;
-static PyGetSetDef EnumDemoEnum_getsetdefs[] = {
+static PyGetSetDef Enum_EnumDemo_getset[] = {
     {"A", Enum_get, NULL, NULL, (void *)&EnumDemo_A},
     {"B", Enum_get, NULL, NULL, (void *)&EnumDemo_B},
     {NULL}
 };
-static PyTypeObject EnumDemoType = {
+static PyTypeObject EnumDemo_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = MUDULE_NAME ".EnumDemo",
-    .tp_basicsize = sizeof(UIntObject),
+    .tp_name = MUDULE_NAME "." "EnumDemo",
+    .tp_basicsize = sizeof(UInt_Object),
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
     .tp_dealloc = UInt_dealloc,
     .tp_repr = UInt_repr,
     .tp_hash = UInt_hash,
     .tp_richcompare = UInt_richcompare
 };
-static PyTypeObject EnumDemoEnumType = {
+static PyTypeObject Enum_EnumDemo_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = MUDULE_NAME ".EnumDemoEnum",
-    .tp_basicsize = sizeof(EnumObject),
+    .tp_name = MUDULE_NAME "." "_Enum_EnumDemo",
+    .tp_basicsize = sizeof(Enum_Object),
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
     .tp_repr = Enum_repr,
-    .tp_getset = EnumDemoEnum_getsetdefs
+    .tp_getset = Enum_EnumDemo_getset
 };
-static EnumObject EnumDemoEnumObject = {
-    PyObject_HEAD_INIT(&EnumDemoEnumType)
-    .uint_cls = &EnumDemoType
+static Enum_Object Enum_EnumDemo_Object = {
+    PyObject_HEAD_INIT(&Enum_EnumDemo_Type)
+    .uint_cls = &EnumDemo_Type
 };
 
 static uint64_t FlagDemo_C = 55;
 static uint64_t FlagDemo_D = 119;
-static PyGetSetDef FlagDemoFlag_getsetdefs[] = {
+static PyGetSetDef Flag_FlagDemo_getsetdefs[] = {
     {"C", Flag_get, NULL, NULL, (void *)&FlagDemo_C},
     {"D", Flag_get, NULL, NULL, (void *)&FlagDemo_D},
     {NULL}
 };
-static PyTypeObject FlagDemoType = {
+static PyTypeObject FlagDemo_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = MUDULE_NAME ".FlagDemo",
-    .tp_basicsize = sizeof(UIntObject),
+    .tp_name = MUDULE_NAME "." "FlagDemo",
+    .tp_basicsize = sizeof(UInt_Object),
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
     .tp_dealloc = UInt_dealloc,
     .tp_repr = UInt_repr,
+    .tp_as_number = &UInt_as_number,
     .tp_hash = UInt_hash,
-    .tp_richcompare = UInt_richcompare,
-    .tp_as_number = &UInt_numbermethods
+    .tp_richcompare = UInt_richcompare
 };
-static PyTypeObject FlagDemoFlagType = {
+static PyTypeObject Flag_FlagDemo_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = MUDULE_NAME ".FlagDemoFlag",
-    .tp_basicsize = sizeof(FlagObject),
+    .tp_name = MUDULE_NAME "." "_Flag_FlagDemo",
+    .tp_basicsize = sizeof(Flag_Object),
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
     .tp_repr = Flag_repr,
-    .tp_getset = FlagDemoFlag_getsetdefs
+    .tp_getset = Flag_FlagDemo_getsetdefs
 };
-static FlagObject FlagDemoFlagObject = {
-    PyObject_HEAD_INIT(&FlagDemoFlagType)
-    .uint_cls = &FlagDemoType
+static Flag_Object Flag_FlagDemo_Object = {
+    PyObject_HEAD_INIT(&Flag_FlagDemo_Type)
+    .uint_cls = &FlagDemo_Type
 };
 
 
@@ -183,8 +183,8 @@ typedef union {
 typedef struct {
     PyObject_HEAD
     VkPerformanceValueDataINTEL data;
-    uint8_t selection;
-    //PyObject *obj;
+    const char *key;
+    PyObject *arg;
 } Py_PerformanceValueDataINTELObject;
 
 static const char Py_PerformanceValueDataINTEL_KEY_value_32[] = "value_32";
@@ -196,22 +196,53 @@ static const char Py_PerformanceValueDataINTEL_KEY_value_string[] = "value_strin
 static void
 Py_PerformanceValueDataINTEL_dealloc(PyObject *self) {
     PyObject_GC_UnTrack(self);
-    uint8_t *self_selection = &((Py_PerformanceValueDataINTELObject *)self)->selection;
-    VkPerformanceValueDataINTEL *self_data = &((Py_PerformanceValueDataINTELObject *)self)->data;
-    if (*self_selection == 4 && self_data->valueString != NULL) {
-        free(self_data->valueString);
-        self_data->valueString = NULL;
-    }
+    Py_CLEAR(((Py_PerformanceValueDataINTELObject *)self)->arg);
     Py_TYPE(self)->tp_free(self);
 }
 
-// def __new__(
+static PyObject *
+Py_PerformanceValueDataINTEL_repr(PyObject *self) {
+    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((Py_PerformanceValueDataINTELObject *)self)->key, ((Py_PerformanceValueDataINTELObject *)self)->arg);
+    return result;
+}
+
+static int
+Py_PerformanceValueDataINTEL_traverse(PyObject *self, visitproc visit, void *arg) {
+    Py_VISIT(((Py_PerformanceValueDataINTELObject *)self)->arg);
+    return 0;
+}
+
+static int
+Py_PerformanceValueDataINTEL_clear(PyObject *self) {
+    Py_CLEAR(((Py_PerformanceValueDataINTELObject *)self)->arg);
+    return 0;
+}
+
+static PyObject *
+Py_PerformanceValueDataINTEL_get(PyObject *self, void *closure) {
+    if (((Py_PerformanceValueDataINTELObject *)self)->key != (char *)closure) {
+        PyErr_Format(PyExc_AttributeError, "Union object was created via key '%s' (accessing '%s')", ((Py_PerformanceValueDataINTELObject *)self)->key, (char *)closure);
+        return NULL;
+    }
+    return Py_NewRef(((Py_PerformanceValueDataINTELObject *)self)->arg);
+}
+
+static PyGetSetDef Py_PerformanceValueDataINTEL_getset[] = {
+    {Py_PerformanceValueDataINTEL_KEY_value_32, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_32},
+    {Py_PerformanceValueDataINTEL_KEY_value_64, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_64},
+    {Py_PerformanceValueDataINTEL_KEY_value_float, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_float},
+    {Py_PerformanceValueDataINTEL_KEY_value_bool, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_bool},
+    {Py_PerformanceValueDataINTEL_KEY_value_string, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_string},
+    {NULL}
+};
+
+// def _new__(
 //     cls,
 //     /,
 //     *,
-//     value_32: SupportsInt | SupportsIndex = ...,
-//     value_64: SupportsInt | SupportsIndex = ...,
-//     value_float: SupportsFloat | SupportsIndex = ...,
+//     value_32: SupportsInt = ...,
+//     value_64: SupportsInt = ...,
+//     value_float: SupportsFloat = ...,
 //     value_bool: bool = ...,
 //     value_string: str = ...
 // ) -> Py_PerformanceValueDataINTELObject: ...
@@ -238,9 +269,9 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
         goto error;
     }
 
-    uint8_t *self_selection = &((Py_PerformanceValueDataINTELObject *)self)->selection;
+    const char **self_key = &((Py_PerformanceValueDataINTELObject *)self)->key;
     VkPerformanceValueDataINTEL *self_data = &((Py_PerformanceValueDataINTELObject *)self)->data;
-    //PyObject **self_obj = &((Py_PerformanceValueDataINTELObject *)self)->obj;
+    PyObject **self_arg = &((Py_PerformanceValueDataINTELObject *)self)->arg;
 
     if (!PyArg_ParseTupleAndKeywords(
         args, kwds, "|$OOOOO", kwlist,
@@ -250,65 +281,68 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     }
     if (arg_value_32) {
         ++argc;
-        *self_selection = 0;
-        self_data->value32 = PyLong_AsUnsignedLongMask(arg_value_32);
-        if (PyErr_Occurred()) {
+        *self_key = Py_PerformanceValueDataINTEL_KEY_value_32;
+        *self_arg = PyNumber_Long(arg_value_32);
+        if (!PyLong_Check(*self_arg)) {
             PyErr_Format(PyExc_TypeError, "Expecting int (got %s)", Py_TYPE(arg_value_32)->tp_name);
             goto error;
         }
-        //if (PyErr_Occurred()) {
-        //    goto error;
-        //}
-        //*self_obj = Py_NewRef(arg_value_32);
+        self_data->value32 = PyLong_AsUnsignedLong(*self_arg);
+        if (PyErr_Occurred()) {
+            goto error;
+        }
     }
     if (arg_value_64) {
         ++argc;
-        //if (!PyLong_Check(arg_value_64)) {
-        //    goto error;
-        //}
-        *self_selection = 1;
-        self_data->value64 = PyLong_AsUnsignedLongLongMask(arg_value_64);
-        if (PyErr_Occurred()) {
+        *self_key = Py_PerformanceValueDataINTEL_KEY_value_64;
+        *self_arg = PyNumber_Long(arg_value_64);
+        if (!PyLong_Check(*self_arg)) {
             PyErr_Format(PyExc_TypeError, "Expecting int (got %s)", Py_TYPE(arg_value_64)->tp_name);
             goto error;
         }
-        //*self_obj = Py_NewRef(arg_value_64);
+        self_data->value64 = PyLong_AsUnsignedLongLong(*self_arg);
+        if (PyErr_Occurred()) {
+            goto error;
+        }
     }
     if (arg_value_float) {
         ++argc;
-        //if (!PyFloat_Check(arg_value_float)) {
-        //    goto error;
-        //}
-        *self_selection = 2;
-        self_data->valueFloat = (float)PyFloat_AsDouble(arg_value_float);
-        if (PyErr_Occurred()) {
+        *self_key = Py_PerformanceValueDataINTEL_KEY_value_float;
+        *self_arg = PyNumber_Float(arg_value_float);
+        if (!PyFloat_Check(*self_arg)) {
             PyErr_Format(PyExc_TypeError, "Expecting float (got %s)", Py_TYPE(arg_value_float)->tp_name);
             goto error;
         }
-        //*self_obj = Py_NewRef(arg_value_float);
+        self_data->valueFloat = (float)PyFloat_AsDouble(*self_arg);
+        if (PyErr_Occurred()) {
+            goto error;
+        }
     }
     if (arg_value_bool) {
         ++argc;
-        if (!PyBool_Check(arg_value_bool)) {
+        *self_key = Py_PerformanceValueDataINTEL_KEY_value_bool;
+        *self_arg = Py_NewRef(arg_value_bool);
+        if (!PyBool_Check(*self_arg)) {
             PyErr_Format(PyExc_TypeError, "Expecting bool (got %s)", Py_TYPE(arg_value_bool)->tp_name);
             goto error;
         }
-        *self_selection = 3;
-        self_data->valueBool = arg_value_bool == Py_True;
-        //*self_obj = Py_NewRef(arg_value_bool);
+        self_data->valueBool = Py_IsTrue(*self_arg);
+        if (PyErr_Occurred()) {
+            goto error;
+        }
     }
     if (arg_value_string) {
         ++argc;
-        if (!PyUnicode_Check(arg_value_string)) {
+        *self_key = Py_PerformanceValueDataINTEL_KEY_value_string;
+        *self_arg = Py_NewRef(arg_value_string);
+        if (!PyUnicode_Check(*self_arg)) {
             PyErr_Format(PyExc_TypeError, "Expecting str (got %s)", Py_TYPE(arg_value_string)->tp_name);
             goto error;
         }
-        *self_selection = 4;
-        //Py_ssize_t size = 0;
-        //const char *s = PyUnicode_AsUTF8AndSize(arg_value_string, &size);
-        self_data->valueString = strdup(PyUnicode_AsUTF8(arg_value_string));
-        //memcpy(self_data->valueString, s, size + 1);
-        //*self_obj = Py_NewRef(arg_value_string);
+        self_data->valueString = PyUnicode_AsUTF8(*self_arg);
+        if (PyErr_Occurred()) {
+            goto error;
+        }
     }
     if (argc != 1) {
         PyErr_Format(PyExc_TypeError, "%s() takes exactly 1 argument (%i given)", cls->tp_name, argc);
@@ -326,60 +360,17 @@ error:
     return NULL;
 }
 
-static int
-Py_PerformanceValueDataINTEL_traverse(PyObject *self, visitproc visit, void *arg) {
-    return 0;
-}
-
-static PyObject *
-Py_PerformanceValueDataINTEL_repr(PyObject *self) {
-    const char *field_name = NULL;
-    PyObject *obj = NULL;
-    uint8_t *self_selection = &((Py_PerformanceValueDataINTELObject *)self)->selection;
-    VkPerformanceValueDataINTEL *self_data = &((Py_PerformanceValueDataINTELObject *)self)->data;
-
-    switch (*self_selection) {
-        case 0:
-            field_name = Py_PerformanceValueDataINTEL_KEY_value_32;
-            obj = PyLong_FromUnsignedLong(self_data->value32);
-            break;
-        case 1:
-            field_name = Py_PerformanceValueDataINTEL_KEY_value_64;
-            obj = PyLong_FromUnsignedLongLong(self_data->value64);
-            break;
-        case 2:
-            field_name = Py_PerformanceValueDataINTEL_KEY_value_float;
-            obj = PyFloat_FromDouble((double)self_data->valueFloat);
-            break;
-        case 3:
-            field_name = Py_PerformanceValueDataINTEL_KEY_value_bool;
-            obj = self_data->valueBool ? Py_True : Py_False;
-            break;
-        case 4:
-            field_name = Py_PerformanceValueDataINTEL_KEY_value_string;
-            obj = PyUnicode_FromString(self_data->valueString);
-            break;
-        default:
-            goto error;
-    }
-    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, field_name, obj);
-    Py_DECREF(obj);
-    return result;
-
-error:
-    Py_XDECREF(obj);
-    return NULL;
-}
-
 static PyTypeObject PerformanceValueDataINTELType = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = MUDULE_NAME "." "PerformanceValueDataINTEL",
     .tp_basicsize = sizeof(Py_PerformanceValueDataINTELObject),
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_HAVE_GC,
     .tp_dealloc = Py_PerformanceValueDataINTEL_dealloc,
-    .tp_new = Py_PerformanceValueDataINTEL_new,
+    .tp_repr = Py_PerformanceValueDataINTEL_repr,
     .tp_traverse = Py_PerformanceValueDataINTEL_traverse,
-    .tp_repr = Py_PerformanceValueDataINTEL_repr
+    .tp_clear = Py_PerformanceValueDataINTEL_clear,
+    .tp_getset = Py_PerformanceValueDataINTEL_getset,
+    .tp_new = Py_PerformanceValueDataINTEL_new
 };
 
 
@@ -411,8 +402,8 @@ PyInit_template(void) {
         return NULL;
     }
     if (
-        PyType_Ready(&EnumDemoType) < 0 || PyType_Ready(&EnumDemoEnumType) < 0 || PyModule_AddObjectRef(module, "EnumDemo", (PyObject *)&EnumDemoEnumObject) < 0 ||
-        PyType_Ready(&FlagDemoType) < 0 || PyType_Ready(&FlagDemoFlagType) < 0 || PyModule_AddObjectRef(module, "FlagDemo", (PyObject *)&FlagDemoFlagObject) < 0 ||
+        PyType_Ready(&EnumDemo_Type) < 0 || PyType_Ready(&Enum_EnumDemo_Type) < 0 || PyModule_AddObjectRef(module, "EnumDemo", (PyObject *)&Enum_EnumDemo_Object) < 0 ||
+        PyType_Ready(&FlagDemo_Type) < 0 || PyType_Ready(&Flag_FlagDemo_Type) < 0 || PyModule_AddObjectRef(module, "FlagDemo", (PyObject *)&Flag_FlagDemo_Object) < 0 ||
         0
     ) {
         Py_DECREF(module);

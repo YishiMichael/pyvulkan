@@ -11,6 +11,7 @@ from typing import (
     Literal,
     Self,
     Sequence,
+    SupportsFloat,
     SupportsInt
 )
 
