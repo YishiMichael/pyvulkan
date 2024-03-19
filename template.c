@@ -112,8 +112,16 @@ Flag_get(PyObject *self, void *closure) {
 static uint64_t EnumDemo_A = 5;
 static uint64_t EnumDemo_B = 12;
 static PyGetSetDef Enum_EnumDemo_getset[] = {
-    {"A", Enum_get, NULL, NULL, (void *)&EnumDemo_A},
-    {"B", Enum_get, NULL, NULL, (void *)&EnumDemo_B},
+    {
+        .name = "A",
+        .get = Enum_get,
+        .closure = (void *)&EnumDemo_A
+    },
+    {
+        .name = "B",
+        .get = Enum_get,
+        .closure = (void *)&EnumDemo_B
+    },
     {NULL}
 };
 static PyTypeObject EnumDemo_Type = {
@@ -142,8 +150,16 @@ static Enum_Object Enum_EnumDemo_Object = {
 static uint64_t FlagDemo_C = 55;
 static uint64_t FlagDemo_D = 119;
 static PyGetSetDef Flag_FlagDemo_getsetdefs[] = {
-    {"C", Flag_get, NULL, NULL, (void *)&FlagDemo_C},
-    {"D", Flag_get, NULL, NULL, (void *)&FlagDemo_D},
+    {
+        .name = "C",
+        .get = Flag_get,
+        .closure = (void *)&FlagDemo_C
+    },
+    {
+        .name = "D",
+        .get = Flag_get,
+        .closure = (void *)&FlagDemo_D
+    },
     {NULL}
 };
 static PyTypeObject FlagDemo_Type = {
@@ -185,7 +201,7 @@ typedef struct {
     VkPerformanceValueDataINTEL data;
     const char *key;
     PyObject *arg;
-} Py_PerformanceValueDataINTELObject;
+} Py_PerformanceValueDataINTEL_Object;
 
 static const char Py_PerformanceValueDataINTEL_KEY_value_32[] = "value_32";
 static const char Py_PerformanceValueDataINTEL_KEY_value_64[] = "value_64";
@@ -196,43 +212,63 @@ static const char Py_PerformanceValueDataINTEL_KEY_value_string[] = "value_strin
 static void
 Py_PerformanceValueDataINTEL_dealloc(PyObject *self) {
     PyObject_GC_UnTrack(self);
-    Py_CLEAR(((Py_PerformanceValueDataINTELObject *)self)->arg);
+    Py_CLEAR(((Py_PerformanceValueDataINTEL_Object *)self)->arg);
     Py_TYPE(self)->tp_free(self);
 }
 
 static PyObject *
 Py_PerformanceValueDataINTEL_repr(PyObject *self) {
-    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((Py_PerformanceValueDataINTELObject *)self)->key, ((Py_PerformanceValueDataINTELObject *)self)->arg);
+    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((Py_PerformanceValueDataINTEL_Object *)self)->key, ((Py_PerformanceValueDataINTEL_Object *)self)->arg);
     return result;
 }
 
 static int
 Py_PerformanceValueDataINTEL_traverse(PyObject *self, visitproc visit, void *arg) {
-    Py_VISIT(((Py_PerformanceValueDataINTELObject *)self)->arg);
+    Py_VISIT(((Py_PerformanceValueDataINTEL_Object *)self)->arg);
     return 0;
 }
 
 static int
 Py_PerformanceValueDataINTEL_clear(PyObject *self) {
-    Py_CLEAR(((Py_PerformanceValueDataINTELObject *)self)->arg);
+    Py_CLEAR(((Py_PerformanceValueDataINTEL_Object *)self)->arg);
     return 0;
 }
 
 static PyObject *
 Py_PerformanceValueDataINTEL_get(PyObject *self, void *closure) {
-    if (((Py_PerformanceValueDataINTELObject *)self)->key != (char *)closure) {
-        PyErr_Format(PyExc_AttributeError, "Union object was created via key '%s' (accessing '%s')", ((Py_PerformanceValueDataINTELObject *)self)->key, (char *)closure);
+    if (((Py_PerformanceValueDataINTEL_Object *)self)->key != (const char *)closure) {
+        PyErr_Format(PyExc_AttributeError, "Union object was created via key '%s' (accessing '%s')", ((Py_PerformanceValueDataINTEL_Object *)self)->key, (char *)closure);
         return NULL;
     }
-    return Py_NewRef(((Py_PerformanceValueDataINTELObject *)self)->arg);
+    return Py_NewRef(((Py_PerformanceValueDataINTEL_Object *)self)->arg);
 }
 
 static PyGetSetDef Py_PerformanceValueDataINTEL_getset[] = {
-    {Py_PerformanceValueDataINTEL_KEY_value_32, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_32},
-    {Py_PerformanceValueDataINTEL_KEY_value_64, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_64},
-    {Py_PerformanceValueDataINTEL_KEY_value_float, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_float},
-    {Py_PerformanceValueDataINTEL_KEY_value_bool, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_bool},
-    {Py_PerformanceValueDataINTEL_KEY_value_string, Py_PerformanceValueDataINTEL_get, NULL, NULL, (void *)Py_PerformanceValueDataINTEL_KEY_value_string},
+    {
+        .name = Py_PerformanceValueDataINTEL_KEY_value_32,
+        .get = Py_PerformanceValueDataINTEL_get,
+        .closure = (void *)Py_PerformanceValueDataINTEL_KEY_value_32
+    },
+    {
+        .name = Py_PerformanceValueDataINTEL_KEY_value_64,
+        .get = Py_PerformanceValueDataINTEL_get,
+        .closure = (void *)Py_PerformanceValueDataINTEL_KEY_value_64
+    },
+    {
+        .name = Py_PerformanceValueDataINTEL_KEY_value_float,
+        .get = Py_PerformanceValueDataINTEL_get,
+        .closure = (void *)Py_PerformanceValueDataINTEL_KEY_value_float
+    },
+    {
+        .name = Py_PerformanceValueDataINTEL_KEY_value_bool,
+        .get = Py_PerformanceValueDataINTEL_get,
+        .closure = (void *)Py_PerformanceValueDataINTEL_KEY_value_bool
+    },
+    {
+        .name = Py_PerformanceValueDataINTEL_KEY_value_string,
+        .get = Py_PerformanceValueDataINTEL_get,
+        .closure = (void *)Py_PerformanceValueDataINTEL_KEY_value_string
+    },
     {NULL}
 };
 
@@ -245,7 +281,7 @@ static PyGetSetDef Py_PerformanceValueDataINTEL_getset[] = {
 //     value_float: SupportsFloat = ...,
 //     value_bool: bool = ...,
 //     value_string: str = ...
-// ) -> Py_PerformanceValueDataINTELObject: ...
+// ) -> Py_PerformanceValueDataINTEL_Object: ...
 static PyObject *
 Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds) {
     static char *kwlist[] = {
@@ -254,7 +290,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
         Py_PerformanceValueDataINTEL_KEY_value_float,
         Py_PerformanceValueDataINTEL_KEY_value_bool,
         Py_PerformanceValueDataINTEL_KEY_value_string,
-        NULL
+        {NULL}
     };
     int argc = 0;
     PyObject *arg_value_32 = NULL;
@@ -269,9 +305,9 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
         goto error;
     }
 
-    const char **self_key = &((Py_PerformanceValueDataINTELObject *)self)->key;
-    VkPerformanceValueDataINTEL *self_data = &((Py_PerformanceValueDataINTELObject *)self)->data;
-    PyObject **self_arg = &((Py_PerformanceValueDataINTELObject *)self)->arg;
+    const char **self_key = &((Py_PerformanceValueDataINTEL_Object *)self)->key;
+    VkPerformanceValueDataINTEL *self_data = &((Py_PerformanceValueDataINTEL_Object *)self)->data;
+    PyObject **self_arg = &((Py_PerformanceValueDataINTEL_Object *)self)->arg;
 
     if (!PyArg_ParseTupleAndKeywords(
         args, kwds, "|$OOOOO", kwlist,
@@ -282,7 +318,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_32) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_32;
-        if (!(*self_arg = PyNumber_Long(arg_value_32))) {
+        if (!(*self_arg = PyLong_Check(arg_value_32) ? Py_NewRef(arg_value_32) : PyNumber_Long(arg_value_32))) {
             PyErr_Format(PyExc_TypeError, "Expecting int (got %s)", Py_TYPE(arg_value_32)->tp_name);
             goto error;
         }
@@ -294,7 +330,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_64) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_64;
-        if (!(*self_arg = PyNumber_Long(arg_value_64))) {
+        if (!(*self_arg = PyLong_Check(arg_value_64) ? Py_NewRef(arg_value_64) : PyNumber_Long(arg_value_64))) {
             PyErr_Format(PyExc_TypeError, "Expecting int (got %s)", Py_TYPE(arg_value_64)->tp_name);
             goto error;
         }
@@ -306,7 +342,7 @@ Py_PerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kw
     if (arg_value_float) {
         ++argc;
         *self_key = Py_PerformanceValueDataINTEL_KEY_value_float;
-        if (!(*self_arg = PyNumber_Float(arg_value_float))) {
+        if (!(*self_arg = PyFloat_Check(arg_value_float) ? Py_NewRef(arg_value_float) : PyNumber_Float(arg_value_float))) {
             PyErr_Format(PyExc_TypeError, "Expecting float (got %s)", Py_TYPE(arg_value_float)->tp_name);
             goto error;
         }
@@ -355,10 +391,10 @@ error:
     return NULL;
 }
 
-static PyTypeObject PerformanceValueDataINTELType = {
+static PyTypeObject Py_PerformanceValueDataINTEL_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = MUDULE_NAME "." "PerformanceValueDataINTEL",
-    .tp_basicsize = sizeof(Py_PerformanceValueDataINTELObject),
+    .tp_basicsize = sizeof(Py_PerformanceValueDataINTEL_Object),
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_HAVE_GC,
     .tp_dealloc = Py_PerformanceValueDataINTEL_dealloc,
     .tp_repr = Py_PerformanceValueDataINTEL_repr,
@@ -405,7 +441,7 @@ PyInit_template(void) {
         return NULL;
     }
     if (
-        PyType_Ready(&PerformanceValueDataINTELType) < 0 || PyModule_AddObjectRef(module, "PerformanceValueDataINTEL", (PyObject *)&PerformanceValueDataINTELType) < 0 ||
+        PyType_Ready(&Py_PerformanceValueDataINTEL_Type) < 0 || PyModule_AddObjectRef(module, "PerformanceValueDataINTEL", (PyObject *)&Py_PerformanceValueDataINTEL_Type) < 0 ||
         0
     ) {
         Py_DECREF(module);
