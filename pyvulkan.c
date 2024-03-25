@@ -2,76 +2,56 @@
 #include <Python.h>
 #include <numpy/ndarrayobject.h>
 
-#define PyHASH_TRUNC(x) ((x) & ~(Py_hash_t)0)
-
 
 typedef struct {
     PyObject_HEAD
-    uint64_t value;
-} PYVK_UInt64_Object;
-
-static inline uint64_t
-PYVK_UInt64_GetValue(PyObject *self) {
-    return ((PYVK_UInt64_Object *)self)->value;
-}
-
-static inline PyObject *
-PYVK_UInt64_New(PyTypeObject *cls, uint64_t value) {
-    PyObject *self = cls->tp_alloc(cls, 0);
-    ((PYVK_UInt64_Object *)self)->value = value;
-    return self;
-}
+} PYVK_Data_Object;
 
 static void
-PYVK_UInt64_dealloc(PyObject *self) {
+PYVK_Data_dealloc(PyObject *self) {
     Py_TYPE(self)->tp_free(self);
 }
 
+static PyTypeObject PYVK_Data_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Data",
+    .tp_basicsize = sizeof(PYVK_Data_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_dealloc = PYVK_Data_dealloc
+};
+
+
+static PyTypeObject PYVK_Enum_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Enum",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_base = &PYVK_Data_Type
+};
+
+
+// enums
+
+typedef struct {
+    PYVK_Data_Object base;
+    uint64_t value;
+} PYVK_Enum64_Object;
+
+static inline PyObject *
+PYVK_Enum64_New(PyTypeObject *cls, uint64_t value) {
+    PyObject *self = cls->tp_alloc(cls, 0);
+    ((PYVK_Enum64_Object *)self)->value = value;
+    return self;
+}
+
 static PyObject *
-PYVK_UInt64_repr(PyObject *self) {
-    PyObject *result = PyUnicode_FromFormat("<%s: %llu>", Py_TYPE(self)->tp_name, PYVK_UInt64_GetValue(self));
+PYVK_Enum64_repr(PyObject *self) {
+    PyObject *result = PyUnicode_FromFormat("<%s: %llu>", Py_TYPE(self)->tp_name, ((PYVK_Enum64_Object *)self)->value);
     return result;
 }
 
-static PyObject *
-PYVK_UInt64_invert(PyObject *self) {
-    return PYVK_UInt64_New(Py_TYPE(self), ~PYVK_UInt64_GetValue(self));
-}
-
-static PyObject *
-PYVK_UInt64_and(PyObject *self, PyObject *other) {
-    if (Py_TYPE(self) != Py_TYPE(other)) {
-        return Py_NotImplemented;
-    }
-    return PYVK_UInt64_New(Py_TYPE(self), PYVK_UInt64_GetValue(self) & PYVK_UInt64_GetValue(other));
-}
-
-static PyObject *
-PYVK_UInt64_xor(PyObject *self, PyObject *other) {
-    if (Py_TYPE(self) != Py_TYPE(other)) {
-        return Py_NotImplemented;
-    }
-    return PYVK_UInt64_New(Py_TYPE(self), PYVK_UInt64_GetValue(self) ^ PYVK_UInt64_GetValue(other));
-}
-
-static PyObject *
-PYVK_UInt64_or(PyObject *self, PyObject *other) {
-    if (Py_TYPE(self) != Py_TYPE(other)) {
-        return Py_NotImplemented;
-    }
-    return PYVK_UInt64_New(Py_TYPE(self), PYVK_UInt64_GetValue(self) | PYVK_UInt64_GetValue(other));
-}
-
-static PyNumberMethods PYVK_UInt64_as_number = {
-    .nb_invert = PYVK_UInt64_invert,
-    .nb_and = PYVK_UInt64_and,
-    .nb_xor = PYVK_UInt64_xor,
-    .nb_or = PYVK_UInt64_or
-};
-
 static Py_hash_t
-PYVK_UInt64_hash(PyObject *self) {
-    Py_hash_t result = PyHASH_TRUNC(PYVK_UInt64_GetValue(self));
+PYVK_Enum64_hash(PyObject *self) {
+    Py_hash_t result = ((PYVK_Enum64_Object *)self)->value & ~(Py_hash_t)0;
     if (result == -1) {
         result = -2;
     }
@@ -79,128 +59,210 @@ PYVK_UInt64_hash(PyObject *self) {
 }
 
 static PyObject *
-PYVK_UInt64_richcompare(PyObject *self, PyObject *other, int op) {
+PYVK_Enum64_richcompare(PyObject *self, PyObject *other, int op) {
     switch (op) {
         case Py_EQ:
-            return Py_TYPE(self) != Py_TYPE(other) ? Py_False : PYVK_UInt64_GetValue(self) != PYVK_UInt64_GetValue(other) ? Py_False : Py_True;
+            return (
+                Py_TYPE(self) != Py_TYPE(other) ? Py_False :
+                ((PYVK_Enum64_Object *)self)->value != ((PYVK_Enum64_Object *)other)->value ? Py_False :
+                Py_True
+            );
         case Py_NE:
-            return Py_TYPE(self) != Py_TYPE(other) ? Py_True : PYVK_UInt64_GetValue(self) != PYVK_UInt64_GetValue(other) ? Py_True : Py_False;
+            return (
+                Py_TYPE(self) != Py_TYPE(other) ? Py_True :
+                ((PYVK_Enum64_Object *)self)->value != ((PYVK_Enum64_Object *)other)->value ? Py_True :
+                Py_False
+            );
     }
     return Py_NotImplemented;
 }
 
+static PyTypeObject PYVK_Enum64_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Enum64",
+    .tp_basicsize = sizeof(PYVK_Enum64_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_repr = PYVK_Enum64_repr,
+    .tp_hash = PYVK_Enum64_hash,
+    .tp_richcompare = PYVK_Enum64_richcompare,
+    .tp_base = &PYVK_Enum_Type
+};
 
-typedef struct {
-    PyObject_HEAD
-    PyTypeObject *uint_cls;
-} PYVK_EnumMeta_Object;
 
 static PyObject *
-PYVK_EnumMeta_repr(PyObject *self) {
-    PyObject *result = PyUnicode_FromFormat("<enum '%s'>", ((PYVK_EnumMeta_Object *)self)->uint_cls->tp_name);
+PYVK_Flag64_invert(PyObject *self) {
+    return PYVK_Enum64_New(Py_TYPE(self), ~((PYVK_Enum64_Object *)self)->value);
+}
+
+static PyObject *
+PYVK_Flag64_and(PyObject *self, PyObject *other) {
+    if (Py_TYPE(self) != Py_TYPE(other)) {
+        return Py_NotImplemented;
+    }
+    return PYVK_Enum64_New(Py_TYPE(self), ((PYVK_Enum64_Object *)self)->value & ((PYVK_Enum64_Object *)other)->value);
+}
+
+static PyObject *
+PYVK_Flag64_xor(PyObject *self, PyObject *other) {
+    if (Py_TYPE(self) != Py_TYPE(other)) {
+        return Py_NotImplemented;
+    }
+    return PYVK_Enum64_New(Py_TYPE(self), ((PYVK_Enum64_Object *)self)->value ^ ((PYVK_Enum64_Object *)other)->value);
+}
+
+static PyObject *
+PYVK_Flag64_or(PyObject *self, PyObject *other) {
+    if (Py_TYPE(self) != Py_TYPE(other)) {
+        return Py_NotImplemented;
+    }
+    return PYVK_Enum64_New(Py_TYPE(self), ((PYVK_Enum64_Object *)self)->value | ((PYVK_Enum64_Object *)other)->value);
+}
+
+static PyNumberMethods PYVK_Flag64_as_number = {
+    .nb_invert = PYVK_Flag64_invert,
+    .nb_and = PYVK_Flag64_and,
+    .nb_xor = PYVK_Flag64_xor,
+    .nb_or = PYVK_Flag64_or
+};
+
+static PyTypeObject PYVK_Flag64_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Flag64",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_as_number = &PYVK_Flag64_as_number,
+    .tp_base = &PYVK_Enum64_Type
+};
+
+
+static PyTypeObject PYVK_EnumMeta_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._EnumMeta",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_base = &PYVK_Data_Type
+};
+
+
+typedef struct {
+    PYVK_Data_Object base;
+    PyTypeObject *enum64_cls;
+} PYVK_Enum64Meta_Object;
+
+static PyObject *
+PYVK_Enum64Meta_get(PyObject *self, void *closure) {
+    return PYVK_Enum64_New(((PYVK_Enum64Meta_Object *)self)->enum64_cls, *(uint64_t *)closure);
+}
+
+static PyObject *
+PYVK_Enum64Meta_repr(PyObject *self) {
+    PyObject *result = PyUnicode_FromFormat("<enum64 '%s'>", ((PYVK_Enum64Meta_Object *)self)->enum64_cls->tp_name);
     return result;
 }
 
-static PyObject *
-PYVK_EnumMeta_get(PyObject *self, void *closure) {
-    return PYVK_UInt64_New(((PYVK_EnumMeta_Object *)self)->uint_cls, *(uint64_t *)closure);
-}
-
-
-typedef struct {
-    PyObject_HEAD
-    PyTypeObject *uint_cls;
-} PYVK_FlagMeta_Object;
+static PyTypeObject PYVK_Enum64Meta_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Enum64Meta",
+    .tp_basicsize = sizeof(PYVK_Enum64Meta_Object),
+    .tp_repr = PYVK_Enum64Meta_repr,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_base = &PYVK_EnumMeta_Type
+};
 
 static PyObject *
-PYVK_FlagMeta_repr(PyObject *self) {
-    PyObject *result = PyUnicode_FromFormat("<flag '%s'>", ((PYVK_FlagMeta_Object *)self)->uint_cls->tp_name);
+PYVK_Flag64Meta_repr(PyObject *self) {
+    PyObject *result = PyUnicode_FromFormat("<flag64 '%s'>", ((PYVK_Enum64Meta_Object *)self)->enum64_cls->tp_name);
     return result;
 }
 
-static PyObject *
-PYVK_FlagMeta_get(PyObject *self, void *closure) {
-    return PYVK_UInt64_New(((PYVK_FlagMeta_Object *)self)->uint_cls, *(uint64_t *)closure);
-}
+static PyTypeObject PYVK_Flag64Meta_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Flag64Meta",
+    .tp_repr = PYVK_Flag64Meta_repr,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_base = &PYVK_Enum64Meta_Type
+};
 
 
 static uint64_t PYVKEnumDemo_A = 5;
 static uint64_t PYVKEnumDemo_B = 12;
+
 static PyGetSetDef PYVKEnumDemo_Meta_getset[] = {
     {
         .name = "A",
-        .get = PYVK_EnumMeta_get,
+        .get = PYVK_Enum64Meta_get,
         .closure = (void *)&PYVKEnumDemo_A
     },
     {
         .name = "B",
-        .get = PYVK_EnumMeta_get,
+        .get = PYVK_Enum64Meta_get,
         .closure = (void *)&PYVKEnumDemo_B
     },
     {NULL}
 };
+
 static PyTypeObject PYVKEnumDemo_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "template.EnumDemo",
-    .tp_basicsize = sizeof(PYVK_UInt64_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
-    .tp_dealloc = PYVK_UInt64_dealloc,
-    .tp_repr = PYVK_UInt64_repr,
-    .tp_hash = PYVK_UInt64_hash,
-    .tp_richcompare = PYVK_UInt64_richcompare
-};
-static PyTypeObject PYVKEnumDemo_Meta_Type = {
-    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "template.EnumDemo_Meta",
-    .tp_basicsize = sizeof(PYVK_EnumMeta_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
-    .tp_repr = PYVK_EnumMeta_repr,
-    .tp_getset = PYVKEnumDemo_Meta_getset
-};
-static PYVK_EnumMeta_Object PYVKEnumDemo_Meta_Object = {
-    PyObject_HEAD_INIT(&PYVKEnumDemo_Meta_Type)
-    .uint_cls = &PYVKEnumDemo_Type
+    .tp_name = "pyvulkan.EnumDemo",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,  // final
+    .tp_base = &PYVK_Enum64_Type
 };
 
+static PyTypeObject PYVKEnumDemo_Meta_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan.EnumDemo_Meta",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,  // final
+    .tp_getset = PYVKEnumDemo_Meta_getset,
+    .tp_base = &PYVK_Enum64Meta_Type
+};
+
+static PYVK_Enum64Meta_Object PYVKEnumDemo_Meta_Object = {
+    .base = {
+        PyObject_HEAD_INIT(&PYVKEnumDemo_Meta_Type)
+    },
+    .enum64_cls = &PYVKEnumDemo_Type
+};  // final
+
+
 static uint64_t PYVKFlagDemo_C = 55;
-static uint64_t PYVKFlagDemo_D = 119;
+static uint64_t PYVKFlagDemo_D = 118;
+
 static PyGetSetDef PYVKFlagDemo_Meta_getset[] = {
     {
         .name = "C",
-        .get = PYVK_FlagMeta_get,
+        .get = PYVK_Enum64Meta_get,
         .closure = (void *)&PYVKFlagDemo_C
     },
     {
         .name = "D",
-        .get = PYVK_FlagMeta_get,
+        .get = PYVK_Enum64Meta_get,
         .closure = (void *)&PYVKFlagDemo_D
     },
     {NULL}
 };
+
 static PyTypeObject PYVKFlagDemo_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "template.FlagDemo",
-    .tp_basicsize = sizeof(PYVK_UInt64_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
-    .tp_dealloc = PYVK_UInt64_dealloc,
-    .tp_repr = PYVK_UInt64_repr,
-    .tp_as_number = &PYVK_UInt64_as_number,
-    .tp_hash = PYVK_UInt64_hash,
-    .tp_richcompare = PYVK_UInt64_richcompare
-};
-static PyTypeObject PYVKFlagDemo_Meta_Type = {
-    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "template.FlagDemo_Meta",
-    .tp_basicsize = sizeof(PYVK_FlagMeta_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,
-    .tp_repr = PYVK_FlagMeta_repr,
-    .tp_getset = PYVKFlagDemo_Meta_getset
-};
-static PYVK_FlagMeta_Object PYVKFlagDemo_Meta_Object = {
-    PyObject_HEAD_INIT(&PYVKFlagDemo_Meta_Type)
-    .uint_cls = &PYVKFlagDemo_Type
+    .tp_name = "pyvulkan.FlagDemo",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,  // final
+    .tp_base = &PYVK_Flag64_Type
 };
 
+static PyTypeObject PYVKFlagDemo_Meta_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan.FlagDemo_Meta",
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,  // final
+    .tp_getset = PYVKFlagDemo_Meta_getset,
+    .tp_base = &PYVK_Flag64Meta_Type
+};
+
+static PYVK_Enum64Meta_Object PYVKFlagDemo_Meta_Object = {
+    .base = {
+        PyObject_HEAD_INIT(&PYVKFlagDemo_Meta_Type)
+    },
+    .enum64_cls = &PYVKFlagDemo_Type
+};
+
+
+// converters
 
 typedef uint32_t VkBool32;
 
@@ -400,6 +462,59 @@ PYVK_PY_SUPPORTS_STR_TO_bytes(PyObject *pysrc, PyObject **pydst) {
 }
 
 
+// unions
+
+typedef struct {
+    PYVK_Data_Object base;
+    const char *key;
+    PyObject *ref;
+} PYVK_Union_Object;
+
+static void
+PYVK_Union_dealloc(PyObject *self) {
+    PyObject_GC_UnTrack(self);
+    Py_CLEAR(((PYVK_Union_Object *)self)->ref);
+    Py_TYPE(self)->tp_free(self);
+}
+
+static int
+PYVK_Union_traverse(PyObject *self, visitproc visit, void *arg) {
+    Py_VISIT(((PYVK_Union_Object *)self)->ref);
+    return 0;
+}
+
+static int
+PYVK_Union_clear(PyObject *self) {
+    Py_CLEAR(((PYVK_Union_Object *)self)->ref);
+    return 0;
+}
+
+static PyObject *
+PYVK_Union_get__address(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure)) {
+    return PyLong_FromUnsignedLongLong(0);
+}
+
+static PyGetSetDef PYVK_Union_getset[] = {
+    {
+        .name = "_address",
+        .get = PYVK_Union_get__address
+    },
+    {NULL}
+};
+
+static PyTypeObject PYVK_Union_Type = {
+    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pyvulkan._Union",
+    .tp_basicsize = sizeof(PYVK_Union_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
+    .tp_dealloc = PYVK_Union_dealloc,
+    .tp_traverse = PYVK_Union_traverse,
+    .tp_clear = PYVK_Union_clear,
+    .tp_getset = PYVK_Union_getset,
+    .tp_base = &PYVK_Data_Type
+};
+
+
 typedef union {
     uint32_t value32;
     uint64_t value64;
@@ -415,11 +530,39 @@ static const char PYVKPerformanceValueDataINTEL_KEY_valueBool[] = "value_bool";
 static const char PYVKPerformanceValueDataINTEL_KEY_valueString[] = "value_string";
 
 typedef struct {
-    PyObject_HEAD
+    PYVK_Union_Object base;
     VkPerformanceValueDataINTEL data;
-    const char *key;
-    PyObject *ref;
 } PYVKPerformanceValueDataINTEL_Object;
+
+static PyObject *
+PYVKPerformanceValueDataINTEL_GetArg(PyObject *self) {
+    PyObject *arg = NULL;
+    const char *key = ((PYVK_Union_Object *)self)->key;
+    VkPerformanceValueDataINTEL *data = &((PYVKPerformanceValueDataINTEL_Object *)self)->data;
+    if ((
+        key == PYVKPerformanceValueDataINTEL_KEY_value32 ? PYVK_NPY_UINT32_0D_FROM_uint32_t(&data->value32, self, &arg) :
+        key == PYVKPerformanceValueDataINTEL_KEY_value64 ? PYVK_NPY_UINT64_0D_FROM_uint64_t(&data->value64, self, &arg) :
+        key == PYVKPerformanceValueDataINTEL_KEY_valueFloat ? PYVK_NPY_FLOAT_0D_FROM_float(&data->valueFloat, self, &arg) :
+        key == PYVKPerformanceValueDataINTEL_KEY_valueBool ? PYVK_NPY_UINT32_0D_FROM_VkBool32(&data->valueBool, self, &arg) :
+        key == PYVKPerformanceValueDataINTEL_KEY_valueString ? PYVK_bytes_FROM_const_charp(&data->valueString, &arg) :
+        0
+    ) < 0) {
+        Py_XDECREF(arg);
+        return NULL;
+    }
+    return arg;
+}
+
+static PyObject *
+PYVKPerformanceValueDataINTEL_repr(PyObject *self) {
+    PyObject *arg = PYVKPerformanceValueDataINTEL_GetArg(self);
+    if (!arg) {
+        return NULL;
+    }
+    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((PYVK_Union_Object *)self)->key, arg);
+    Py_DECREF(arg);
+    return result;
+}
 
 static PyObject *
 PYVKPerformanceValueDataINTEL_get__address(PyObject *self, void *Py_UNUSED(closure)) {
@@ -429,53 +572,11 @@ PYVKPerformanceValueDataINTEL_get__address(PyObject *self, void *Py_UNUSED(closu
 static PyObject *
 PYVKPerformanceValueDataINTEL_get(PyObject *self, void *closure) {
     const char *key = (const char *)closure;
-    if (((PYVKPerformanceValueDataINTEL_Object *)self)->key != key) {
-        PyErr_Format(PyExc_RuntimeError, "Union object was created via key '%s' (accessing '%s')", ((PYVKPerformanceValueDataINTEL_Object *)self)->key, key);
+    if (((PYVK_Union_Object *)self)->key != key) {
+        PyErr_Format(PyExc_RuntimeError, "Union object was created via key '%s' (accessing '%s')", ((PYVK_Union_Object *)self)->key, key);
         return NULL;
     }
-    PyObject *obj = NULL;
-    if ((
-        key == PYVKPerformanceValueDataINTEL_KEY_value32 ? PYVK_NPY_UINT32_0D_FROM_uint32_t(&((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32, self, &obj) :
-        key == PYVKPerformanceValueDataINTEL_KEY_value64 ? PYVK_NPY_UINT64_0D_FROM_uint64_t(&((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64, self, &obj) :
-        key == PYVKPerformanceValueDataINTEL_KEY_valueFloat ? PYVK_NPY_FLOAT_0D_FROM_float(&((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat, self, &obj) :
-        key == PYVKPerformanceValueDataINTEL_KEY_valueBool ? PYVK_NPY_UINT32_0D_FROM_VkBool32(&((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool, self, &obj) :
-        key == PYVKPerformanceValueDataINTEL_KEY_valueString ? PYVK_bytes_FROM_const_charp(&((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString, &obj) :
-        0
-    ) < 0) {
-        Py_XDECREF(obj);
-        return NULL;
-    }
-    return obj;
-}
-
-static void
-PYVKPerformanceValueDataINTEL_dealloc(PyObject *self) {
-    PyObject_GC_UnTrack(self);
-    Py_CLEAR(((PYVKPerformanceValueDataINTEL_Object *)self)->ref);
-    Py_TYPE(self)->tp_free(self);
-}
-
-static PyObject *
-PYVKPerformanceValueDataINTEL_repr(PyObject *self) {
-    PyObject *obj = PYVKPerformanceValueDataINTEL_get(self, (void *)((PYVKPerformanceValueDataINTEL_Object *)self)->key);
-    if (!obj) {
-        return NULL;
-    }
-    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((PYVKPerformanceValueDataINTEL_Object *)self)->key, obj);
-    Py_DECREF(obj);
-    return result;
-}
-
-static int
-PYVKPerformanceValueDataINTEL_traverse(PyObject *self, visitproc visit, void *arg) {
-    Py_VISIT(((PYVKPerformanceValueDataINTEL_Object *)self)->ref);
-    return 0;
-}
-
-static int
-PYVKPerformanceValueDataINTEL_clear(PyObject *self) {
-    Py_CLEAR(((PYVKPerformanceValueDataINTEL_Object *)self)->ref);
-    return 0;
+    return PYVKPerformanceValueDataINTEL_GetArg(self);
 }
 
 static PyGetSetDef PYVKPerformanceValueDataINTEL_getset[] = {
@@ -523,7 +624,7 @@ static PyGetSetDef PYVKPerformanceValueDataINTEL_getset[] = {
 // ) -> PerformanceValueDataINTEL: ...
 static PyObject *
 PYVKPerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *kwds) {
-    static char *kwlist[] = {
+    static const char *kwlist[] = {
         PYVKPerformanceValueDataINTEL_KEY_value32,
         PYVKPerformanceValueDataINTEL_KEY_value64,
         PYVKPerformanceValueDataINTEL_KEY_valueFloat,
@@ -557,11 +658,11 @@ PYVKPerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *k
         goto error;
     }
     if ((
-        arg_value32 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value32, PYVK_NPY_UINT32_0D_AS_uint32_t(arg_value32, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32)) :
-        arg_value64 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value64, PYVK_NPY_UINT64_0D_AS_uint64_t(arg_value64, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64)) :
-        arg_valueFloat ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueFloat, PYVK_NPY_FLOAT_0D_AS_float(arg_valueFloat, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat)) :
-        arg_valueBool ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_NPY_UINT32_0D_AS_VkBool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
-        arg_valueString ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_bytes_AS_const_charp(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->ref)) :
+        arg_value32 ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value32, PYVK_NPY_UINT32_0D_AS_uint32_t(arg_value32, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32)) :
+        arg_value64 ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value64, PYVK_NPY_UINT64_0D_AS_uint64_t(arg_value64, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64)) :
+        arg_valueFloat ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueFloat, PYVK_NPY_FLOAT_0D_AS_float(arg_valueFloat, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat)) :
+        arg_valueBool ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_NPY_UINT32_0D_AS_VkBool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
+        arg_valueString ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_bytes_AS_const_charp(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString, &((PYVK_Union_Object *)self)->ref)) :
         0
     ) < 0) {
         goto error;
@@ -575,14 +676,12 @@ error:
 
 static PyTypeObject PYVKPerformanceValueDataINTEL_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "template.PerformanceValueDataINTEL",
+    .tp_name = "pyvulkan.PerformanceValueDataINTEL",
     .tp_basicsize = sizeof(PYVKPerformanceValueDataINTEL_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_HAVE_GC,
-    .tp_dealloc = PYVKPerformanceValueDataINTEL_dealloc,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
     .tp_repr = PYVKPerformanceValueDataINTEL_repr,
-    .tp_traverse = PYVKPerformanceValueDataINTEL_traverse,
-    .tp_clear = PYVKPerformanceValueDataINTEL_clear,
     .tp_getset = PYVKPerformanceValueDataINTEL_getset,
+    .tp_base = &PYVK_Union_Type,
     .tp_new = PYVKPerformanceValueDataINTEL_new
 };
 
@@ -601,33 +700,32 @@ static PyTypeObject PYVKPerformanceValueDataINTEL_Type = {
 //} ParentStructDemo;
 
 
-static PyModuleDef template_module = {
+static PyModuleDef pyvulkan_module = {
     .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "template",
+    .m_name = "pyvulkan",
     .m_doc = "Example module that creates an extension type.",
     .m_size = -1,
 };
 
 PyMODINIT_FUNC
-PyInit_template(void) {
+PyInit_pyvulkan(void) {
     import_array();
     if (PyErr_Occurred() || !PyArray_API) {
         return NULL;
     }
 
-    PyObject *module = PyModule_Create(&template_module);
+    PyObject *module = PyModule_Create(&pyvulkan_module);
     if (!module) {
         return NULL;
     }
     if (
+        PyType_Ready(&PYVK_Data_Type) < 0 || PyModule_AddObjectRef(module, "_Data", (PyObject *)&PYVK_Data_Type) < 0 ||
+        PyType_Ready(&PYVK_Enum_Type) < 0 || PyModule_AddObjectRef(module, "_Enum", (PyObject *)&PYVK_Enum_Type) < 0 ||
+        PyType_Ready(&PYVK_Enum64_Type) < 0 || PyModule_AddObjectRef(module, "_Enum64", (PyObject *)&PYVK_Enum64_Type) < 0 ||
+        PyType_Ready(&PYVK_Flag64_Type) < 0 || PyModule_AddObjectRef(module, "_Flag64", (PyObject *)&PYVK_Flag64_Type) < 0 ||
         PyType_Ready(&PYVKEnumDemo_Type) < 0 || PyType_Ready(&PYVKEnumDemo_Meta_Type) < 0 || PyModule_AddObjectRef(module, "EnumDemo", (PyObject *)&PYVKEnumDemo_Meta_Object) < 0 ||
         PyType_Ready(&PYVKFlagDemo_Type) < 0 || PyType_Ready(&PYVKFlagDemo_Meta_Type) < 0 || PyModule_AddObjectRef(module, "FlagDemo", (PyObject *)&PYVKFlagDemo_Meta_Object) < 0 ||
-        0
-    ) {
-        Py_DECREF(module);
-        return NULL;
-    }
-    if (
+        PyType_Ready(&PYVK_Union_Type) < 0 || PyModule_AddObjectRef(module, "_Union", (PyObject *)&PYVK_Union_Type) < 0 ||
         PyType_Ready(&PYVKPerformanceValueDataINTEL_Type) < 0 || PyModule_AddObjectRef(module, "PerformanceValueDataINTEL", (PyObject *)&PYVKPerformanceValueDataINTEL_Type) < 0 ||
         0
     ) {
