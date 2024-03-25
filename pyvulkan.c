@@ -259,258 +259,222 @@ static PYVK_Enum64Meta_Object PYVKFlagDemo_Meta_Object = {
         PyObject_HEAD_INIT(&PYVKFlagDemo_Meta_Type)
     },
     .enum64_cls = &PYVKFlagDemo_Type
-};
+};  // final
 
 
 // converters
 
 typedef uint32_t VkBool32;
 
-static inline int
-PYVK_NPY_UINT32_0D_FROM_uint32_t(uint32_t *csrc, PyObject *base, PyObject **pydst) {
-    *pydst = PyArray_SimpleNewFromData(0, NULL, NPY_UINT32, csrc);
-    if (!*pydst) {
-        return -1;
-    }
-    if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
-        Py_DECREF(*pydst);
-        *pydst = NULL;
-        return -1;
-    }
-    Py_INCREF(base);
-    return 0;
+// Use PyArray_SimpleNew, memcpy for 1d arrays
+// PyObject *pydst = PyArray_SimpleNew(0, NULL, NPY_UINT32);
+// if (!pydst) {
+//     return NULL;
+// }
+// memcpy(PyArray_DATA(pydst), &csrc, sizeof(csrc));
+static PyObject *
+PYVK_Scalar_From_uint32(uint32_t csrc) {
+    return PyArray_Scalar(&csrc, PyArray_DescrFromType(NPY_UINT32), NULL);
+    //PyObject *scalar = PyArray_SimpleNew(0, NULL, NPY_UINT32);
+    //if (!scalar) {
+    //    return NULL;
+    //}
+    //memcpy(PyArray_DATA(pydst), &csrc, sizeof(csrc));
+    //return pydst;
+    //*pydst = PyArray_SimpleNewFromData(0, NULL, NPY_UINT32, csrc);
+    //if (!*pydst) {
+    //    return -1;
+    //}
+    //if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
+    //    Py_CLEAR(*pydst);
+    //    *pydst = NULL;
+    //    return -1;
+    //}
+    //Py_INCREF(base);
+    //return 0;
 }
 
-static inline int
-PYVK_NPY_UINT64_0D_FROM_uint64_t(uint64_t *csrc, PyObject *base, PyObject **pydst) {
-    *pydst = PyArray_SimpleNewFromData(0, NULL, NPY_UINT64, csrc);
-    if (!*pydst) {
-        return -1;
-    }
-    if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
-        Py_DECREF(*pydst);
-        *pydst = NULL;
-        return -1;
-    }
-    Py_INCREF(base);
-    return 0;
+static PyObject *
+PYVK_Scalar_From_uint64(uint64_t csrc) {
+    return PyArray_Scalar(&csrc, PyArray_DescrFromType(NPY_UINT64), NULL);
+    //*pydst = PyArray_SimpleNewFromData(0, NULL, NPY_UINT64, csrc);
+    //if (!*pydst) {
+    //    return -1;
+    //}
+    //if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
+    //    Py_CLEAR(*pydst);
+    //    *pydst = NULL;
+    //    return -1;
+    //}
+    //Py_INCREF(base);
+    //return 0;
 }
 
-static inline int
-PYVK_NPY_FLOAT_0D_FROM_float(float *csrc, PyObject *base, PyObject **pydst) {
-    *pydst = PyArray_SimpleNewFromData(0, NULL, NPY_FLOAT, csrc);
-    if (!*pydst) {
-        return -1;
-    }
-    if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
-        Py_DECREF(*pydst);
-        *pydst = NULL;
-        return -1;
-    }
-    Py_INCREF(base);
-    return 0;
+static PyObject *
+PYVK_Scalar_From_float(float csrc) {
+    return PyArray_Scalar(&csrc, PyArray_DescrFromType(NPY_FLOAT), NULL);
+    //*pydst = PyArray_SimpleNewFromData(0, NULL, NPY_FLOAT, csrc);
+    //if (!*pydst) {
+    //    return -1;
+    //}
+    //if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
+    //    Py_CLEAR(*pydst);
+    //    *pydst = NULL;
+    //    return -1;
+    //}
+    //Py_INCREF(base);
+    //return 0;
 }
 
-static inline int
-PYVK_NPY_UINT32_0D_FROM_VkBool32(VkBool32 *csrc, PyObject *base, PyObject **pydst) {
-    *pydst = PyArray_SimpleNewFromData(0, NULL, NPY_UINT32, csrc);
-    if (!*pydst) {
-        return -1;
-    }
-    if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
-        Py_DECREF(*pydst);
-        *pydst = NULL;
-        return -1;
-    }
-    Py_INCREF(base);
-    return 0;
+static PyObject *
+PYVK_Scalar_From_VkBool32(VkBool32 csrc) {
+    return PyArray_Scalar(&csrc, PyArray_DescrFromType(NPY_UINT32), NULL);
+    //*pydst = PyArray_SimpleNewFromData(0, NULL, NPY_UINT32, csrc);
+    //if (!*pydst) {
+    //    return -1;
+    //}
+    //if (PyArray_SetBaseObject((PyArrayObject *)*pydst, base) < 0) {
+    //    Py_CLEAR(*pydst);
+    //    *pydst = NULL;
+    //    return -1;
+    //}
+    //Py_INCREF(base);
+    //return 0;
 }
 
-static inline int
-PYVK_bytes_FROM_const_charp(const char **csrc, PyObject **pydst) {
-    *pydst = PyBytes_FromString(*csrc);
-    if (!*pydst) {
-        return -1;
-    }
-    return 0;
+static PyObject *
+PYVK_Str_From_charp(const char *csrc) {
+    return PyUnicode_FromString(csrc);
+    //*pydst = PyBytes_FromString(*csrc);
+    //if (!*pydst) {
+    //    return -1;
+    //}
+    //return 0;
 }
 
-static inline int
-PYVK_NPY_UINT32_0D_AS_uint32_t(PyObject *pysrc, uint32_t *cdst) {
-    *cdst = *(uint32_t *)PyArray_DATA(pysrc);
-    return 0;
-}
+//static inline int
+//PYVK_NPY_UINT32_0D_AS_uint32_t(PyObject *pysrc, uint32_t *cdst) {
+//    *cdst = *(uint32_t *)PyArray_DATA(pysrc);
+//    return 0;
+//}
 
-static inline int
-PYVK_NPY_UINT64_0D_AS_uint64_t(PyObject *pysrc, uint64_t *cdst) {
-    *cdst = *(uint64_t *)PyArray_DATA(pysrc);
-    return 0;
-}
+//static inline int
+//PYVK_NPY_UINT64_0D_AS_uint64_t(PyObject *pysrc, uint64_t *cdst) {
+//    *cdst = *(uint64_t *)PyArray_DATA(pysrc);
+//    return 0;
+//}
 
-static inline int
-PYVK_NPY_FLOAT_0D_AS_float(PyObject *pysrc, float *cdst) {
-    *cdst = *(float *)PyArray_DATA(pysrc);
-    return 0;
-}
+//static inline int
+//PYVK_NPY_FLOAT_0D_AS_float(PyObject *pysrc, float *cdst) {
+//    *cdst = *(float *)PyArray_DATA(pysrc);
+//    return 0;
+//}
 
-static inline int
-PYVK_NPY_UINT32_0D_AS_VkBool32(PyObject *pysrc, VkBool32 *cdst) {
-    *cdst = *(VkBool32 *)PyArray_DATA(pysrc);
-    return 0;
-}
+//static inline int
+//PYVK_NPY_UINT32_0D_AS_VkBool32(PyObject *pysrc, VkBool32 *cdst) {
+//    *cdst = *(VkBool32 *)PyArray_DATA(pysrc);
+//    return 0;
+//}
 
-static inline int
-PYVK_bytes_AS_const_charp(PyObject *pysrc, const char **cdst, PyObject **pyref) {
-    *cdst = PyBytes_AS_STRING(pysrc);
-    *pyref = Py_NewRef(pysrc);
-    return 0;
-}
+//static inline int
+//PYVK_bytes_AS_const_charp(PyObject *pysrc, const char **cdst) {
+//    *cdst = PyBytes_AS_STRING(pysrc);
+//    //*pyref = Py_NewRef(pysrc);
+//    return 0;
+//}
 
+// 1d, 2d, 3d arrays - PyArray_AsCArray & PyArray_Free
 static int
-PYVK_PY_SCALAR_TO_NPY_UINT32_0D(PyObject *pysrc, PyObject **pydst) {
-    *pydst = (
-        PyArray_IsPythonNumber(pysrc) ? PyArray_FROM_OT(pysrc, NPY_UINT32) :
-        PyArray_IsZeroDim(pysrc) ? PyArray_CastToType((PyArrayObject *)pysrc, PyArray_DescrFromType(NPY_UINT32), 0) :
-        PyArray_IsScalar(pysrc, Generic) ? PyArray_FromScalar(pysrc, PyArray_DescrFromType(NPY_UINT32)) :
-        NULL
-    );
-    if (!*pydst) {
+PYVK_ScalarLike_As_uint32(PyObject *pysrc, uint32_t *cdst) {
+    PyObject *array = PyArray_FROM_OTF(pysrc, NPY_UINT32, NPY_ARRAY_FORCECAST);
+    if (!array || !PyArray_IsZeroDim(array)) {
+        Py_CLEAR(array);
         PyErr_Format(PyExc_TypeError, "Cannot convert %s into uint32", Py_TYPE(pysrc)->tp_name);
-        return 0;
+        return -1;
     }
-    if (PyErr_Occurred()) {
-        *pydst = NULL;
-        return 0;
-    }
-    return 1;
+    *cdst = *(uint32_t *)PyArray_DATA(array);
+    Py_CLEAR(array);
+    return 0;
 }
 
 static int
-PYVK_PY_SCALAR_TO_NPY_UINT64_0D(PyObject *pysrc, PyObject **pydst) {
-    *pydst = (
-        PyArray_IsPythonNumber(pysrc) ? PyArray_FROM_OT(pysrc, NPY_UINT64) :
-        PyArray_IsZeroDim(pysrc) ? PyArray_CastToType((PyArrayObject *)pysrc, PyArray_DescrFromType(NPY_UINT64), 0) :
-        PyArray_IsScalar(pysrc, Generic) ? PyArray_FromScalar(pysrc, PyArray_DescrFromType(NPY_UINT64)) :
-        NULL
-    );
-    if (!*pydst) {
+PYVK_ScalarLike_As_uint64(PyObject *pysrc, uint64_t *cdst) {
+    PyObject *array = PyArray_FROM_OTF(pysrc, NPY_UINT64, NPY_ARRAY_FORCECAST);
+    if (!array || !PyArray_IsZeroDim(array)) {
+        Py_CLEAR(array);
         PyErr_Format(PyExc_TypeError, "Cannot convert %s into uint64", Py_TYPE(pysrc)->tp_name);
-        return 0;
+        return -1;
     }
-    if (PyErr_Occurred()) {
-        *pydst = NULL;
-        return 0;
-    }
-    return 1;
+    *cdst = *(uint64_t *)PyArray_DATA(array);
+    Py_CLEAR(array);
+    return 0;
 }
 
 static int
-PYVK_PY_SCALAR_TO_NPY_FLOAT_0D(PyObject *pysrc, PyObject **pydst) {
-    *pydst = (
-        PyArray_IsPythonNumber(pysrc) ? PyArray_FROM_OT(pysrc, NPY_FLOAT) :
-        PyArray_IsZeroDim(pysrc) ? PyArray_CastToType((PyArrayObject *)pysrc, PyArray_DescrFromType(NPY_FLOAT), 0) :
-        PyArray_IsScalar(pysrc, Generic) ? PyArray_FromScalar(pysrc, PyArray_DescrFromType(NPY_FLOAT)) :
-        NULL
-    );
-    if (!*pydst) {
+PYVK_ScalarLike_As_float(PyObject *pysrc, float *cdst) {
+    PyObject *array = PyArray_FROM_OTF(pysrc, NPY_FLOAT, NPY_ARRAY_FORCECAST);
+    if (!array || !PyArray_IsZeroDim(array)) {
+        Py_CLEAR(array);
         PyErr_Format(PyExc_TypeError, "Cannot convert %s into float", Py_TYPE(pysrc)->tp_name);
-        return 0;
+        return -1;
     }
-    if (PyErr_Occurred()) {
-        *pydst = NULL;
-        return 0;
-    }
-    return 1;
+    *cdst = *(float *)PyArray_DATA(array);
+    Py_CLEAR(array);
+    return 0;
 }
 
 static int
-PYVK_PY_SUPPORTS_BOOL_TO_NPY_UINT32_0D(PyObject *pysrc, PyObject **pydst) {
-    *pydst = (
-        PyArray_IsPythonNumber(pysrc) ? PyArray_FROM_OT(pysrc, NPY_UINT32) :
-        PyArray_IsZeroDim(pysrc) ? PyArray_CastToType((PyArrayObject *)pysrc, PyArray_DescrFromType(NPY_UINT32), 0) :
-        PyArray_IsScalar(pysrc, Generic) ? PyArray_FromScalar(pysrc, PyArray_DescrFromType(NPY_UINT32)) :
-        NULL
-    );
+PYVK_ScalarLike_As_VkBool32(PyObject *pysrc, VkBool32 *cdst) {
     // Note: We do not perform a ==0 conversion here.
-    if (!*pydst) {
-        PyErr_Format(PyExc_TypeError, "Cannot convert %s into bool", Py_TYPE(pysrc)->tp_name);
-        return 0;
+    PyObject *array = PyArray_FROM_OTF(pysrc, NPY_UINT32, NPY_ARRAY_FORCECAST);
+    if (!array || !PyArray_IsZeroDim(array)) {
+        Py_CLEAR(array);
+        PyErr_Format(PyExc_TypeError, "Cannot convert %s into VkBool32", Py_TYPE(pysrc)->tp_name);
+        return -1;
     }
-    if (PyErr_Occurred()) {
-        *pydst = NULL;
-        return 0;
-    }
-    return 1;
+    *cdst = *(VkBool32 *)PyArray_DATA(array);
+    Py_CLEAR(array);
+    return 0;
 }
 
 static int
-PYVK_PY_SUPPORTS_STR_TO_bytes(PyObject *pysrc, PyObject **pydst) {
-    *pydst = (
-        PyUnicode_Check(pysrc) ? PyUnicode_AsEncodedString(pysrc, "utf-8", "strict") :
-        PyBytes_Check(pysrc) ? Py_NewRef(pysrc) :
+PYVK_StrLike_As_charp(PyObject *pysrc, const char **cdst) {
+    const char *str = (
+        PyUnicode_Check(pysrc) ? PyUnicode_AsUTF8(pysrc) :
+        PyBytes_Check(pysrc) ? PyBytes_AsString(pysrc) :
         NULL
     );
-    if (!*pydst) {
-        PyErr_Format(PyExc_TypeError, "Cannot convert %s into bytes", Py_TYPE(pysrc)->tp_name);
-        return 0;
+    if (!str) {
+        PyErr_Format(PyExc_TypeError, "Cannot convert %s into charp", Py_TYPE(pysrc)->tp_name);
+        return -1;
     }
-    if (PyErr_Occurred()) {
-        *pydst = NULL;
-        return 0;
-    }
-    return 1;
+    size_t buffer_size = (strlen(str) + 1) * sizeof(char);
+    *cdst = PyObject_Malloc(buffer_size);
+    memcpy(*cdst, str, buffer_size);
+    return 0;
+    //*pydst = (
+    //    PyUnicode_Check(pysrc) ? PyUnicode_AsEncodedString(pysrc, "utf-8", "strict") :
+    //    PyBytes_Check(pysrc) ? Py_NewRef(pysrc) :
+    //    NULL
+    //);
+    //if (!*pydst) {
+    //    PyErr_Format(PyExc_TypeError, "Cannot convert %s into bytes", Py_TYPE(pysrc)->tp_name);
+    //    return 0;
+    //}
+    //if (PyErr_Occurred()) {
+    //    *pydst = NULL;
+    //    return 0;
+    //}
+    //return 1;
 }
 
 
 // unions
 
-typedef struct {
-    PYVK_Data_Object base;
-    const char *key;
-    PyObject *ref;
-} PYVK_Union_Object;
-
-static void
-PYVK_Union_dealloc(PyObject *self) {
-    PyObject_GC_UnTrack(self);
-    Py_CLEAR(((PYVK_Union_Object *)self)->ref);
-    Py_TYPE(self)->tp_free(self);
-}
-
-static int
-PYVK_Union_traverse(PyObject *self, visitproc visit, void *arg) {
-    Py_VISIT(((PYVK_Union_Object *)self)->ref);
-    return 0;
-}
-
-static int
-PYVK_Union_clear(PyObject *self) {
-    Py_CLEAR(((PYVK_Union_Object *)self)->ref);
-    return 0;
-}
-
-static PyObject *
-PYVK_Union_get__address(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure)) {
-    return PyLong_FromUnsignedLongLong(0);
-}
-
-static PyGetSetDef PYVK_Union_getset[] = {
-    {
-        .name = "_address",
-        .get = PYVK_Union_get__address
-    },
-    {NULL}
-};
-
 static PyTypeObject PYVK_Union_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "pyvulkan._Union",
-    .tp_basicsize = sizeof(PYVK_Union_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
-    .tp_dealloc = PYVK_Union_dealloc,
-    .tp_traverse = PYVK_Union_traverse,
-    .tp_clear = PYVK_Union_clear,
-    .tp_getset = PYVK_Union_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
     .tp_base = &PYVK_Data_Type
 };
 
@@ -530,28 +494,36 @@ static const char PYVKPerformanceValueDataINTEL_KEY_valueBool[] = "value_bool";
 static const char PYVKPerformanceValueDataINTEL_KEY_valueString[] = "value_string";
 
 typedef struct {
-    PYVK_Union_Object base;
+    PYVK_Data_Object base;
+    const char *key;
     VkPerformanceValueDataINTEL data;
+    //PyObject *ref;
 } PYVKPerformanceValueDataINTEL_Object;
 
 static PyObject *
 PYVKPerformanceValueDataINTEL_GetArg(PyObject *self) {
-    PyObject *arg = NULL;
-    const char *key = ((PYVK_Union_Object *)self)->key;
+    const char *key = ((PYVKPerformanceValueDataINTEL_Object *)self)->key;
     VkPerformanceValueDataINTEL *data = &((PYVKPerformanceValueDataINTEL_Object *)self)->data;
-    if ((
-        key == PYVKPerformanceValueDataINTEL_KEY_value32 ? PYVK_NPY_UINT32_0D_FROM_uint32_t(&data->value32, self, &arg) :
-        key == PYVKPerformanceValueDataINTEL_KEY_value64 ? PYVK_NPY_UINT64_0D_FROM_uint64_t(&data->value64, self, &arg) :
-        key == PYVKPerformanceValueDataINTEL_KEY_valueFloat ? PYVK_NPY_FLOAT_0D_FROM_float(&data->valueFloat, self, &arg) :
-        key == PYVKPerformanceValueDataINTEL_KEY_valueBool ? PYVK_NPY_UINT32_0D_FROM_VkBool32(&data->valueBool, self, &arg) :
-        key == PYVKPerformanceValueDataINTEL_KEY_valueString ? PYVK_bytes_FROM_const_charp(&data->valueString, &arg) :
-        0
-    ) < 0) {
-        Py_XDECREF(arg);
+    PyObject *arg = (
+        key == PYVKPerformanceValueDataINTEL_KEY_value32 ? PYVK_Scalar_From_uint32(data->value32) :
+        key == PYVKPerformanceValueDataINTEL_KEY_value64 ? PYVK_Scalar_From_uint64(data->value64) :
+        key == PYVKPerformanceValueDataINTEL_KEY_valueFloat ? PYVK_Scalar_From_float(data->valueFloat) :
+        key == PYVKPerformanceValueDataINTEL_KEY_valueBool ? PYVK_Scalar_From_VkBool32(data->valueBool) :
+        key == PYVKPerformanceValueDataINTEL_KEY_valueString ? PYVK_Str_From_charp(data->valueString) :
+        NULL
+    );
+    if (!arg) {
         return NULL;
     }
     return arg;
 }
+
+//static void
+//PYVKPerformanceValueDataINTEL_dealloc(PyObject *self) {
+//    PyObject_GC_UnTrack(self);
+//    Py_CLEAR(((PYVKPerformanceValueDataINTEL_Object *)self)->ref);
+//    Py_TYPE(self)->tp_free(self);
+//}
 
 static PyObject *
 PYVKPerformanceValueDataINTEL_repr(PyObject *self) {
@@ -559,10 +531,22 @@ PYVKPerformanceValueDataINTEL_repr(PyObject *self) {
     if (!arg) {
         return NULL;
     }
-    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((PYVK_Union_Object *)self)->key, arg);
-    Py_DECREF(arg);
+    PyObject *result = PyUnicode_FromFormat("%s(%s=%R)", Py_TYPE(self)->tp_name, ((PYVKPerformanceValueDataINTEL_Object *)self)->key, arg);
+    Py_CLEAR(arg);
     return result;
 }
+
+//static int
+//PYVKPerformanceValueDataINTEL_traverse(PyObject *self, visitproc visit, void *arg) {
+//    Py_VISIT(((PYVKPerformanceValueDataINTEL_Object *)self)->ref);
+//    return 0;
+//}
+
+//static int
+//PYVKPerformanceValueDataINTEL_clear(PyObject *self) {
+//    Py_CLEAR(((PYVKPerformanceValueDataINTEL_Object *)self)->ref);
+//    return 0;
+//}
 
 static PyObject *
 PYVKPerformanceValueDataINTEL_get__address(PyObject *self, void *Py_UNUSED(closure)) {
@@ -571,9 +555,8 @@ PYVKPerformanceValueDataINTEL_get__address(PyObject *self, void *Py_UNUSED(closu
 
 static PyObject *
 PYVKPerformanceValueDataINTEL_get(PyObject *self, void *closure) {
-    const char *key = (const char *)closure;
-    if (((PYVK_Union_Object *)self)->key != key) {
-        PyErr_Format(PyExc_RuntimeError, "Union object was created via key '%s' (accessing '%s')", ((PYVK_Union_Object *)self)->key, key);
+    if (((PYVKPerformanceValueDataINTEL_Object *)self)->key != (const char *)closure) {
+        PyErr_Format(PyExc_RuntimeError, "Union object was created via key '%s' (accessing '%s')", ((PYVKPerformanceValueDataINTEL_Object *)self)->key, (const char *)closure);
         return NULL;
     }
     return PYVKPerformanceValueDataINTEL_GetArg(self);
@@ -644,12 +627,8 @@ PYVKPerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *k
         goto error;
     }
     if (!PyArg_ParseTupleAndKeywords(
-        args, kwds, "|$O&O&O&O&O&", kwlist,
-        PYVK_PY_SCALAR_TO_NPY_UINT32_0D, &arg_value32,
-        PYVK_PY_SCALAR_TO_NPY_UINT64_0D, &arg_value64,
-        PYVK_PY_SCALAR_TO_NPY_FLOAT_0D, &arg_valueFloat,
-        PYVK_PY_SUPPORTS_BOOL_TO_NPY_UINT32_0D, &arg_valueBool,
-        PYVK_PY_SUPPORTS_STR_TO_bytes, &arg_valueString
+        args, kwds, "|$OOOOO", kwlist,
+        &arg_value32, &arg_value64, &arg_valueFloat, &arg_valueBool, &arg_valueString
     )) {
         goto error;
     }
@@ -658,11 +637,11 @@ PYVKPerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *k
         goto error;
     }
     if ((
-        arg_value32 ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value32, PYVK_NPY_UINT32_0D_AS_uint32_t(arg_value32, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32)) :
-        arg_value64 ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value64, PYVK_NPY_UINT64_0D_AS_uint64_t(arg_value64, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64)) :
-        arg_valueFloat ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueFloat, PYVK_NPY_FLOAT_0D_AS_float(arg_valueFloat, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat)) :
-        arg_valueBool ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_NPY_UINT32_0D_AS_VkBool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
-        arg_valueString ? (((PYVK_Union_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_bytes_AS_const_charp(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString, &((PYVK_Union_Object *)self)->ref)) :
+        arg_value32 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value32, PYVK_ScalarLike_As_uint32(arg_value32, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32)) :
+        arg_value64 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value64, PYVK_ScalarLike_As_uint64(arg_value64, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64)) :
+        arg_valueFloat ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueFloat, PYVK_ScalarLike_As_float(arg_valueFloat, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat)) :
+        arg_valueBool ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_ScalarLike_As_VkBool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
+        arg_valueString ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_StrLike_As_charp(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString)) :
         0
     ) < 0) {
         goto error;
@@ -670,20 +649,36 @@ PYVKPerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *k
     return self;
 
 error:
-    Py_XDECREF(self);
+    Py_CLEAR(self);
     return NULL;
+}
+
+static void
+PYVKPerformanceValueDataINTEL_free(void *self) {
+    const char *key = ((PYVKPerformanceValueDataINTEL_Object *)self)->key;
+    VkPerformanceValueDataINTEL *data = &((PYVKPerformanceValueDataINTEL_Object *)self)->data;
+    if (
+        key == PYVKPerformanceValueDataINTEL_KEY_valueString ? (PyObject_Free(data->valueString), data->valueString = NULL, 0) :
+        0
+    ) {}
+    PyObject_Free(self);
 }
 
 static PyTypeObject PYVKPerformanceValueDataINTEL_Type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "pyvulkan.PerformanceValueDataINTEL",
     .tp_basicsize = sizeof(PYVKPerformanceValueDataINTEL_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_BASETYPE,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE,  // final
+    //.tp_dealloc = PYVKPerformanceValueDataINTEL_dealloc,
     .tp_repr = PYVKPerformanceValueDataINTEL_repr,
+    //.tp_traverse = PYVKPerformanceValueDataINTEL_traverse,
+    //.tp_clear = PYVKPerformanceValueDataINTEL_clear,
     .tp_getset = PYVKPerformanceValueDataINTEL_getset,
     .tp_base = &PYVK_Union_Type,
-    .tp_new = PYVKPerformanceValueDataINTEL_new
+    .tp_new = PYVKPerformanceValueDataINTEL_new,
+    .tp_free = PYVKPerformanceValueDataINTEL_free
 };
+// TODO: use PyObject_Malloc, PyObject_Free
 
 
 //typedef struct {
@@ -729,7 +724,7 @@ PyInit_pyvulkan(void) {
         PyType_Ready(&PYVKPerformanceValueDataINTEL_Type) < 0 || PyModule_AddObjectRef(module, "PerformanceValueDataINTEL", (PyObject *)&PYVKPerformanceValueDataINTEL_Type) < 0 ||
         0
     ) {
-        Py_DECREF(module);
+        Py_CLEAR(module);
         return NULL;
     }
     return module;
