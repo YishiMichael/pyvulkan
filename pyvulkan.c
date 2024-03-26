@@ -3,6 +3,21 @@
 #include <numpy/ndarrayobject.h>
 
 
+static uint64_t PYVKEnumDemo_A = 5;
+static uint64_t PYVKEnumDemo_B = 12;
+
+static uint64_t PYVKFlagDemo_C = 55;
+static uint64_t PYVKFlagDemo_D = 118;
+
+typedef uint32_t VkBool32;
+
+typedef enum {
+    VK_STRUCTURE_TYPE_STRUCT_DEMO = 0
+} VkStructureType;
+
+
+// base class
+
 typedef struct {
     PyObject_HEAD
 } PYVK_Data_Object;
@@ -185,9 +200,6 @@ static PyTypeObject PYVK_Flag64Meta_Type = {
 };
 
 
-static uint64_t PYVKEnumDemo_A = 5;
-static uint64_t PYVKEnumDemo_B = 12;
-
 static PyGetSetDef PYVKEnumDemo_Meta_getset[] = {
     {
         .name = "A",
@@ -222,9 +234,6 @@ static PYVK_Enum64Meta_Object PYVKEnumDemo_Meta_Object = {
     .enum64_cls = &PYVKEnumDemo_Type
 };  // final
 
-
-static uint64_t PYVKFlagDemo_C = 55;
-static uint64_t PYVKFlagDemo_D = 118;
 
 static PyGetSetDef PYVKFlagDemo_Meta_getset[] = {
     {
@@ -261,9 +270,17 @@ static PYVK_Enum64Meta_Object PYVKFlagDemo_Meta_Object = {
 };  // final
 
 
-// converters
+// c -> py converters
 
-typedef uint32_t VkBool32;
+static PyObject *
+PYVK_Construct__PyBytes__char_p(const char *csrc) {
+    return PyBytes_FromString(csrc);
+}
+
+static PyObject *
+PYVK_Construct__PyBytes__char_x16(const char csrc[16]) {
+    return PyBytes_FromString(csrc);
+}
 
 // Use PyArray_SimpleNew, memcpy for 1d arrays
 // PyObject *pydst = PyArray_SimpleNew(0, NULL, NPY_UINT32);
@@ -287,14 +304,27 @@ PYVK_Construct__NPY_FLOAT_Scalar__float(float csrc) {
 }
 
 static PyObject *
-PYVK_Construct__NPY_UINT32_Scalar__VkBool32(VkBool32 csrc) {
+PYVK_Construct__NPY_UINT32_Scalar__bool32(VkBool32 csrc) {
     return PyArray_Scalar(&csrc, PyArray_DescrFromType(NPY_UINT32), NULL);
 }
 
 static PyObject *
-PYVK_Construct__Bytes__p_char(const char *csrc) {
-    return PyBytes_FromString(csrc);
+PYVK_Construct__PYVKStructDemo__VkStructDemo_p(VkStructDemo *csrc) {
+
 }
+
+static PyObject *
+PYVK_Construct__PYVK_Struct__pNext(void *csrc) {
+    switch (*(VkStructureType *)csrc) {
+        case VK_STRUCTURE_TYPE_STRUCT_DEMO:
+            return PYVK_Construct__PYVKStructDemo__VkStructDemo_p(*(VkStructDemo *)csrc);
+    }
+    PyErr_Format(PyExc_RuntimeError, "Unrecognized pNext field");
+    return NULL;
+}
+
+
+// py -> c converters
 
 // 1d, 2d, 3d arrays - PyArray_AsCArray & PyArray_Free
 static int
@@ -343,7 +373,7 @@ PYVK_Convert__ScalarLike__float(PyObject *pysrc, float *cdst) {
 }
 
 static int
-PYVK_Convert__ScalarLike__VkBool32(PyObject *pysrc, VkBool32 *cdst) {
+PYVK_Convert__ScalarLike__bool32(PyObject *pysrc, VkBool32 *cdst) {
     PyObject *array = PyArray_FROM_OTF(pysrc, NPY_BOOL, NPY_ARRAY_FORCECAST);
     if (!array || !PyArray_IsZeroDim(array)) {
         Py_CLEAR(array);
@@ -359,7 +389,7 @@ PYVK_Convert__ScalarLike__VkBool32(PyObject *pysrc, VkBool32 *cdst) {
 }
 
 static int
-PYVK_Convert__BytesLike__p_char(PyObject *pysrc, const char **cdst) {
+PYVK_Convert__BytesLike__char_p(PyObject *pysrc, const char **cdst) {
     const char *str = (
         PyBytes_Check(pysrc) ? PyBytes_AsString(pysrc) :
         PyUnicode_Check(pysrc) ? PyUnicode_AsUTF8(pysrc) :
@@ -367,7 +397,7 @@ PYVK_Convert__BytesLike__p_char(PyObject *pysrc, const char **cdst) {
     );
     if (!str) {
         if (!PyErr_Occurred()) {
-            PyErr_Format(PyExc_TypeError, "Cannot convert %s into p_char", Py_TYPE(pysrc)->tp_name);
+            PyErr_Format(PyExc_TypeError, "Cannot convert %s into char_p", Py_TYPE(pysrc)->tp_name);
         }
         return -1;
     }
@@ -418,8 +448,8 @@ static const char PYVKPerformanceValueDataINTEL_KEY_valueString[] = "value_strin
 
 typedef struct {
     PyObject_HEAD
-    const char *key;
     VkPerformanceValueDataINTEL data;
+    const char *key;
 } PYVKPerformanceValueDataINTEL_Object;
 
 //static void
@@ -491,7 +521,7 @@ PYVKPerformanceValueDataINTEL_get_valueBool(PyObject *self, void *Py_UNUSED(clos
         PyErr_Format(PyExc_RuntimeError, "%s object was created via key '%s' (accessing '%s')", Py_TYPE(self)->tp_name, ((PYVKPerformanceValueDataINTEL_Object *)self)->key, PYVKPerformanceValueDataINTEL_KEY_valueBool);
         return NULL;
     }
-    return PYVK_Construct__NPY_UINT32_Scalar__VkBool32(((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool);
+    return PYVK_Construct__NPY_UINT32_Scalar__bool32(((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool);
 }
 
 static PyObject *
@@ -500,7 +530,7 @@ PYVKPerformanceValueDataINTEL_get_valueString(PyObject *self, void *Py_UNUSED(cl
         PyErr_Format(PyExc_RuntimeError, "%s object was created via key '%s' (accessing '%s')", Py_TYPE(self)->tp_name, ((PYVKPerformanceValueDataINTEL_Object *)self)->key, PYVKPerformanceValueDataINTEL_KEY_valueString);
         return NULL;
     }
-    return PYVK_Construct__Bytes__p_char(((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString);
+    return PYVK_Construct__PyBytes__char_p(((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString);
 }
 
 static PyGetSetDef PYVKPerformanceValueDataINTEL_getset[] = {
@@ -576,8 +606,8 @@ PYVKPerformanceValueDataINTEL_new(PyTypeObject *cls, PyObject *args, PyObject *k
         arg_value32 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value32, PYVK_Convert__ScalarLike__uint32(arg_value32, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32)) :
         arg_value64 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value64, PYVK_Convert__ScalarLike__uint64(arg_value64, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64)) :
         arg_valueFloat ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueFloat, PYVK_Convert__ScalarLike__float(arg_valueFloat, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat)) :
-        arg_valueBool ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_Convert__ScalarLike__VkBool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
-        arg_valueString ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_Convert__BytesLike__p_char(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString)) :
+        arg_valueBool ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_Convert__ScalarLike__bool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
+        arg_valueString ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_Convert__BytesLike__char_p(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString)) :
         0
     ) < 0) {
         goto error;
@@ -653,48 +683,149 @@ typedef struct {
     VkStructDemo data;
 } PYVKStructDemo_Object;
 
-
-static PyObject *
-PYVKStructDemo_repr(PyObject *self) {
-    // TODO: use getattrstring
-    PyObject *arg_pStr = PYVK_Construct__Bytes__p_char(((PYVKStructDemo_Object *)self)->data.pStr);
-    PyObject *arg_str16 = PYVK_Construct__Bytes__char_16(((PYVKStructDemo_Object *)self)->data.str16);
-    PyObject *arg_pNext = PYVK_Construct__Structure__pNext(((PYVKStructDemo_Object *)self)->data.pNext);
-    PyObject *arg_matrix = PYVK_Construct__NPY_FLOAT_Array2D__float_3_4(((PYVKStructDemo_Object *)self)->data.matrix);
-    PyObject *arg_valueCount = PYVK_Construct__NPY_UINT32_Scalar__uint32(((PYVKStructDemo_Object *)self)->data.valueCount);
-    PyObject *arg_values = PYVK_Construct__UInt32Array1D__p_uint32(((PYVKStructDemo_Object *)self)->data.values, ((PYVKStructDemo_Object *)self)->data.valueCount);
-    PyObject *arg_child = PYVK_Construct__Optional_struct_PerformanceValueDataINTEL__p_struct_PerformanceValueDataINTEL(((PYVKStructDemo_Object *)self)->data.child);
-    PyObject *arg_childrenCount = PYVK_Construct__NPY_UINT32_Scalar__uint32(((PYVKStructDemo_Object *)self)->data.childrenCount);
-    PyObject *arg_children = PYVK_Construct__tuple_struct_PerformanceValueDataINTEL__p_struct_PerformanceValueDataINTEL(((PYVKStructDemo_Object *)self)->data.children, ((PYVKStructDemo_Object *)self)->data.childrenCount);
-    if (!arg_pStr || !arg_str16 || !arg_pNext || !arg_matrix || !arg_valueCount || !arg_values || !arg_child || !arg_childrenCount || !arg_children) {
-        Py_CLEAR(arg_pStr);
-        Py_CLEAR(arg_str16);
-        Py_CLEAR(arg_pNext);
-        Py_CLEAR(arg_matrix);
-        Py_CLEAR(arg_valueCount);
-        Py_CLEAR(arg_values);
-        Py_CLEAR(arg_child);
-        Py_CLEAR(arg_childrenCount);
-        Py_CLEAR(arg_children);
-        return NULL;
-    }
-    PyObject *result = PyUnicode_FromFormat("%s(%s=%R, %s=%R, %s=%R, %s=%R, %s=%R, %s=%R, %s=%R, %s=%R, %s=%R, %s=%R)", Py_TYPE(self)->tp_name, PYVKStructDemo_KEY_sType, PYVKStructDemo_KEY_pStr, arg_pStr, PYVKStructDemo_KEY_str16, arg_str16, PYVKStructDemo_KEY_pNext, arg_pNext, PYVKStructDemo_KEY_matrix, arg_matrix, PYVKStructDemo_KEY_valueCount, arg_valueCount, PYVKStructDemo_KEY_values, arg_values, PYVKStructDemo_KEY_child, arg_child, PYVKStructDemo_KEY_childrenCount, arg_childrenCount, PYVKStructDemo_KEY_children, arg_children);
-    Py_CLEAR(arg_pStr);
-    Py_CLEAR(arg_str16);
-    Py_CLEAR(arg_pNext);
-    Py_CLEAR(arg_matrix);
-    Py_CLEAR(arg_valueCount);
-    Py_CLEAR(arg_values);
-    Py_CLEAR(arg_child);
-    Py_CLEAR(arg_childrenCount);
-    Py_CLEAR(arg_children);
-    return result;
-}
-
-
 static PyObject *
 PYVKStructDemo_get__address(PyObject *self, void *Py_UNUSED(closure)) {
     return PyLong_FromVoidPtr(&((PYVKStructDemo_Object *)self)->data);
+}
+
+static PyObject *
+PYVKStructDemo_get_pStr(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__PyBytes__char_p(((PYVKStructDemo_Object *)self)->data.pStr);
+}
+
+static PyObject *
+PYVKStructDemo_get_str16(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__PyBytes__char_x16(((PYVKStructDemo_Object *)self)->data.str16);
+}
+
+static PyObject *
+PYVKStructDemo_get_pNext(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__PYVK_Struct__pNext(((PYVKStructDemo_Object *)self)->data.pNext);
+}
+
+static PyObject *
+PYVKStructDemo_get_matrix(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__NPY_FLOAT_Array2D__float_x3_x4(((PYVKStructDemo_Object *)self)->data.matrix);
+}
+
+static PyObject *
+PYVKStructDemo_get_valueCount(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__NPY_UINT32_Scalar__uint32(((PYVKStructDemo_Object *)self)->data.valueCount);
+}
+
+static PyObject *
+PYVKStructDemo_get_values(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__NPY_UINT32_Array1D__uint32_p(((PYVKStructDemo_Object *)self)->data.values, ((PYVKStructDemo_Object *)self)->data.valueCount);
+}
+
+static PyObject *
+PYVKStructDemo_get_child(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__PYVKPerformanceValueDataINTEL_Optional__VkPerformanceValueDataINTEL_p(((PYVKStructDemo_Object *)self)->data.child);
+}
+
+static PyObject *
+PYVKStructDemo_get_childrenCount(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__NPY_UINT32_Scalar__uint32(((PYVKStructDemo_Object *)self)->data.childrenCount);
+}
+
+static PyObject *
+PYVKStructDemo_get_children(PyObject *self, void *Py_UNUSED(closure)) {
+    return PYVK_Construct__PYVKPerformanceValueDataINTEL_tuple__VkPerformanceValueDataINTEL_p(((PYVKStructDemo_Object *)self)->data.children, ((PYVKStructDemo_Object *)self)->data.childrenCount);
+}
+
+static PyGetSetDef PYVKStructDemo_getset[] = {
+    {
+        .name = "_address",
+        .get = PYVKStructDemo_get__address
+    },
+    {
+        .name = PYVKStructDemo_KEY_pStr,
+        .get = PYVKStructDemo_get_pStr
+    },
+    {
+        .name = PYVKStructDemo_KEY_str16,
+        .get = PYVKStructDemo_get_str16
+    },
+    {
+        .name = PYVKStructDemo_KEY_pNext,
+        .get = PYVKStructDemo_get_pNext
+    },
+    {
+        .name = PYVKStructDemo_KEY_matrix,
+        .get = PYVKStructDemo_get_matrix
+    },
+    {
+        .name = PYVKStructDemo_KEY_valueCount,
+        .get = PYVKStructDemo_get_valueCount
+    },
+    {
+        .name = PYVKStructDemo_KEY_values,
+        .get = PYVKStructDemo_get_values
+    },
+    {
+        .name = PYVKStructDemo_KEY_child,
+        .get = PYVKStructDemo_get_child
+    },
+    {
+        .name = PYVKStructDemo_KEY_childrenCount,
+        .get = PYVKStructDemo_get_childrenCount
+    },
+    {
+        .name = PYVKStructDemo_KEY_children,
+        .get = PYVKStructDemo_get_children
+    },
+    {NULL}
+};
+
+static PyObject *
+PYVKStructDemo_new(PyTypeObject *cls, PyObject *args, PyObject *kwds) {
+    static const char *kwlist[] = {
+        PYVKStructDemo_KEY_pStr,
+        PYVKStructDemo_KEY_str16,
+        PYVKStructDemo_KEY_pNext,
+        PYVKStructDemo_KEY_matrix,
+        PYVKStructDemo_KEY_valueCount,
+        PYVKStructDemo_KEY_values,
+        PYVKStructDemo_KEY_child,
+        PYVKStructDemo_KEY_childrenCount,
+        PYVKStructDemo_KEY_children,
+        {NULL}
+    };
+    PyObject *self = NULL;
+    PyObject *arg_str16 = NULL;
+    PyObject *arg_pNext = NULL;
+    PyObject *arg_matrix = NULL;
+    PyObject *arg_valueCount = NULL;
+    PyObject *arg_values = NULL;
+    PyObject *arg_child = NULL;
+    PyObject *arg_childrenCount = NULL;
+    PyObject *arg_children = NULL;
+
+    self = Py_TYPE(cls)->tp_alloc(Py_TYPE(cls), 0);
+    if (!self) {
+        goto error;
+    }
+    if (!PyArg_ParseTupleAndKeywords(
+        args, kwds, "|OOOOOOOO", kwlist,
+        &arg_str16, &arg_pNext, &arg_matrix, &arg_valueCount, &arg_values, &arg_child, &arg_childrenCount, &arg_children
+    )) {
+        goto error;
+    }
+    if ((
+        arg_value32 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value32, PYVK_Convert__ScalarLike__uint32(arg_value32, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value32)) :
+        arg_value64 ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_value64, PYVK_Convert__ScalarLike__uint64(arg_value64, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.value64)) :
+        arg_valueFloat ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueFloat, PYVK_Convert__ScalarLike__float(arg_valueFloat, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueFloat)) :
+        arg_valueBool ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueBool, PYVK_Convert__ScalarLike__bool32(arg_valueBool, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueBool)) :
+        arg_valueString ? (((PYVKPerformanceValueDataINTEL_Object *)self)->key = PYVKPerformanceValueDataINTEL_KEY_valueString, PYVK_Convert__BytesLike__char_p(arg_valueString, &((PYVKPerformanceValueDataINTEL_Object *)self)->data.valueString)) :
+        0
+    ) < 0) {
+        goto error;
+    }
+    return self;
+
+error:
+    Py_CLEAR(self);
+    return NULL;
 }
 
 
